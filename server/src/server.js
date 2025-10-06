@@ -152,6 +152,16 @@ const contactLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'NephroConsult API Server',
+    status: 'running',
+    time: new Date().toISOString(),
+    version: '1.0.0'
+  });
+});
+
 // Health
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });

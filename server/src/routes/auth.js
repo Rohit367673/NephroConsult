@@ -10,6 +10,19 @@ import { env } from '../config.js';
 
 const router = express.Router();
 
+// Debug endpoint to check configuration
+router.get('/debug', (req, res) => {
+  const { flags } = require('../config.js');
+  res.json({
+    emailEnabled: flags.emailEnabled,
+    smtpHost: !!process.env.SMTP_HOST,
+    smtpUser: !!process.env.SMTP_USER,
+    smtpPass: !!process.env.SMTP_PASS,
+    mongoUri: !!process.env.MONGO_URI,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Send OTP for email verification
 router.post('/send-otp', async (req, res) => {
   try {
