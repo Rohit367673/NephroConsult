@@ -9,7 +9,7 @@ import { Loader2, Eye, EyeOff, Heart, Stethoscope, User, CheckCircle } from 'luc
 import { toast } from 'sonner@2.0.3';
 
 export function SignupPage() {
-  const { signup } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -91,7 +91,7 @@ export function SignupPage() {
         })
       };
 
-      const success = await signup(userData);
+      const success = await register(userData);
       
       if (success) {
         toast.success(`Account created successfully! Welcome to NephroConsult.`);
