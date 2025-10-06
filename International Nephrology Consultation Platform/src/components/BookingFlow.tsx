@@ -63,6 +63,56 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
     '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM'
   ];
 
+  // Function to check if a time slot is available based on current time
+  const isTimeSlotAvailable = (slot: string) => {
+    if (!bookingData.date) return true;
+    
+    // Fix: Parse date string properly to avoid timezone shifts
+    const selectedDate = bookingData.date instanceof Date 
+      ? bookingData.date 
+      : new Date(bookingData.date + 'T00:00:00'); // Force local timezone
+    
+    const today = new Date();
+    
+    // Normalize dates for comparison
+    const selectedDateNorm = new Date(selectedDate);
+    const todayNorm = new Date(today);
+    selectedDateNorm.setHours(0, 0, 0, 0);
+    todayNorm.setHours(0, 0, 0, 0);
+    
+    // If selected date is in the future, all slots are available
+    if (selectedDateNorm.getTime() > todayNorm.getTime()) {
+      return true;
+    }
+    
+    // If selected date is in the past, no slots are available
+    if (selectedDateNorm.getTime() < todayNorm.getTime()) {
+      return false;
+    }
+    
+    // For today's bookings, only allow slots that are at least 1 hour from now
+    const currentTime = new Date();
+    const slotTime = new Date();
+    
+    // Parse the time slot
+    const [time, period] = slot.split(' ');
+    const [hours, minutes] = time.split(':').map(Number);
+    
+    let slotHours = hours;
+    if (period === 'PM' && hours !== 12) {
+      slotHours += 12;
+    } else if (period === 'AM' && hours === 12) {
+      slotHours = 0;
+    }
+    
+    slotTime.setHours(slotHours, minutes || 0, 0, 0);
+    
+    // Add 1 hour buffer to current time
+    const minAllowedTime = new Date(currentTime.getTime() + 60 * 60 * 1000);
+    
+    return slotTime >= minAllowedTime;
+  };
+
   const currencies = [
     { code: 'USD', symbol: '$', name: 'US Dollar' },
     { code: 'EUR', symbol: '€', name: 'Euro' },
@@ -183,7 +233,15 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
                   mode="single"
                   selected={bookingData.date || undefined}
                   onSelect={(date) => setBookingData(prev => ({ ...prev, date }))}
-                  disabled={(date) => date < new Date() || date.getDay() === 0}
+                  disabled={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); // Set to start of day for comparison
+                    const selectedDate = new Date(date);
+                    selectedDate.setHours(0, 0, 0, 0);
+                    
+                    // Disable past dates (not including today) and Sundays
+                    return selectedDate < today || date.getDay() === 0;
+                  }}
                   className="rounded-xl border border-gray-200"
                 />
               </div>
@@ -191,21 +249,27 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
               <div>
                 <Label className="text-base font-medium mb-4 block">Available Time Slots</Label>
                 <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto">
-                  {timeSlots.map((slot) => (
-                    <Button
-                      key={slot}
-                      variant={bookingData.timeSlot === slot ? "default" : "outline"}
-                      onClick={() => setBookingData(prev => ({ ...prev, timeSlot: slot }))}
-                      className={`p-3 ${
-                        bookingData.timeSlot === slot
-                          ? 'bg-[#006f6f] hover:bg-[#005555] text-white'
-                          : 'border-gray-200 hover:border-[#006f6f] hover:text-[#006f6f]'
-                      }`}
-                    >
-                      <Clock className="w-4 h-4 mr-2" />
-                      {slot}
-                    </Button>
-                  ))}
+                  {timeSlots.map((slot) => {
+                    const isAvailable = isTimeSlotAvailable(slot);
+                    return (
+                      <Button
+                        key={slot}
+                        variant={bookingData.timeSlot === slot ? "default" : "outline"}
+                        onClick={() => isAvailable && setBookingData(prev => ({ ...prev, timeSlot: slot }))}
+                        disabled={!isAvailable}
+                        className={`p-3 ${
+                          !isAvailable
+                            ? 'opacity-50 cursor-not-allowed border-gray-100 text-gray-400'
+                            : bookingData.timeSlot === slot
+                            ? 'bg-[#006f6f] hover:bg-[#005555] text-white'
+                            : 'border-gray-200 hover:border-[#006f6f] hover:text-[#006f6f]'
+                        }`}
+                      >
+                        <Clock className="w-4 h-4 mr-2" />
+                        {slot}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

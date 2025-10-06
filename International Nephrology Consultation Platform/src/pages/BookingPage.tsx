@@ -46,8 +46,12 @@ function CalendarComponent({ selectedDate, onDateSelect }: CalendarComponentProp
   const startingDayOfWeek = firstDay.getDay();
   
   const formatDate = (day: number) => {
-    const date = new Date(year, month, day);
-    return date.toISOString().split('T')[0];
+    // Fix: Create date string directly to avoid timezone issues
+    const monthStr = (month + 1).toString().padStart(2, '0'); // month is 0-indexed
+    const dayStr = day.toString().padStart(2, '0');
+    const dateString = `${year}-${monthStr}-${dayStr}`;
+    console.log(`📅 Calendar: Formatting day ${day} of month ${month + 1}/${year} -> ${dateString}`);
+    return dateString;
   };
   
   const isDateDisabled = (day: number) => {
@@ -444,7 +448,12 @@ export default function BookingPage() {
   useEffect(() => {
     // Update available time slots when date or consultation type changes
     if (bookingData.date && userTimezone) {
-      const selectedDate = new Date(bookingData.date);
+      // Fix: Parse date string as local date to avoid timezone shifts
+      const [year, month, day] = bookingData.date.split('-');
+      const selectedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      
+      console.log(`📅 BookingPage: Selected date string: "${bookingData.date}" -> Parsed date: ${selectedDate.toString()}`);
+      
       const isUrgent = bookingData.consultationType === 'urgent';
       const slots = getAvailableTimeSlotsForUser(selectedDate, userTimezone, isUrgent);
       
@@ -670,7 +679,7 @@ export default function BookingPage() {
                 <div className="flex items-center justify-center space-x-2">
                   <MapPin className="h-4 h-4 text-blue-600" />
                   <p className="text-sm font-medium text-blue-800">
-                    Your Location: {userCountry} • Regular: 6-10 PM IST • Urgent: 10 AM-10 PM IST
+                    Your Location: {userCountry} • Doctor Location: India (IST) • Regular: 6-10 PM IST • Urgent: 10 AM-10 PM IST
                   </p>
                 </div>
               </div>
@@ -759,7 +768,10 @@ export default function BookingPage() {
                   <p className="text-sm text-amber-700">
                     {bookingData.consultationType === 'urgent' 
                       ? 'Urgent consultations: 10 AM - 10 PM IST' 
-                      : 'Regular consultations: 6-10 PM IST'} • Times shown in your timezone ({userTimezone})
+                      : 'Regular consultations: 6-10 PM IST'} • 
+                    {userCountry === 'India' 
+                      ? 'Times shown in IST' 
+                      : `Times converted to your timezone (${userTimezone})`}
                   </p>
                 </div>
               </div>
@@ -827,24 +839,31 @@ export default function BookingPage() {
                             key={slot.time}
                             variant={bookingData.time === slot.time ? "default" : "outline"}
                             size="sm"
-                            className={`h-16 text-xs relative ${
+                            className={`h-16 text-xs relative transition-all ${
                               bookingData.time === slot.time 
                                 ? 'bg-[#006f6f] hover:bg-[#005555] text-white' 
                                 : slot.isBooked
                                 ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed opacity-60'
                                 : slot.available
-                                ? 'hover:border-[#006f6f] hover:bg-[#006f6f]/5'
-                                : 'bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed'
+                                ? 'hover:border-[#006f6f] hover:bg-[#006f6f]/5 border-gray-300'
+                                : 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed opacity-50'
                             }`}
                             disabled={!slot.available}
                             onClick={() => handleSlotSelection(slot)}
                           >
                             <div className="text-center">
                               <div className="font-medium">{slot.time}</div>
-                              <div className="opacity-75 text-xs">{slot.istTime} IST</div>
+                              {userCountry !== 'India' && (
+                                <div className="opacity-75 text-xs">{slot.istTime} IST</div>
+                              )}
                               {slot.isBooked && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-red-500/10 rounded">
-                                  <span className="text-xs font-medium text-red-600">BOOKED</span>
+                                <div className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1 rounded-bl">
+                                  BOOKED
+                                </div>
+                              )}
+                              {!slot.available && !slot.isBooked && (
+                                <div className="absolute top-0 right-0 bg-gray-400 text-white text-xs px-1 rounded-bl">
+                                  PAST
                                 </div>
                               )}
                             </div>

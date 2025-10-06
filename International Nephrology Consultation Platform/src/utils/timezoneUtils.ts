@@ -116,66 +116,105 @@ export const getPricingForTimezone = (timezone: string) => {
 export const getAvailableTimeSlotsForUser = (date: Date, userTimezone: string, isUrgent: boolean = false): Array<{ time: string, istTime: string, available: boolean }> => {
   const slots: Array<{ time: string, istTime: string, available: boolean }> = [];
   
-  // Determine the hour range based on consultation type
-  const startHour = isUrgent ? URGENT_CONSULTATION_START : DOCTOR_AVAILABLE_START;
-  const endHour = isUrgent ? URGENT_CONSULTATION_END : DOCTOR_AVAILABLE_END;
+  console.log(`📅 Generating slots for ${date.toDateString()}, isUrgent: ${isUrgent}, userTimezone: ${userTimezone}`);
   
-  // Create time slots for doctor's available hours in IST
+  // Determine the hour range based on consultation type (Doctor's IST schedule)
+  const startHour = isUrgent ? URGENT_CONSULTATION_START : DOCTOR_AVAILABLE_START; // 10 AM or 6 PM IST
+  const endHour = isUrgent ? URGENT_CONSULTATION_END : DOCTOR_AVAILABLE_END;       // 10 PM IST for both
+  
+  // Check if user is in India (same timezone as doctor)
+  const isIndianUser = userTimezone === 'Asia/Kolkata' || userTimezone === 'Asia/Calcutta' || 
+                       userTimezone.includes('India') || userTimezone.includes('Kolkata') || 
+                       userTimezone.includes('Calcutta') || userTimezone.includes('Mumbai') || 
+                       userTimezone.includes('Delhi') || userTimezone.includes('Chennai') || 
+                       userTimezone.includes('Bangalore');
+  
+  // Create time slots for doctor's available hours
   for (let hour = startHour; hour < endHour; hour++) {
-    // Create a date object for the selected date
-    const slotDate = new Date(date);
-    slotDate.setHours(hour, 0, 0, 0);
-    
-    // Format the IST time
-    const istHour = hour > 12 ? hour - 12 : hour;
+    // Format the IST time (doctor's time) with clear AM/PM
+    const istHour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
     const istPeriod = hour >= 12 ? 'PM' : 'AM';
-    const istTimeStr = `${istHour}:00 ${istPeriod}`;
+    const istTimeStr = `${istHour12}:00 ${istPeriod}`;
     
-    // Convert IST to user's timezone using Intl.DateTimeFormat
-    // First, create a date string with IST timezone info
-    const istDateString = slotDate.toLocaleString('en-US', {
-      timeZone: DOCTOR_TIMEZONE,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
+    let displayTimeStr: string;
     
-    // Parse the IST date string and create a new Date object
-    const [datePart, timePart] = istDateString.split(', ');
-    const [month, day, year] = datePart.split('/');
-    const [hours, minutes, seconds] = timePart.split(':');
+    if (isIndianUser) {
+      // For Indian users: Show IST time with IST label for clarity
+      displayTimeStr = `${istTimeStr} IST`;
+    } else {
+      // For international users: Convert IST time to their local time
+      try {
+        // Create a date object for this IST time slot
+        const istDate = new Date(date);
+        istDate.setHours(hour, 0, 0, 0);
+        
+        // Convert IST to user's timezone
+        // First convert to UTC (IST is UTC+5:30)
+        const utcTime = new Date(istDate.getTime() - (5.5 * 60 * 60 * 1000));
+        
+        // Then format in user's timezone
+        displayTimeStr = utcTime.toLocaleString('en-US', {
+          timeZone: userTimezone,
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        // Extract just the time part
+        const timePart = displayTimeStr.split(', ')[1] || displayTimeStr;
+        displayTimeStr = timePart;
+        
+      } catch (error) {
+        console.warn('Timezone conversion failed, using IST time:', error);
+        displayTimeStr = istTimeStr; // Fallback to IST
+      }
+    }
     
-    // Create a UTC date from IST components
-    const utcDate = new Date(Date.UTC(
-      parseInt(year),
-      parseInt(month) - 1,
-      parseInt(day),
-      parseInt(hours) - 5, // IST is UTC+5:30
-      parseInt(minutes) - 30,
-      parseInt(seconds)
-    ));
-    
-    // Format for user's timezone
-    const userTimeStr = utcDate.toLocaleString('en-US', {
-      timeZone: userTimezone,
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    }).split(', ')[1] || `${istHour}:00 ${istPeriod}`; // Fallback to IST if conversion fails
-    
-    // Check if the slot is in the future
+    // Check availability based on current IST time
     const now = new Date();
-    const available = utcDate > now;
+    const currentISTTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    
+    // Create date objects for comparison (normalized to start of day)
+    const selectedDate = new Date(date);
+    const today = new Date(currentISTTime);
+    
+    selectedDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    
+    let available = true;
+    
+    if (selectedDate.getTime() === today.getTime()) {
+      // Same day - check if slot is in the future
+      const currentISTHour = currentISTTime.getHours();
+      const currentISTMinutes = currentISTTime.getMinutes();
+      
+      // Convert to total minutes for precise comparison
+      const currentTotalMinutes = currentISTHour * 60 + currentISTMinutes;
+      const slotTotalMinutes = hour * 60;
+      const bufferMinutes = 60; // 1-hour advance booking buffer
+      
+      available = slotTotalMinutes >= (currentTotalMinutes + bufferMinutes);
+    } else if (selectedDate.getTime() > today.getTime()) {
+      // Future date - all doctor hours are available
+      available = true;
+    } else {
+      // Past date - no slots available
+      available = false;
+    }
+    
+    console.log(`Slot ${hour}:00 IST (${istTimeStr}) -> Display: ${displayTimeStr}, available: ${available}`);
     
     slots.push({
-      time: userTimeStr,
-      istTime: istTimeStr,
+      time: displayTimeStr,      // User's display time (IST for Indians, local time for internationals)
+      istTime: istTimeStr,       // Always store IST time for backend
       available
     });
+  }
+  
+  console.log(`🎯 FINAL RESULT: Generated ${slots.length} slots for ${isIndianUser ? 'Indian' : 'International'} user:`, slots);
+  
+  if (slots.length === 0) {
+    console.error(`❌ ERROR: No slots generated! Check doctor hours range: ${startHour}-${endHour}`);
   }
   
   return slots;
