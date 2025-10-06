@@ -28,7 +28,7 @@ const AppointmentSchema = new mongoose.Schema(
     },
     doctor: {
       id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      name: { type: String, default: 'Dr. Ilango Krishnamurthy' },
+      name: { type: String, default: 'Dr. Ilango S. Prakasam' },
       title: { type: String, default: 'Sr. Nephrologist' },
       qualifications: { type: String, default: 'MD, DNB (Nephrology), MRCP (UK)' },
       experience: { type: String, default: '15+ Years Experience' },

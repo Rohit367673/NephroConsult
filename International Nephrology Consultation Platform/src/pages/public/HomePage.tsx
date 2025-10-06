@@ -288,7 +288,7 @@ function SignupModal({ isOpen, onClose, onLoginOpen }: {
         <DialogHeader>
           <DialogTitle className="sr-only">Create NephroConsult Account</DialogTitle>
           <DialogDescription className="sr-only">
-            Join NephroConsult to access expert nephrology care and book consultations with Dr. Ilango Krishnamurthy
+            Join NephroConsult to access expert nephrology care and book consultations with Dr. Ilango S. Prakasam
           </DialogDescription>
         </DialogHeader>
         <motion.div

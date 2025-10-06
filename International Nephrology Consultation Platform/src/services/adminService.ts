@@ -69,7 +69,7 @@ class AdminService {
         instructions: 'Take medications as prescribed. Increase water intake to 3-4 liters daily.',
         nextVisit: '2024-02-16',
         createdAt: '2024-01-16',
-        doctorName: 'Dr. Ilango Krishnamurthy'
+        doctorName: 'Dr. Ilango S. Prakasam'
       },
       country: 'US'
     },

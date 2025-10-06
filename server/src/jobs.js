@@ -45,7 +45,7 @@ export async function scheduleAppointmentReminder(appointment) {
     // Patient reminder email
     const patientReminderTemplate = getConsultationReminderTemplate(
       appointment.patient.name,
-      'Dr. Ilango Krishnamurthy',
+      'Dr. Ilango S. Prakasam',
       new Date(appointment.date).toLocaleDateString(),
       appointment.timeSlot,
       false // isDoctor = false (patient email)
@@ -62,7 +62,7 @@ export async function scheduleAppointmentReminder(appointment) {
     if (doctorEmail) {
       const doctorReminderTemplate = getConsultationReminderTemplate(
         appointment.patient.name,
-        'Dr. Ilango Krishnamurthy',
+        'Dr. Ilango S. Prakasam',
         new Date(appointment.date).toLocaleDateString(),
         appointment.timeSlot,
         true // isDoctor = true (doctor email)

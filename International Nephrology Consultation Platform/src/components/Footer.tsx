@@ -35,7 +35,7 @@ export default function Footer() {
           <div className="text-center max-w-2xl mx-auto">
             <h3 className="text-2xl font-bold mb-4">Stay Updated on Kidney Health</h3>
             <p className="text-gray-400 mb-6">
-              Get the latest insights, tips, and health advice directly from Dr. Ilango Krishnamurthy
+              Get the latest insights, tips, and health advice directly from Dr. Ilango S. Prakasam
             </p>
             <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
               <Input
@@ -71,7 +71,7 @@ export default function Footer() {
                 </div>
               </div>
               <p className="text-gray-400 mb-6 leading-relaxed">
-                World-class nephrology consultations with Dr. Ilango Krishnamurthy. 
+                World-class nephrology consultations with Dr. Ilango S. Prakasam. 
                 Providing expert kidney care through secure telemedicine worldwide.
               </p>
               

@@ -178,7 +178,7 @@ router.post('/login', async (req, res) => {
         // Create doctor account if it doesn't exist
         const passwordHash = await bcrypt.hash(password, 10);
         userDoc = await User.create({
-          name: 'Dr. Ilango Krishnamurthy',
+          name: 'Dr. Ilango S. Prakasam',
           email: emailNormalized,
           passwordHash,
           role: 'doctor',

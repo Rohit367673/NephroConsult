@@ -88,7 +88,7 @@ export function Navigation() {
               <Stethoscope className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="font-semibold text-lg text-gray-900">Dr. Ilango Krishnamurthy</div>
+              <div className="font-semibold text-lg text-gray-900">Dr. Ilango S. Prakasam</div>
               <div className="text-sm text-[#006f6f]">Nephrology Specialist</div>
             </div>
           </Link>

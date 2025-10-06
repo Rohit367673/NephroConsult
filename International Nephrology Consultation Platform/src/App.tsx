@@ -261,7 +261,7 @@ function SignupModal({ isOpen, onClose, onLoginOpen }: {
         <DialogHeader>
           <DialogTitle className="sr-only">Create NephroConsult Account</DialogTitle>
           <DialogDescription className="sr-only">
-            Join NephroConsult to access expert nephrology care and book consultations with Dr. Ilango Krishnamurthy
+            Join NephroConsult to access expert nephrology care and book consultations with Dr. Ilango S. Prakasam
           </DialogDescription>
         </DialogHeader>
         <motion.div
@@ -1510,7 +1510,7 @@ function ContactPage() {
               Contact NephroConsult
             </motion.h1>
             <motion.p variants={itemVariants} className="text-xl text-gray-600 mb-8">
-              Get in touch with Dr. Ilango Krishnamurthy's team for expert nephrology consultation and support
+              Get in touch with Dr. Ilango S. Prakasam's team for expert nephrology consultation and support
             </motion.p>
             <motion.div variants={itemVariants} className="flex justify-center space-x-8 text-sm text-gray-600">
               <div className="flex items-center space-x-2">
@@ -1850,7 +1850,7 @@ function AboutPage() {
                 Leading Nephrologist
               </Badge>
               <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-                Meet Dr. Ilango Krishnamurthy
+                Meet Dr. Ilango S. Prakasam
               </h1>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
                 Senior Nephrologist with over 15 years of experience in kidney care, 

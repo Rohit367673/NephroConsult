@@ -1104,7 +1104,7 @@ export default function BookingPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Doctor:</span>
-                      <span className="font-medium text-[#006f6f]">Dr. Ilango Krishnamurthy <span className="text-[#006f6f]">(Sr. Nephrologist)</span></span>
+                      <span className="font-medium text-[#006f6f]">Dr. Ilango S. Prakasam <span className="text-[#006f6f]">(Sr. Nephrologist)</span></span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Patient:</span>

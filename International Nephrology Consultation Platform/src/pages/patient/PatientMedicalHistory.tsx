@@ -28,7 +28,7 @@ export function PatientMedicalHistory() {
     {
       id: '1',
       date: '2024-09-10',
-      doctor: 'Dr. Ilango Krishnamurthy',
+      doctor: 'Dr. Ilango S. Prakasam',
       type: 'Video Consultation',
       diagnosis: 'Hypertension Management',
       status: 'completed',
@@ -39,7 +39,7 @@ export function PatientMedicalHistory() {
     {
       id: '2',
       date: '2024-08-28',
-      doctor: 'Dr. Ilango Krishnamurthy',
+      doctor: 'Dr. Ilango S. Prakasam',
       type: 'Follow-up Consultation',
       diagnosis: 'Kidney Function Assessment',
       status: 'completed',
@@ -50,7 +50,7 @@ export function PatientMedicalHistory() {
     {
       id: '3',
       date: '2024-08-15',
-      doctor: 'Dr. Ilango Krishnamurthy',
+      doctor: 'Dr. Ilango S. Prakasam',
       type: 'Initial Consultation',
       diagnosis: 'Chronic Kidney Disease Stage 2',
       status: 'completed',
@@ -107,7 +107,7 @@ export function PatientMedicalHistory() {
     {
       id: '1',
       date: '2024-09-10',
-      doctor: 'Dr. Ilango Krishnamurthy',
+      doctor: 'Dr. Ilango S. Prakasam',
       medications: [
         { name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily', duration: '30 days' },
         { name: 'Amlodipine', dosage: '5mg', frequency: 'Once daily', duration: '30 days' }
@@ -119,7 +119,7 @@ export function PatientMedicalHistory() {
     {
       id: '2',
       date: '2024-08-28',
-      doctor: 'Dr. Ilango Krishnamurthy',
+      doctor: 'Dr. Ilango S. Prakasam',
       medications: [
         { name: 'Losartan', dosage: '50mg', frequency: 'Once daily', duration: '30 days' }
       ],

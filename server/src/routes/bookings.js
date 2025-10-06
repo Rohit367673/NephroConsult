@@ -72,7 +72,7 @@ router.post('/appointments', requireAuth, async (req, res) => {
         country,
       },
       doctor: { 
-        name: 'Dr. Ilango Krishnamurthy',
+        name: 'Dr. Ilango S. Prakasam',
         title: 'Sr. Nephrologist',
         qualifications: 'MD, DNB (Nephrology), MRCP (UK)',
         experience: '15+ Years Experience',
@@ -176,7 +176,7 @@ router.post('/appointments', requireAuth, async (req, res) => {
             <div class="success-box">
               <h3 style="color: #155724; margin-top: 0;">Your consultation has been successfully booked!</h3>
               <p><strong>Patient:</strong> ${userDoc?.name}</p>
-              <p><strong>Doctor:</strong> Dr. Ilango Krishnamurthy (Sr. Nephrologist)</p>
+              <p><strong>Doctor:</strong> Dr. Ilango S. Prakasam (Sr. Nephrologist)</p>
               <p><strong>Qualifications:</strong> MD, DNB (Nephrology), MRCP (UK)</p>
               <p><strong>Experience:</strong> 15+ Years Experience</p>
               <p><strong>Date:</strong> ${date}</p>

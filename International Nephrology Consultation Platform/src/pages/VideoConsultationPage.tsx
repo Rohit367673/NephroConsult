@@ -48,7 +48,7 @@ export function VideoConsultationPage() {
   const appointmentData = {
     id: appointmentId,
     patientName: 'John Doe',
-    doctorName: 'Dr. Ilango Krishnamurthy',
+    doctorName: 'Dr. Ilango S. Prakasam',
     scheduledTime: '10:00 AM',
     type: 'Video Consultation',
     duration: 30
@@ -122,7 +122,7 @@ export function VideoConsultationPage() {
         const doctorResponse: ChatMessage = {
           id: (Date.now() + 1).toString(),
           sender: 'doctor',
-          message: 'Thank you for the information. I'll review this during our consultation.',
+          message: 'Thank you for the information. I will review this during our consultation.',
           timestamp: new Date()
         };
         setChatMessages(prev => [...prev, doctorResponse]);

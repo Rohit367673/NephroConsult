@@ -22,7 +22,7 @@ const getDynamicPricing = () => {
 const knowledgeBase = [
   {
     keywords: ['doctor', 'ilango', 'who', 'about', 'qualification', 'krishnamurthy'],
-    response: "Dr. Ilango Krishnamurthy is our Sr. Nephrologist with MD, DNB (Nephrology), MRCP (UK) qualifications and 15+ years of experience. He provides expert kidney care through NephroConsult, offering world-class nephrology consultations via secure HD video calls with comprehensive care from initial consultations to ongoing kidney health management. Available globally with region-specific pricing and 24/7 support."
+    response: "Dr. Ilango S. Prakasam is our Sr. Nephrologist with MD, DNB (Nephrology), MRCP (UK) qualifications and 15+ years of experience. He provides expert kidney care through NephroConsult, offering world-class nephrology consultations via secure HD video calls with comprehensive care from initial consultations to ongoing kidney health management. Available globally with region-specific pricing and 24/7 support."
   },
   {
     keywords: ['book', 'appointment', 'schedule', 'consult', 'booking', 'how to book'],

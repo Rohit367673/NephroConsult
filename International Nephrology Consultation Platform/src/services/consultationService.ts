@@ -114,7 +114,7 @@ class ConsultationService {
           time: '10:00 AM',
           istTime: '10:30 PM IST',
           status: 'upcoming',
-          doctorName: 'Dr. Ilango Krishnamurthy',
+          doctorName: 'Dr. Ilango S. Prakasam',
           documents: ['kidney_report.pdf', 'blood_test.pdf'],
           amount: 30,
           currency: 'USD',
@@ -129,7 +129,7 @@ class ConsultationService {
           time: '2:00 PM',
           istTime: '12:30 AM IST',
           status: 'completed',
-          doctorName: 'Dr. Ilango Krishnamurthy',
+          doctorName: 'Dr. Ilango S. Prakasam',
           documents: ['followup_labs.pdf'],
           prescription: {
             medicines: [
@@ -139,7 +139,7 @@ class ConsultationService {
             instructions: 'Take medications as prescribed. Increase water intake to 3-4 liters daily.',
             nextVisit: '2024-02-16',
             createdAt: '2024-01-16',
-            doctorName: 'Dr. Ilango'
+            doctorName: 'Dr. Ilango S. Prakasam'
           },
           receiptUrl: '/receipts/consultation-2.pdf',
           amount: 25,
@@ -155,7 +155,7 @@ class ConsultationService {
           time: '4:00 PM',
           istTime: '4:00 PM IST',
           status: 'upcoming',
-          doctorName: 'Dr. Ilango Krishnamurthy',
+          doctorName: 'Dr. Ilango S. Prakasam',
           documents: ['ultrasound.pdf', 'creatinine_report.pdf'],
           amount: 2500,
           currency: 'INR',

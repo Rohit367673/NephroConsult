@@ -30,7 +30,7 @@ export function PrescriptionView() {
     {
       id: '1',
       date: '2024-09-10',
-      doctor: 'Dr. Ilango Krishnamurthy',
+      doctor: 'Dr. Ilango S. Prakasam',
       diagnosis: 'Hypertension Management',
       medications: [
         {
@@ -69,7 +69,7 @@ export function PrescriptionView() {
     {
       id: '2',
       date: '2024-08-28',
-      doctor: 'Dr. Ilango Krishnamurthy',
+      doctor: 'Dr. Ilango S. Prakasam',
       diagnosis: 'Kidney Function Support',
       medications: [
         {
@@ -99,7 +99,7 @@ export function PrescriptionView() {
     {
       id: '3',
       date: '2024-08-15',
-      doctor: 'Dr. Ilango Krishnamurthy',
+      doctor: 'Dr. Ilango S. Prakasam',
       diagnosis: 'Initial Kidney Management',
       medications: [
         {

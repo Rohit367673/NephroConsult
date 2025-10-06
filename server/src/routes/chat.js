@@ -27,9 +27,9 @@ const knowledgeBase = [
   {
     keywords: ['doctor', 'krishnamurthy', 'ilango', 'who', 'about'],
     reply:
-      'Dr. Ilango Krishnamurthy is our Sr. Nephrologist with MD, DNB (Nephrology), MRCP (UK) qualifications and 15+ years of experience. He provides expert kidney care through our international consultation platform, offering world-class nephrology consultations via secure video calls with comprehensive care from initial consultations to ongoing kidney health management.',
+      'Dr. Ilango S. Prakasam is our Sr. Nephrologist with MD, DNB (Nephrology), MRCP (UK) qualifications and 15+ years of experience. He provides expert kidney care through our international consultation platform, offering world-class nephrology consultations via secure video calls with comprehensive care from initial consultations to ongoing kidney health management.',
     suggestions: [
-      'How do I book with Dr. Ilango Krishnamurthy?',
+      'How do I book with Dr. Ilango S. Prakasam?',
       'What are his qualifications?',
       'What services does he offer?'
     ]
@@ -77,7 +77,7 @@ const knowledgeBase = [
   {
     keywords: ['lab', 'report', 'test', 'upload'],
     reply:
-      'Lab reports can be uploaded during booking or later through your profile. Dr. Ilango Krishnamurthy reviews them before or during consultation. We provide professional analysis of kidney function tests and lab reports as part of our services.',
+      'Lab reports can be uploaded during booking or later through your profile. Dr. Ilango S. Prakasam reviews them before or during consultation. We provide professional analysis of kidney function tests and lab reports as part of our services.',
     suggestions: [
       'What lab reports should I upload?',
       'When will my reports be reviewed?',
@@ -107,7 +107,7 @@ const knowledgeBase = [
   {
     keywords: ['website', 'pages', 'navigate', 'where'],
     reply:
-      'Our website includes: Home (Dr. Ilango Krishnamurthy introduction), About (detailed platform info), Book Appointment (online booking), Contact (support options), Profile (appointment management), and Login/Signup (user authentication).',
+      'Our website includes: Home (Dr. Ilango S. Prakasam introduction), About (detailed platform info), Book Appointment (online booking), Contact (support options), Profile (appointment management), and Login/Signup (user authentication).',
     suggestions: [
       'How do I create an account?',
       'Where do I book appointments?',
@@ -134,10 +134,10 @@ async function buildReply(message, history = []) {
   // Try OpenAI first if available
   if (openai) {
     try {
-      const systemPrompt = `You are a helpful medical assistant for NephroConsult, an international nephrology consultation platform led by Dr. Ilango Krishnamurthy. You have comprehensive knowledge about the website and services.
+      const systemPrompt = `You are a helpful medical assistant for NephroConsult, an international nephrology consultation platform led by Dr. Ilango S. Prakasam. You have comprehensive knowledge about the website and services.
 
 ABOUT THE PLATFORM:
-- Expert kidney care with Dr. Ilango Krishnamurthy (Sr. Nephrologist)
+- Expert kidney care with Dr. Ilango S. Prakasam (Sr. Nephrologist)
 - Qualifications: MD, DNB (Nephrology), MRCP (UK)
 - Experience: 15+ years in comprehensive kidney care
 - World-class nephrology consultations through secure video calls
@@ -165,7 +165,7 @@ BOOKING PROCESS:
 6. Confirm booking and receive meeting link
 
 WEBSITE PAGES:
-- Home: Main landing page with Dr. Ilango Krishnamurthy introduction
+- Home: Main landing page with Dr. Ilango S. Prakasam introduction
 - About: Detailed information about the doctor and platform
 - Book Appointment: Online booking system with calendar
 - Contact: Multiple contact methods and support options
@@ -193,7 +193,7 @@ POLICIES:
 - Secure, encrypted communications
 - HIPAA compliant data handling
 
-Always provide specific, accurate information about the website and services. Direct users to appropriate pages when needed. For medical advice, remind them to book a consultation with Dr. Ilango Krishnamurthy.`;
+Always provide specific, accurate information about the website and services. Direct users to appropriate pages when needed. For medical advice, remind them to book a consultation with Dr. Ilango S. Prakasam.`;
 
       const messages = [
         { role: 'system', content: systemPrompt },

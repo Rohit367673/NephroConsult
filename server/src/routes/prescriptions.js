@@ -145,7 +145,7 @@ router.post('/', requireAuth(['doctor', 'admin']), async (req, res) => {
     if (data.sendEmail && patient.email) {
       const prescriptionTemplate = getPrescriptionEmailTemplate(
         data.patientName,
-        'Dr. Ilango Krishnamurthy',
+        'Dr. Ilango S. Prakasam',
         {
           medicines: data.medicines,
           instructions: data.followUpInstructions,
