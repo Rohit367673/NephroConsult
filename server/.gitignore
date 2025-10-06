@@ -1,0 +1,50 @@
+# Environment Variables (CRITICAL - Never commit these)
+.env
+.env.local
+.env.production
+.env.development
+.env.test
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test files (Remove in production)
+test-*.js
+debug-*.js
+
+# Database dumps
+*.sql
+*.dump
+
+# Uploads (if any)
+uploads/
+public/uploads/
+
+# Session store
+sessions/
+
+# PM2 process files
+.pm2/
+ecosystem.config.js
+
+# SSL certificates
+ssl/
+certs/
+*.pem
+*.key
+*.crt
+
+# Backup files
+backups/
+*.backup
+
+# Development utilities
+seed-data/
+mock-data/
+
+# Monitoring logs
+monitoring/
+health-check.log

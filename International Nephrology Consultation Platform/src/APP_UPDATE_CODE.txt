@@ -1,0 +1,279 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    EXACT CODE TO ADD TO APP.TSX                             ║
+║                  Copy & Paste These Snippets                                ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+
+═══════════════════════════════════════════════════════════════════════════
+📝 STEP 1: ADD THIS IMPORT
+═══════════════════════════════════════════════════════════════════════════
+
+Location: Top of /App.tsx, after existing imports (around line 17)
+
+ADD THIS LINE:
+─────────────────────────────────────────────────────────────────────────────
+import HomePage from './pages/public/HomePage';
+─────────────────────────────────────────────────────────────────────────────
+
+CONTEXT (what it should look like):
+─────────────────────────────────────────────────────────────────────────────
+import { AuthProvider, AuthContext, useAuth } from './contexts/AuthContext';
+import BookingPage from './pages/BookingPage';
+import ProfilePage from './pages/ProfilePage';
+import Footer from './components/Footer';
+import HomePage from './pages/public/HomePage';  ← ADD THIS LINE
+─────────────────────────────────────────────────────────────────────────────
+
+
+═══════════════════════════════════════════════════════════════════════════
+🗑️ STEP 2: DELETE THESE SECTIONS
+═══════════════════════════════════════════════════════════════════════════
+
+FIND AND DELETE Section 1: FloatingElements Function
+─────────────────────────────────────────────────────────────────────────────
+// Floating Elements Component
+function FloatingElements() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* ... entire function content ... */}
+    </div>
+  );
+}
+─────────────────────────────────────────────────────────────────────────────
+❌ DELETE THIS ENTIRE FUNCTION (approximately 50 lines)
+
+
+FIND AND DELETE Section 2: HomePage Function
+─────────────────────────────────────────────────────────────────────────────
+// Enhanced Home Page Component
+function HomePage() {
+  const { user } = useAuth();
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
+  /* ... hundreds of lines of code ... */
+  return (
+    <motion.div>
+      {/* ... entire homepage JSX ... */}
+    </motion.div>
+  );
+}
+─────────────────────────────────────────────────────────────────────────────
+❌ DELETE THIS ENTIRE FUNCTION (approximately 500-700 lines)
+
+
+NOTE: If these functions are embedded in your HomePage:
+  - LoginModal
+  - SignupModal
+  - Navigation (if it's local, not imported)
+  
+These are now included in the new HomePage.tsx, so delete them too.
+
+
+═══════════════════════════════════════════════════════════════════════════
+✅ STEP 3: VERIFY YOUR ROUTES
+═══════════════════════════════════════════════════════════════════════════
+
+Location: Inside your App component's return statement
+
+SHOULD LOOK LIKE THIS:
+─────────────────────────────────────────────────────────────────────────────
+export default function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AnimatePresence mode="wait">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/booking" element={<BookingPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AnimatePresence>
+      </Router>
+    </AuthProvider>
+  );
+}
+─────────────────────────────────────────────────────────────────────────────
+
+
+═══════════════════════════════════════════════════════════════════════════
+📋 COMPLETE MINIMAL APP.TSX EXAMPLE
+═══════════════════════════════════════════════════════════════════════════
+
+If you want to see the complete minimal structure, here it is:
+
+─────────────────────────────────────────────────────────────────────────────
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AnimatePresence } from 'motion/react';
+import { AuthProvider } from './contexts/AuthContext';
+import HomePage from './pages/public/HomePage';
+import BookingPage from './pages/BookingPage';
+import ProfilePage from './pages/ProfilePage';
+import ContactPage from './pages/public/ContactPage'; // If you have this
+
+// Chat Widget (if you have it as a separate component)
+import ChatWidget from './components/ChatWidget';
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AnimatePresence mode="wait">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/booking" element={<BookingPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AnimatePresence>
+        
+        {/* Chat Widget if you have one */}
+        {/* <ChatWidget /> */}
+      </Router>
+    </AuthProvider>
+  );
+}
+─────────────────────────────────────────────────────────────────────────────
+
+NOTE: Keep any other components you have like:
+  ✅ ContactPage (if separate)
+  ✅ ChatWidget (if separate)
+  ✅ ProtectedRoute (if you use it)
+  ✅ Any custom modals or components
+
+
+═══════════════════════════════════════════════════════════════════════════
+🔍 WHAT TO KEEP IN APP.TSX
+═══════════════════════════════════════════════════════════════════════════
+
+KEEP THESE:
+  ✅ All imports
+  ✅ ContactPage component (if you have it)
+  ✅ ChatWidget component (if separate)
+  ✅ ProtectedRoute component (if you use it)
+  ✅ Main App export
+  ✅ AuthProvider wrapper
+  ✅ Router setup
+  ✅ Routes configuration
+
+DELETE THESE:
+  ❌ Old HomePage function
+  ❌ FloatingElements function (if embedded)
+  ❌ LoginModal function (if embedded in old HomePage)
+  ❌ SignupModal function (if embedded in old HomePage)
+  ❌ Navigation function (if embedded in old HomePage)
+
+
+═══════════════════════════════════════════════════════════════════════════
+🎯 QUICK VALIDATION
+═══════════════════════════════════════════════════════════════════════════
+
+After making changes, verify:
+
+1. CHECK IMPORTS:
+   ☐ import HomePage from './pages/public/HomePage'; ← Added?
+
+2. CHECK NO DUPLICATE FUNCTIONS:
+   ☐ Only ONE HomePage should exist (imported one)
+   ☐ No embedded FloatingElements function
+   ☐ No duplicate LoginModal/SignupModal
+
+3. CHECK ROUTES:
+   ☐ <Route path="/" element={<HomePage />} /> exists
+   ☐ HomePage is imported, not defined locally
+
+4. SAVE AND TEST:
+   ☐ Save /App.tsx
+   ☐ Refresh browser
+   ☐ No console errors
+   ☐ Homepage displays correctly
+
+
+═══════════════════════════════════════════════════════════════════════════
+⚠️ COMMON MISTAKES TO AVOID
+═══════════════════════════════════════════════════════════════════════════
+
+❌ MISTAKE 1: Forgot to delete old HomePage function
+   → Result: Conflict between imported and local HomePage
+
+❌ MISTAKE 2: Wrong import path
+   → Should be: './pages/public/HomePage'
+   → NOT: '../pages/public/HomePage' or 'pages/public/HomePage'
+
+❌ MISTAKE 3: Deleted too much
+   → Keep ContactPage, ChatWidget, and other components you use
+
+❌ MISTAKE 4: Left LoginModal/SignupModal when they were embedded
+   → New HomePage has these built-in, remove old duplicates
+
+
+═══════════════════════════════════════════════════════════════════════════
+✅ SUCCESS CHECKLIST
+═══════════════════════════════════════════════════════════════════════════
+
+After updating App.tsx:
+
+☐ No TypeScript errors
+☐ No import errors
+☐ Browser console is clean
+☐ Homepage loads successfully
+☐ Navigation works between pages
+☐ Login/Signup modals open
+☐ Responsive design works (test by resizing browser)
+☐ No 404 errors in network tab
+
+
+═══════════════════════════════════════════════════════════════════════════
+🚀 NEXT STEPS
+═══════════════════════════════════════════════════════════════════════════
+
+1. Make the changes above
+2. Save /App.tsx
+3. Refresh your browser
+4. Test responsive behavior:
+   - Open DevTools (F12)
+   - Click "Toggle Device Toolbar" (Ctrl+Shift+M)
+   - Test different screen sizes
+
+5. If everything works:
+   - Commit your changes (git commit)
+   - Deploy to staging
+   - Test on real devices
+   - Deploy to production
+
+
+═══════════════════════════════════════════════════════════════════════════
+💡 PRO TIP
+═══════════════════════════════════════════════════════════════════════════
+
+Before making changes:
+  1. Create a git commit: git commit -am "Before responsive update"
+  2. Or copy App.tsx to App.tsx.backup
+
+This way you can easily revert if needed!
+
+
+═══════════════════════════════════════════════════════════════════════════
+📞 NEED HELP?
+═══════════════════════════════════════════════════════════════════════════
+
+Check these files in order:
+  1. QUICK_START.md - Fast overview
+  2. COPY_PASTE_CHECKLIST.md - Step-by-step guide
+  3. INTEGRATION_GUIDE.md - Detailed instructions
+
+Most issues are fixed by:
+  ✅ Clearing browser cache
+  ✅ Restarting dev server
+  ✅ Checking import paths
+  ✅ Verifying no duplicate functions
+
+
+═══════════════════════════════════════════════════════════════════════════
+Version: 2.0
+Status: Ready to Copy & Paste
+Last Updated: October 1, 2025
+═══════════════════════════════════════════════════════════════════════════
