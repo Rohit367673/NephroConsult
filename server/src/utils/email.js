@@ -1,63 +1,9 @@
-import nodemailer from 'nodemailer';
 import { env, flags } from '../config.js';
 
-let transporter = null;
-
+// Resend HTTP API configuration - no SMTP needed
 if (flags.emailEnabled) {
-  // Gmail SMTP Configuration with App Password
-  // Try multiple configurations to bypass cloud provider blocking
-  const gmailConfig = {
-    service: 'gmail',
-    auth: {
-      user: env.SMTP_USER,  // Your Gmail address
-      pass: env.SMTP_PASS   // Gmail App Password (16 characters)
-    },
-    // Shorter timeouts for faster fallback
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 5000,    // 5 seconds
-    socketTimeout: 10000,     // 10 seconds
-    // Additional options for better reliability
-    pool: true,
-    maxConnections: 3,
-    maxMessages: 50
-  };
-
-  // If port is specified, use manual config to try different ports
-  if (env.SMTP_PORT) {
-    gmailConfig.host = 'smtp.gmail.com';
-    gmailConfig.port = env.SMTP_PORT;
-    gmailConfig.secure = env.SMTP_PORT == 465; // true for 465, false for 587
-    delete gmailConfig.service; // Remove service when using manual config
-  }
-
-  transporter = nodemailer.createTransport(gmailConfig);
-
-  console.log(`📧 Gmail SMTP configured for: ${env.SMTP_USER}${env.SMTP_PORT ? ` on port ${env.SMTP_PORT}` : ''}`);
-  
-  // Test connection with timeout
-  const connectionTest = new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('Connection test timeout - SMTP likely blocked by hosting provider'));
-    }, 8000);
-
-    transporter.verify((error, success) => {
-      clearTimeout(timeout);
-      if (error) {
-        reject(error);
-      } else {
-        resolve(success);
-      }
-    });
-  });
-
-  connectionTest
-    .then(() => {
-      console.log('✅ Gmail SMTP connection verified successfully');
-    })
-    .catch((error) => {
-      console.error('❌ Gmail SMTP connection failed:', error.message);
-      console.log('⚠️ Email system will use fallback display for OTP');
-    });
+  console.log(`📧 Resend API configured for: ${env.SMTP_USER}`);
+  console.log(`🔑 API Key: ${env.SMTP_PASS?.substring(0, 8)}...`);
 }
 
 export async function sendEmail(to, subject, html, options = {}) {
@@ -74,50 +20,72 @@ export async function sendEmail(to, subject, html, options = {}) {
     return { ok: true, mock: true, category };
   }
   
-  console.log(`📧 [${category}] Sending email to ${to} via Gmail SMTP`);
+  console.log(`🚀 [${category}] Sending email to ${to} via Resend API`);
   
   try {
-    const mailOptions = {
-      from: env.SMTP_FROM,
-      to: to,
-      subject: subject,
-      html: html,
-      // Additional options for better deliverability
-      replyTo: env.SMTP_FROM,
+    // Use Resend HTTP API (bypasses SMTP blocking)
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
       headers: {
-        'X-Mailer': 'NephroConsult Platform',
-        'X-Priority': '1' // High priority for OTP and important emails
-      }
-    };
-
-    // Add timeout to email sending to prevent hanging
-    const sendPromise = transporter.sendMail(mailOptions);
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Email send timeout - SMTP blocked by hosting provider')), 15000);
+        'Authorization': `Bearer ${env.SMTP_PASS}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: env.SMTP_FROM,
+        to: [to],
+        subject: subject,
+        html: html,
+        headers: {
+          'X-Mailer': 'NephroConsult Platform'
+        }
+      })
     });
 
-    const info = await Promise.race([sendPromise, timeoutPromise]);
-    
-    console.log(`✅ [${category}] Email sent successfully to ${to}`);
-    console.log(`📧 Message ID: ${info.messageId}`);
-    console.log(`📧 Response: ${info.response}`);
-    
-    return { 
-      ok: true, 
-      id: info.messageId, 
-      category, 
-      method: 'gmail-smtp',
-      response: info.response
-    };
+    if (response.ok) {
+      const result = await response.json();
+      console.log(`✅ [${category}] Email sent via Resend API to ${to}`);
+      console.log(`📧 Message ID: ${result.id}`);
+      
+      return { 
+        ok: true, 
+        id: result.id, 
+        category, 
+        method: 'resend-api'
+      };
+    } else {
+      const errorText = await response.text();
+      console.error(`❌ [${category}] Resend API failed: ${response.status} - ${errorText}`);
+      
+      // Handle domain verification issues gracefully
+      if (errorText.includes('domain is not verified') || errorText.includes('testing emails')) {
+        console.log(`⚠️ [${category}] Domain verification required - using fallback`);
+        return { 
+          ok: false, 
+          fallback: true, 
+          error: 'Domain verification required for production emails', 
+          category 
+        };
+      }
+      
+      if (critical) {
+        throw new Error(`Resend API failed: ${response.status} - ${errorText}`);
+      }
+      
+      return { 
+        ok: false, 
+        fallback: true, 
+        error: `Resend API error: ${response.status}`, 
+        category 
+      };
+    }
   } catch (error) {
-    console.error(`❌ [${category}] Gmail SMTP error:`, error.message);
-    console.error(`❌ Full error details:`, error);
+    console.error(`❌ [${category}] Resend API error:`, error.message);
     
     if (critical) {
       throw error;
     }
     
-    // Graceful fallback for non-critical emails
+    // Graceful fallback for any errors
     return { 
       ok: false, 
       fallback: true, 
