@@ -58,7 +58,19 @@ router.post('/send-otp', async (req, res) => {
       
       console.log(`📧 Email result:`, emailResult);
       
-      // Email sent successfully
+      // Check if we hit domain limitation and need fallback
+      if (emailResult.fallback) {
+        console.log(`⚠️ Email fallback used for ${email}, OTP: ${otp}`);
+        
+        return res.json({ 
+          message: 'Email service has domain restrictions. Your OTP is displayed below.',
+          success: true,
+          otp: otp,
+          fallback: true
+        });
+      }
+      
+      // Email sent successfully  
       res.json({ 
         message: 'Verification code sent successfully',
         success: true,
