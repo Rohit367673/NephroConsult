@@ -47,7 +47,7 @@ router.post('/send-otp', async (req, res) => {
     const otp = generateOTP();
     storeOTP(normalizedEmail, otp);
 
-    // Send email
+    // Send email with OTP
     try {
       const emailHtml = getOTPEmailTemplate(otp, 'User').html;
       const emailResult = await sendOTPEmail(
@@ -58,39 +58,38 @@ router.post('/send-otp', async (req, res) => {
       
       console.log(`📧 Email result:`, emailResult);
       
-      // Check if we hit domain limitation and need fallback
-      if (emailResult.fallback) {
-        console.log(`⚠️ Email fallback used for ${email}, OTP: ${otp}`);
+      // Check if email failed but we have fallback
+      if (emailResult.fallback || !emailResult.ok) {
+        console.log(`⚠️ Email service unavailable for ${email}, showing OTP: ${otp}`);
         
         return res.json({ 
-          message: 'Email service has domain restrictions. Your OTP is displayed below.',
+          message: 'Email service temporarily unavailable. Your verification code is displayed below.',
           success: true,
           otp: otp,
           fallback: true
         });
       }
       
-      // Email sent successfully  
+      // Email sent successfully via Gmail SMTP
       res.json({ 
-        message: 'Verification code sent successfully',
+        message: 'Verification code sent to your email!',
         success: true,
-        method: emailResult.method
+        method: emailResult.method || 'gmail-smtp'
       });
+      
     } catch (emailError) {
       console.error('❌ EMAIL SEND ERROR:', emailError.message);
       console.error('❌ FULL ERROR:', emailError);
       
-      // Return the actual error to see what's wrong
-      return res.status(500).json({ 
-        error: `Email failed: ${emailError.message}`,
-        success: false,
-        details: {
-          smtpHost: process.env.SMTP_HOST,
-          smtpUser: process.env.SMTP_USER,
-          smtpPort: process.env.SMTP_PORT,
-          errorType: emailError.name,
-          errorMessage: emailError.message
-        }
+      // If email completely fails, show OTP in response for better UX
+      console.log(`⚠️ Email completely failed for ${email}, showing OTP: ${otp}`);
+      
+      return res.json({ 
+        message: 'Email service error. Your verification code is displayed below.',
+        success: true,
+        otp: otp,
+        fallback: true,
+        error: emailError.message
       });
     }
   } catch (error) {

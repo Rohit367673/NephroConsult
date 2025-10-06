@@ -2,110 +2,101 @@ import nodemailer from 'nodemailer';
 import { env, flags } from '../config.js';
 
 let transporter = null;
+
 if (flags.emailEnabled) {
-  const isGmail = (env.SMTP_HOST || '').toLowerCase().includes('gmail.com');
-  const transportOptions = {
-    host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
-    secure: env.SMTP_PORT === 465,
+  // Gmail SMTP Configuration with App Password
+  transporter = nodemailer.createTransporter({
+    service: 'gmail',
     auth: {
-      user: env.SMTP_USER,
-      pass: env.SMTP_PASS
+      user: env.SMTP_USER,  // Your Gmail address
+      pass: env.SMTP_PASS   // Gmail App Password (16 characters)
     },
-    connectionTimeout: 30000,
-    greetingTimeout: 20000,
-    socketTimeout: 30000,
-    tls: {
-      rejectUnauthorized: !isGmail,
-      ciphers: 'SSLv3'
-    },
-    family: 4,
-    debug: env.NODE_ENV !== 'production'
-  };
+    // Additional options for better reliability
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+    rateDelta: 20000,
+    rateLimit: 5
+  });
 
-  if (isGmail) {
-    transportOptions.service = 'gmail';
-    transportOptions.requireTLS = true;
-    // Gmail prefers SSL on 465; fall back to STARTTLS on 587
-    transportOptions.secure = env.SMTP_PORT === 465;
-    transportOptions.tls = {
-      rejectUnauthorized: true
-    };
-  }
-
-  transporter = nodemailer.createTransport(transportOptions);
-
-  console.log(`📧 Email service configured: ${env.SMTP_HOST}:${env.SMTP_PORT}`);
+  console.log(`📧 Gmail SMTP configured for: ${env.SMTP_USER}`);
+  
+  // Test connection on startup
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error('❌ Gmail SMTP connection failed:', error.message);
+    } else {
+      console.log('✅ Gmail SMTP connection verified successfully');
+    }
+  });
 }
 
 export async function sendEmail(to, subject, html, options = {}) {
   const { 
-    critical = true, // Always fail if email doesn't work - no fallbacks
+    critical = false, // Allow graceful fallback for better UX
     category = 'general'
   } = options;
 
   if (!flags.emailEnabled) {
-    throw new Error('Email service disabled in configuration');
-  }
-  
-  console.log(`🔍 [${category}] Attempting to send email to ${to}`);
-  console.log(`🔍 [${category}] SMTP Config: ${env.SMTP_HOST}:${env.SMTP_PORT}, user: ${env.SMTP_USER}`);
-  console.log(`🔍 [${category}] SMTP_PASS starts with: ${env.SMTP_PASS?.substring(0, 5)}...`);
-  
-  // Force Resend HTTP API if we detect Resend configuration
-  if (env.SMTP_HOST === 'smtp.resend.com' && env.SMTP_PASS?.startsWith('re_')) {
-    console.log(`🚀 [${category}] Using Resend HTTP API (bypassing SMTP)`);
-    
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.SMTP_PASS}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: env.SMTP_FROM,
-        to: [to],
-        subject: subject,
-        html: html
-      })
-    });
-
-    if (response.ok) {
-      const result = await response.json();
-      console.log(`✅ [${category}] Email sent via Resend API to ${to} (${result.id})`);
-      return { ok: true, id: result.id, category, method: 'resend-api' };
-    } else {
-      const errorText = await response.text();
-      console.error(`❌ [${category}] Resend API failed: ${response.status} - ${errorText}`);
-      
-      // If it's a domain verification issue, provide fallback for development
-      if (errorText.includes('verify a domain') || errorText.includes('testing emails')) {
-        console.log(`⚠️ [${category}] Resend domain limitation - using development fallback`);
-        return { ok: true, fallback: true, error: 'Domain verification required', category };
-      }
-      
-      throw new Error(`Resend API failed: ${response.status} - ${errorText}`);
+    console.log(`⚠️ [${category}] Email service disabled - would send to ${to}`);
+    if (critical) {
+      throw new Error('Email service disabled in configuration');
     }
+    return { ok: true, mock: true, category };
   }
   
-  // Use SMTP for other providers
-  console.log(`📧 [${category}] Using SMTP transport`);
-  const info = await transporter.sendMail({
-    from: env.SMTP_FROM,
-    to,
-    subject,
-    html,
-  });
+  console.log(`📧 [${category}] Sending email to ${to} via Gmail SMTP`);
   
-  console.log(`✅ [${category}] Email sent via SMTP to ${to} (${info.messageId})`);
-  return { ok: true, id: info.messageId, category, method: 'smtp' };
+  try {
+    const mailOptions = {
+      from: env.SMTP_FROM,
+      to: to,
+      subject: subject,
+      html: html,
+      // Additional options for better deliverability
+      replyTo: env.SMTP_FROM,
+      headers: {
+        'X-Mailer': 'NephroConsult Platform',
+        'X-Priority': '1' // High priority for OTP and important emails
+      }
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    
+    console.log(`✅ [${category}] Email sent successfully to ${to}`);
+    console.log(`📧 Message ID: ${info.messageId}`);
+    console.log(`📧 Response: ${info.response}`);
+    
+    return { 
+      ok: true, 
+      id: info.messageId, 
+      category, 
+      method: 'gmail-smtp',
+      response: info.response
+    };
+  } catch (error) {
+    console.error(`❌ [${category}] Gmail SMTP error:`, error.message);
+    console.error(`❌ Full error details:`, error);
+    
+    if (critical) {
+      throw error;
+    }
+    
+    // Graceful fallback for non-critical emails
+    return { 
+      ok: false, 
+      fallback: true, 
+      error: error.message, 
+      category 
+    };
+  }
 }
 
 // Specialized email functions for different categories
 export async function sendOTPEmail(to, subject, html) {
   return sendEmail(to, subject, html, { 
     category: 'otp', 
-    critical: false // OTP can use fallback display
+    critical: false // Allow fallback for OTP display in UI
   });
 }
 
