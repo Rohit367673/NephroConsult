@@ -40,6 +40,38 @@ export async function sendEmail(to, subject, html, options = {}) {
     return { ok: true, mock: true, category };
   }
   
+  // Try Resend HTTP API first (bypass SMTP blocking)
+  if (env.SMTP_HOST === 'smtp.resend.com' && env.SMTP_PASS?.startsWith('re_')) {
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.SMTP_PASS}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: env.SMTP_FROM,
+          to: [to],
+          subject: subject,
+          html: html
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`✅ [${category}] Email sent via Resend API to ${to} (${result.id})`);
+        return { ok: true, id: result.id, category, method: 'resend-api' };
+      } else {
+        console.log(`❌ [${category}] Resend API failed: ${response.status}`);
+        throw new Error(`Resend API failed: ${response.status}`);
+      }
+    } catch (apiError) {
+      console.log(`❌ [${category}] Resend API error: ${apiError.message}`);
+      // Fall through to SMTP attempt
+    }
+  }
+  
+  // Fallback to SMTP (will likely fail on Render)
   try {
     const info = await transporter.sendMail({
       from: env.SMTP_FROM,
@@ -47,8 +79,8 @@ export async function sendEmail(to, subject, html, options = {}) {
       subject,
       html,
     });
-    console.log(`✅ [${category}] Email sent successfully to ${to} (${info.messageId})`);
-    return { ok: true, id: info.messageId, category };
+    console.log(`✅ [${category}] Email sent via SMTP to ${to} (${info.messageId})`);
+    return { ok: true, id: info.messageId, category, method: 'smtp' };
   } catch (error) {
     console.error(`❌ [${category}] Email failed to ${to}:`, error.message);
     
