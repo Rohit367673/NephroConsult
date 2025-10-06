@@ -11,10 +11,19 @@ if (flags.emailEnabled) {
       user: env.SMTP_USER, 
       pass: env.SMTP_PASS 
     },
-    // Add timeout and connection options for better reliability
+    // Enhanced connection options for Gmail SMTP issues
     connectionTimeout: 60000, // 60 seconds
-    greetingTimeout: 30000, // 30 seconds
+    greetingTimeout: 30000, // 30 seconds  
     socketTimeout: 60000, // 60 seconds
+    // Try to bypass some blocking
+    tls: {
+      rejectUnauthorized: false,
+      ciphers: 'SSLv3'
+    },
+    // Force IPv4 (sometimes helps with cloud providers)
+    family: 4,
+    // Add debug for troubleshooting
+    debug: env.NODE_ENV !== 'production'
   });
   
   console.log(`📧 Email service configured: ${env.SMTP_HOST}:${env.SMTP_PORT}`);
