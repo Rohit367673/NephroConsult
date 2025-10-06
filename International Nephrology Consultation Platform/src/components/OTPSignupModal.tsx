@@ -90,7 +90,22 @@ export function OTPSignupModal({ isOpen, onClose }: OTPSignupModalProps) {
       const response = await apiService.sendOTP(signupData.email);
       
       if (response.success) {
-        toast.success('📧 Verification code sent to your email!');
+        if (response.data?.fallback && response.data?.otp) {
+          // Email service failed, show OTP directly
+          toast.success(`⚠️ Email service unavailable. Your verification code is: ${response.data.otp}`, {
+            duration: 10000 // Show for 10 seconds
+          });
+          console.log('Fallback OTP:', response.data.otp);
+        } else if (response.data?.otp) {
+          // Development mode
+          toast.success(`📧 Development mode - Your OTP: ${response.data.otp}`, {
+            duration: 8000
+          });
+          console.log('Dev OTP:', response.data.otp);
+        } else {
+          // Normal email sent successfully
+          toast.success('📧 Verification code sent to your email!');
+        }
         setStep('otp');
         setOtpTimer(60); // 60 second timer
       } else {

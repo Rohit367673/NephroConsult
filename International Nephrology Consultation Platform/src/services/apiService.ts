@@ -3,7 +3,11 @@ const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}
 
 interface ApiResponse<T> {
   success: boolean;
-  data?: T;
+  data?: T & {
+    otp?: string;
+    fallback?: boolean;
+    mock?: boolean;
+  };
   message?: string;
   error?: string;
 }

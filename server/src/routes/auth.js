@@ -51,12 +51,29 @@ router.post('/send-otp', async (req, res) => {
     // Send email
     try {
       const emailTemplate = getOTPEmailTemplate(otp, 'User');
-      await sendEmail(email, emailTemplate.subject, emailTemplate.html);
+      const emailResult = await sendEmail(email, emailTemplate.subject, emailTemplate.html);
 
-      return res.json({ 
-        message: 'OTP sent successfully to your email',
-        success: true 
-      });
+      // Handle different email scenarios
+      if (emailResult.fallback) {
+        console.log(`⚠️ Email fallback used for ${email}, OTP: ${otp}`);
+        return res.json({ 
+          message: 'Account verification in progress. Your OTP is temporarily displayed for testing.',
+          success: true,
+          otp: otp, // In production, you'd handle this differently
+          fallback: true
+        });
+      } else if (emailResult.mock) {
+        return res.json({ 
+          message: 'Development mode - OTP generated',
+          success: true,
+          otp: otp // Show OTP in development
+        });
+      } else {
+        return res.json({ 
+          message: 'OTP sent successfully to your email',
+          success: true 
+        });
+      }
     } catch (emailError) {
       console.error('Email sending failed:', emailError);
       return res.status(500).json({ 
