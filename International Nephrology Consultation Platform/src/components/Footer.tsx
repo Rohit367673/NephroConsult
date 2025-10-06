@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Heart, Mail, Phone, MapPin, Globe, Shield, Clock, Star, Facebook, Twitter, Instagram, Linkedin, ArrowUp } from 'lucide-react';
 import { Button } from './ui/button';
@@ -206,9 +207,8 @@ export default function Footer() {
                 © 2024 NephroConsult. All rights reserved.
               </p>
               <div className="flex space-x-6 text-sm">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">Terms of Service</a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">Cookie Policy</a>
+                <Link to="/terms" className="text-gray-400 hover:text-white transition-colors">Terms &amp; Conditions</Link>
+                <Link to="/cookies" className="text-gray-400 hover:text-white transition-colors">Cookies Policy</Link>
               </div>
             </div>
 

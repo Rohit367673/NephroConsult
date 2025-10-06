@@ -31,6 +31,8 @@ import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import DoctorPhoto from './asset/PHOTO-2025-09-26-17-36-15.jpg';
 import KidneyAnatomyImage from './asset/images.jpeg';
 import HeroImage from './assets/hero-nephrology.jpg';
+import TermsPage from './pages/public/TermsPage';
+import CookiesPolicyPage from './pages/public/CookiesPolicyPage';
 import { hasFirebaseCredentials } from './config/firebase';
 
 // Regional pricing (aligned with timezoneUtils.ts)
@@ -2006,6 +2008,8 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/cookies" element={<CookiesPolicyPage />} />
             
             {/* Booking Routes */}
             <Route path="/booking" element={<BookingPage />} />

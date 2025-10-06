@@ -81,8 +81,12 @@ export function PublicLayout() {
             </div>
           </div>
 
-          <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground">
-            <p>&copy; 2024 NephroConsult. All rights reserved. | Privacy Policy | Terms of Service</p>
+          <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground space-y-2">
+            <p>&copy; 2024 NephroConsult. All rights reserved.</p>
+            <div className="flex justify-center space-x-4 text-sm">
+              <Link to="/terms" className="hover:text-foreground transition-colors">Terms &amp; Conditions</Link>
+              <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies Policy</Link>
+            </div>
           </div>
         </div>
       </footer>

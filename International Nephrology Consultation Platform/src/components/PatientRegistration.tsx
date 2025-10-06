@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { ArrowLeft, Check, Shield, Clock, Mail, Phone } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -436,8 +437,8 @@ export function PatientRegistration({ onNavigate }: PatientRegistrationProps) {
             <div className="flex items-start space-x-3">
               <Checkbox id="terms" />
               <Label htmlFor="terms" className="text-sm leading-relaxed">
-                I agree to the <a href="#" className="text-primary underline">Terms of Service</a> and 
-                <a href="#" className="text-primary underline ml-1">Privacy Policy</a>
+                I agree to the <Link to="/terms" className="text-primary underline">Terms &amp; Conditions</Link> and 
+                <Link to="/cookies" className="text-primary underline ml-1">Cookies Policy</Link>
               </Label>
             </div>
 
