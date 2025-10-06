@@ -44,40 +44,41 @@ router.post('/send-otp', async (req, res) => {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    // Generate and store OTP
     const otp = generateOTP();
     storeOTP(normalizedEmail, otp);
 
     // Send email
     try {
-      const emailTemplate = getOTPEmailTemplate(otp, 'User');
-      const emailResult = await sendOTPEmail(email, emailTemplate.subject, emailTemplate.html);
-
-      // Handle different email scenarios
-      if (emailResult.fallback) {
-        console.log(`⚠️ Email fallback used for ${email}, OTP: ${otp}`);
-        return res.json({ 
-          message: 'Account verification in progress. Your OTP is temporarily displayed for testing.',
-          success: true,
-          otp: otp, // In production, you'd handle this differently
-          fallback: true
-        });
-      } else if (emailResult.mock) {
-        return res.json({ 
-          message: 'Development mode - OTP generated',
-          success: true,
-          otp: otp // Show OTP in development
-        });
-      } else {
-        return res.json({ 
-          message: 'OTP sent successfully to your email',
-          success: true 
-        });
-      }
+      const emailHtml = getOTPEmailTemplate(otp, 'User').html;
+      const emailResult = await sendOTPEmail(
+        email,
+        'Your NephroConsult Verification Code',
+        emailHtml
+      );
+      
+      console.log(`📧 Email result:`, emailResult);
+      
+      // Email sent successfully
+      res.json({ 
+        message: 'Verification code sent successfully',
+        success: true,
+        method: emailResult.method
+      });
     } catch (emailError) {
-      console.error('Email sending failed:', emailError);
+      console.error('❌ EMAIL SEND ERROR:', emailError.message);
+      console.error('❌ FULL ERROR:', emailError);
+      
+      // Return the actual error to see what's wrong
       return res.status(500).json({ 
-        error: 'Failed to send verification email. Please try again.' 
+        error: `Email failed: ${emailError.message}`,
+        success: false,
+        details: {
+          smtpHost: process.env.SMTP_HOST,
+          smtpUser: process.env.SMTP_USER,
+          smtpPort: process.env.SMTP_PORT,
+          errorType: emailError.name,
+          errorMessage: emailError.message
+        }
       });
     }
   } catch (error) {

@@ -31,87 +31,58 @@ if (flags.emailEnabled) {
 
 export async function sendEmail(to, subject, html, options = {}) {
   const { 
-    critical = false, // If true, will throw error even in production
-    category = 'general' // Category for logging: 'otp', 'prescription', 'reminder', 'contact', etc.
+    critical = true, // Always fail if email doesn't work - no fallbacks
+    category = 'general'
   } = options;
 
   if (!flags.emailEnabled) {
-    console.log(`[email:dev:${category}]`, { to, subject });
-    return { ok: true, mock: true, category };
+    throw new Error('Email service disabled in configuration');
   }
   
-  // Try Resend HTTP API first (bypass SMTP blocking)
+  console.log(`🔍 [${category}] Attempting to send email to ${to}`);
+  console.log(`🔍 [${category}] SMTP Config: ${env.SMTP_HOST}:${env.SMTP_PORT}, user: ${env.SMTP_USER}`);
+  console.log(`🔍 [${category}] SMTP_PASS starts with: ${env.SMTP_PASS?.substring(0, 5)}...`);
+  
+  // Force Resend HTTP API if we detect Resend configuration
   if (env.SMTP_HOST === 'smtp.resend.com' && env.SMTP_PASS?.startsWith('re_')) {
-    try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${env.SMTP_PASS}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: env.SMTP_FROM,
-          to: [to],
-          subject: subject,
-          html: html
-        })
-      });
+    console.log(`🚀 [${category}] Using Resend HTTP API (bypassing SMTP)`);
+    
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.SMTP_PASS}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: env.SMTP_FROM,
+        to: [to],
+        subject: subject,
+        html: html
+      })
+    });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log(`✅ [${category}] Email sent via Resend API to ${to} (${result.id})`);
-        return { ok: true, id: result.id, category, method: 'resend-api' };
-      } else {
-        console.log(`❌ [${category}] Resend API failed: ${response.status}`);
-        throw new Error(`Resend API failed: ${response.status}`);
-      }
-    } catch (apiError) {
-      console.log(`❌ [${category}] Resend API error: ${apiError.message}`);
-      // Fall through to SMTP attempt
+    if (response.ok) {
+      const result = await response.json();
+      console.log(`✅ [${category}] Email sent via Resend API to ${to} (${result.id})`);
+      return { ok: true, id: result.id, category, method: 'resend-api' };
+    } else {
+      const errorText = await response.text();
+      console.error(`❌ [${category}] Resend API failed: ${response.status} - ${errorText}`);
+      throw new Error(`Resend API failed: ${response.status} - ${errorText}`);
     }
   }
   
-  // Fallback to SMTP (will likely fail on Render)
-  try {
-    const info = await transporter.sendMail({
-      from: env.SMTP_FROM,
-      to,
-      subject,
-      html,
-    });
-    console.log(`✅ [${category}] Email sent via SMTP to ${to} (${info.messageId})`);
-    return { ok: true, id: info.messageId, category, method: 'smtp' };
-  } catch (error) {
-    console.error(`❌ [${category}] Email failed to ${to}:`, error.message);
-    
-    // Log the failure with category for better debugging
-    console.log(`📝 [${category}] FAILED EMAIL DETAILS:`, {
-      to,
-      subject,
-      error: error.message,
-      timestamp: new Date().toISOString(),
-      htmlPreview: html.substring(0, 200) + '...'
-    });
-    
-    // In production, handle non-critical emails gracefully
-    if (env.NODE_ENV === 'production' && !critical) {
-      console.log(`📝 [${category}] FALLBACK: Email service unavailable for ${to}`);
-      
-      // Store failed email details for potential manual handling
-      console.log(`📧 [${category}] Email would have been sent:`, {
-        to,
-        subject,
-        category,
-        failureReason: error.message
-      });
-      
-      // Return success so the main process continues
-      return { ok: true, fallback: true, error: error.message, category };
-    }
-    
-    // For critical emails or development, throw the error
-    throw error;
-  }
+  // Use SMTP for other providers
+  console.log(`📧 [${category}] Using SMTP transport`);
+  const info = await transporter.sendMail({
+    from: env.SMTP_FROM,
+    to,
+    subject,
+    html,
+  });
+  
+  console.log(`✅ [${category}] Email sent via SMTP to ${to} (${info.messageId})`);
+  return { ok: true, id: info.messageId, category, method: 'smtp' };
 }
 
 // Specialized email functions for different categories
