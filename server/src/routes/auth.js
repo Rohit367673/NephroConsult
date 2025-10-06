@@ -10,15 +10,15 @@ import { env } from '../config.js';
 
 const router = express.Router();
 
-// Debug endpoint to check configuration
+// Debug endpoint to check configuration  
 router.get('/debug', (req, res) => {
-  const { flags } = require('../config.js');
   res.json({
-    emailEnabled: flags.emailEnabled,
-    smtpHost: !!process.env.SMTP_HOST,
-    smtpUser: !!process.env.SMTP_USER,
-    smtpPass: !!process.env.SMTP_PASS,
+    smtpHost: process.env.SMTP_HOST,
+    smtpUser: process.env.SMTP_USER,
+    smtpPort: process.env.SMTP_PORT,
+    smtpPassStartsWith: process.env.SMTP_PASS ? process.env.SMTP_PASS.substring(0, 3) + '...' : 'missing',
     mongoUri: !!process.env.MONGO_URI,
+    nodeEnv: process.env.NODE_ENV,
     timestamp: new Date().toISOString()
   });
 });
