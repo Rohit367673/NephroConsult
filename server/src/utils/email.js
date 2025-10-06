@@ -3,29 +3,38 @@ import { env, flags } from '../config.js';
 
 let transporter = null;
 if (flags.emailEnabled) {
-  transporter = nodemailer.createTransport({
+  const isGmail = (env.SMTP_HOST || '').toLowerCase().includes('gmail.com');
+  const transportOptions = {
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
-    secure: env.SMTP_PORT === 465, // true for 465, false for other ports
-    auth: { 
-      user: env.SMTP_USER, 
-      pass: env.SMTP_PASS 
+    secure: env.SMTP_PORT === 465,
+    auth: {
+      user: env.SMTP_USER,
+      pass: env.SMTP_PASS
     },
-    // Enhanced connection options for Gmail SMTP issues
-    connectionTimeout: 60000, // 60 seconds
-    greetingTimeout: 30000, // 30 seconds  
-    socketTimeout: 60000, // 60 seconds
-    // Try to bypass some blocking
+    connectionTimeout: 30000,
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
     tls: {
-      rejectUnauthorized: false,
+      rejectUnauthorized: !isGmail,
       ciphers: 'SSLv3'
     },
-    // Force IPv4 (sometimes helps with cloud providers)
     family: 4,
-    // Add debug for troubleshooting
     debug: env.NODE_ENV !== 'production'
-  });
-  
+  };
+
+  if (isGmail) {
+    transportOptions.service = 'gmail';
+    transportOptions.requireTLS = true;
+    // Gmail prefers SSL on 465; fall back to STARTTLS on 587
+    transportOptions.secure = env.SMTP_PORT === 465;
+    transportOptions.tls = {
+      rejectUnauthorized: true
+    };
+  }
+
+  transporter = nodemailer.createTransport(transportOptions);
+
   console.log(`📧 Email service configured: ${env.SMTP_HOST}:${env.SMTP_PORT}`);
 }
 
