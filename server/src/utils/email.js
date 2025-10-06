@@ -30,7 +30,7 @@ if (flags.emailEnabled) {
     delete gmailConfig.service; // Remove service when using manual config
   }
 
-  transporter = nodemailer.createTransporter(gmailConfig);
+  transporter = nodemailer.createTransport(gmailConfig);
 
   console.log(`📧 Gmail SMTP configured for: ${env.SMTP_USER}${env.SMTP_PORT ? ` on port ${env.SMTP_PORT}` : ''}`);
   
