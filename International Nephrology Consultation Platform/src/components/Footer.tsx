@@ -151,7 +151,7 @@ export default function Footer() {
                   <Mail className="w-5 h-5 text-[#006f6f] mt-0.5" />
                   <div>
                     <p className="font-medium">Email</p>
-                    <p className="text-gray-400">contact@nephroconsult.com</p>
+                    <p className="text-gray-400">suyambu54321@gmail.com</p>
                     <p className="text-sm text-gray-500">Response within 24 hours</p>
                   </div>
                 </div>
