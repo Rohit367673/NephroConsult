@@ -5,7 +5,7 @@ import User from '../models/User.js';
 import { auth as firebaseAuth } from '../config/firebase.js';
 import { generateOTP, storeOTP, verifyOTP } from '../utils/otp.js';
 import { getOTPEmailTemplate } from '../utils/emailTemplates.js';
-import { sendEmail } from '../utils/email.js';
+import { sendOTPEmail } from '../utils/email.js';
 import { env } from '../config.js';
 
 const router = express.Router();
@@ -51,7 +51,7 @@ router.post('/send-otp', async (req, res) => {
     // Send email
     try {
       const emailTemplate = getOTPEmailTemplate(otp, 'User');
-      const emailResult = await sendEmail(email, emailTemplate.subject, emailTemplate.html);
+      const emailResult = await sendOTPEmail(email, emailTemplate.subject, emailTemplate.html);
 
       // Handle different email scenarios
       if (emailResult.fallback) {

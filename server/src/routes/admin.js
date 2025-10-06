@@ -1,7 +1,7 @@
 import express from 'express';
 import { requireRole } from '../middlewares/auth.js';
 import Appointment from '../models/Appointment.js';
-import { sendEmail } from '../utils/email.js';
+import { sendPrescriptionEmail, sendEmail } from '../utils/email.js';
 import { z } from 'zod';
 
 const router = express.Router();
@@ -67,7 +67,7 @@ router.post('/appointments/:id/prescription', requireRole('doctor', 'admin'), as
         return m.link ? `<li><a href="${m.link}">${text}</a></li>` : `<li>${text}</li>`;
       }).join('');
 
-      await sendEmail(
+      await sendPrescriptionEmail(
         appt.patient.email,
         'Your prescription is available',
         `<p>Dear ${appt.patient.name},</p>
@@ -102,7 +102,8 @@ router.post('/appointments/:id/complete', requireRole('doctor', 'admin'), async 
         `<p>Dear ${appt.patient.name},</p>
          <p>Your consultation on ${appt.date} at ${appt.timeSlot} has been marked as completed.</p>
          <p>${appt.prescription ? 'A prescription has been added to your profile.' : ''}</p>
-         <p>— NephroConsult</p>`
+         <p>— NephroConsult</p>`,
+        { category: 'consultation' }
       );
     } catch {}
 

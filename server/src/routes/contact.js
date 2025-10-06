@@ -1,6 +1,6 @@
 import express from 'express';
 import { env } from '../config.js';
-import { sendEmail } from '../utils/email.js';
+import { sendContactEmail } from '../utils/email.js';
 import { z } from 'zod';
 
 const router = express.Router();
@@ -30,7 +30,7 @@ router.post('/', async (req, res) => {
       <p>${String(message).replace(/\n/g, '<br/>')}</p>
     `;
 
-    await sendEmail(to, `[NephroConsult Contact] ${subject}`, html);
+    await sendContactEmail(to, `[NephroConsult Contact] ${subject}`, html);
 
     return res.json({ ok: true });
   } catch (e) {

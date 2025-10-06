@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { requireAuth } from '../middlewares/auth.js';
 import { env, flags } from '../config.js';
-import { sendEmail } from '../utils/email.js';
+import { sendPaymentEmail } from '../utils/email.js';
 import { validatePaymentEnvironment, getPaymentEnvironmentInfo, logPaymentEnvironment } from '../utils/paymentValidation.js';
 
 const router = express.Router();
@@ -209,7 +209,7 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
         </html>
       `;
 
-      await sendEmail(
+      await sendPaymentEmail(
         booking_details.patientEmail,
         'Payment Successful - NephroConsult',
         emailHtml

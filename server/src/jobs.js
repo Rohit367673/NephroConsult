@@ -1,6 +1,6 @@
 import Agenda from 'agenda';
 import { env } from './config.js';
-import { sendEmail } from './utils/email.js';
+import { sendReminderEmail } from './utils/email.js';
 import { getConsultationReminderTemplate } from './utils/emailTemplates.js';
 
 let agenda = null;
@@ -10,9 +10,9 @@ export async function startJobs() {
   agenda = new Agenda({ db: { address: env.MONGO_URI, collection: 'jobs' } });
 
   agenda.define('send_email', async (job) => {
-    const { to, subject, html } = job.attrs.data || {};
+    const { to, subject, html, category = 'reminder' } = job.attrs.data || {};
     if (to && subject && html) {
-      await sendEmail(to, subject, html);
+      await sendReminderEmail(to, subject, html);
     }
   });
 

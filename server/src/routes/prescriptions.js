@@ -4,7 +4,7 @@ import { requireAuth } from '../middlewares/auth.js';
 import Prescription from '../models/Prescription.js';
 import Appointment from '../models/Appointment.js';
 import User from '../models/User.js';
-import { sendEmail } from '../utils/email.js';
+import { sendPrescriptionEmail } from '../utils/email.js';
 import { getPrescriptionEmailTemplate } from '../utils/emailTemplates.js';
 
 const router = express.Router();
@@ -154,7 +154,7 @@ router.post('/', requireAuth(['doctor', 'admin']), async (req, res) => {
         new Date(data.date).toLocaleDateString()
       );
       
-      await sendEmail(
+      await sendPrescriptionEmail(
         patient.email,
         prescriptionTemplate.subject,
         prescriptionTemplate.html

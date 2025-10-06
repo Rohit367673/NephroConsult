@@ -4,7 +4,7 @@ import Appointment from '../models/Appointment.js';
 import User from '../models/User.js';
 import { priceFor, mapConsultationTypeId } from '../utils/pricing.js';
 import { env } from '../config.js';
-import { sendEmail } from '../utils/email.js';
+import { sendBookingEmail } from '../utils/email.js';
 import { generateMeetLink } from '../utils/meet.js';
 import { scheduleAppointmentReminder } from '../jobs.js';
 import { getConsultationReminderTemplate } from '../utils/emailTemplates.js';
@@ -212,7 +212,7 @@ router.post('/appointments', requireAuth, async (req, res) => {
         </html>
       `;
       
-      await sendEmail(
+      await sendBookingEmail(
         userDoc?.email,
         'Booking Confirmed - NephroConsult',
         confirmationHtml
