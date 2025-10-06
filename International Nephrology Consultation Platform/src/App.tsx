@@ -29,6 +29,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 // Images
 import DoctorPhoto from './asset/PHOTO-2025-09-26-17-36-15.jpg';
+import KidneyAnatomyImage from './asset/images.jpeg';
 import HeroImage from './assets/hero-nephrology.jpg';
 import { hasFirebaseCredentials } from './config/firebase';
 
@@ -1098,7 +1099,7 @@ function HomePage() {
               <div className="relative h-48 sm:h-56 md:h-64 lg:h-72 xl:h-80 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl mb-4 sm:mb-5 md:mb-6">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#006f6f]/20 to-transparent z-10" />
                 <img
-                  src="/src/asset/images.jpeg"
+                  src={KidneyAnatomyImage}
                   alt="Kidney anatomy and structure"
                   className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                   loading="lazy"
