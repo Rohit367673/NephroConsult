@@ -290,6 +290,10 @@ router.post('/firebase-login', async (req, res) => {
       ]
     });
 
+    // Admin emails list
+    const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
+    const isAdmin = adminEmails.includes(firebaseUser.email);
+
     if (!user) {
       // Create new user
       user = new User({
@@ -297,17 +301,25 @@ router.post('/firebase-login', async (req, res) => {
         email: firebaseUser.email,
         firebaseUid: firebaseUser.uid,
         photoURL: firebaseUser.photoURL,
-        role: 'patient',
+        role: isAdmin ? 'admin' : 'patient',
         isEmailVerified: true, // Firebase emails are verified
         authProvider: 'google'
       });
       await user.save();
+      console.log(`👤 Created new user with role: ${user.role} for ${user.email}`);
     } else {
       // Update existing user with Firebase info
       user.firebaseUid = firebaseUser.uid;
       user.photoURL = firebaseUser.photoURL;
       user.isEmailVerified = true;
       user.authProvider = 'google';
+      
+      // Update role to admin if needed
+      if (isAdmin && user.role !== 'admin') {
+        console.log('🔧 Updating existing user role to admin for:', user.email);
+        user.role = 'admin';
+      }
+      
       await user.save();
     }
 
@@ -344,6 +356,89 @@ router.post('/logout', async (req, res) => {
     });
   } catch {
     return res.json({ ok: true });
+  }
+});
+
+// Restore session from user data (for admin panel)
+router.post('/restore-session', async (req, res) => {
+  try {
+    const { user: userData } = req.body;
+    
+    if (!userData || !userData.email) {
+      return res.status(400).json({ error: 'User data required' });
+    }
+
+    // Admin emails list
+    const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
+    
+    // Find user in database
+    console.log('🔍 Looking for user in database:', userData.email);
+    let user = await User.findOne({ email: userData.email });
+    if (!user) {
+      console.log('❌ User not found in database:', userData.email);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Update user role to admin if in admin emails list
+    if (adminEmails.includes(userData.email) && user.role !== 'admin') {
+      console.log('🔧 Updating user role to admin for:', userData.email);
+      user.role = 'admin';
+      await user.save();
+    }
+
+    console.log('👤 Found user in database:', {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      role: user.role
+    });
+
+    // Create/restore session
+    req.session.user = {
+      id: String(user._id),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      photoURL: user.photoURL
+    };
+
+    console.log('💾 Session created:', req.session.user);
+    console.log('🔒 Session ID:', req.sessionID);
+    console.log('✅ Session restored for user:', user.email, 'Role:', user.role);
+    return res.json({ success: true, user: { id: String(user._id), email: user.email, name: user.name, role: user.role } });
+  } catch (error) {
+    console.error('Session restore error:', error);
+    return res.status(500).json({ error: 'Failed to restore session' });
+  }
+});
+
+// TEMP: Fix user role to admin
+router.post('/fix-admin-role', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email required' });
+    }
+
+    console.log('🔧 Fixing admin role for:', email);
+    const user = await User.findOneAndUpdate(
+      { email: email },
+      { role: 'admin' },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log('✅ Role updated:', user.email, 'is now', user.role);
+    return res.json({ 
+      message: 'Role updated successfully',
+      user: { email: user.email, role: user.role }
+    });
+  } catch (error) {
+    console.error('Error fixing admin role:', error);
+    return res.status(500).json({ error: 'Failed to update role' });
   }
 });
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
@@ -1999,6 +1999,17 @@ function AboutPage() {
 }
 
 // Main App Component
+function ConditionalChatbot() {
+  const location = useLocation();
+  
+  // Don't show chatbot on admin pages
+  if (location.pathname.includes('/admin')) {
+    return null;
+  }
+  
+  return <SimpleChatbot />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -2040,7 +2051,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>
-        <SimpleChatbot />
+        <ConditionalChatbot />
         <Toaster position="top-right" />
       </Router>
     </AuthProvider>

@@ -99,8 +99,15 @@ export const createRazorpayOrder = async (bookingDetails: BookingDetails): Promi
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to create order');
+      console.error(`Payment API Error: ${response.status} ${response.statusText}`);
+      try {
+        const errorData = await response.json();
+        console.error('Payment API Error Details:', errorData);
+        throw new Error(errorData.error || `Failed to create payment order (${response.status})`);
+      } catch (parseError) {
+        console.error('Could not parse error response:', parseError);
+        throw new Error(`Failed to create payment order (${response.status})`);
+      }
     }
 
     const data = await response.json();

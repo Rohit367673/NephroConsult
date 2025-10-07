@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Calendar, Clock, Video, Phone, FileText, User, Star, Mail, Globe, ChevronDown, LogOut, Search, Filter, CheckCircle2, AlertCircle, Users, ClipboardList, MessageSquare, Download, ExternalLink, Copy, Share, TestTube } from 'lucide-react';
+import { Calendar, Clock, Video, Phone, FileText, User, Star, Mail, Globe, ChevronDown, LogOut, Filter, CheckCircle2, AlertCircle, Users, ClipboardList, MessageSquare, Download, ExternalLink, Copy, Share, Eye } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import adminService, { Consultation, Prescription } from '../../services/adminService';
-import TestRunner from '../../components/TestRunner';
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
@@ -30,12 +29,47 @@ export default function AdminDashboard() {
     nextVisit: ''
   });
 
+  // Restore backend session for admin access
+  const restoreSession = async () => {
+    if (!user || !user.email) return;
+    
+    try {
+      console.log('🔄 Restoring backend session for:', user.email);
+      const response = await fetch('/api/auth/restore-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ user })
+      });
+
+      if (response.ok) {
+        console.log('✅ Backend session restored successfully');
+      } else {
+        console.warn('⚠️ Session restoration failed:', response.status);
+      }
+    } catch (error) {
+      console.warn('⚠️ Error restoring session:', error);
+    }
+  };
+
   // Load consultations data
   useEffect(() => {
     const loadConsultations = async () => {
       try {
         setLoading(true);
+        console.log('👤 Current user:', user);
+        console.log('👤 User role:', user?.role);
+        console.log('👤 User email:', user?.email);
+        
+        // First restore the backend session
+        await restoreSession();
+        
+        // Then fetch consultations
         const data = await adminService.getConsultations();
+        console.log('🏥 Admin Dashboard received consultations:', data);
+        console.log('🏥 Total consultations:', data.length);
         setConsultations(data);
       } catch (error) {
         toast.error('Failed to load consultations');
@@ -44,8 +78,10 @@ export default function AdminDashboard() {
       }
     };
     
-    loadConsultations();
-  }, []);
+    if (user) {
+      loadConsultations();
+    }
+  }, [user]);
 
   // Verify admin access
   useEffect(() => {
@@ -70,8 +106,16 @@ export default function AdminDashboard() {
                       (activeTab === 'upcoming' && consultation.status === 'upcoming') ||
                       (activeTab === 'completed' && consultation.status === 'completed');
     
-    return matchesSearch && matchesFilter && matchesTab;
+    const passes = matchesSearch && matchesFilter && matchesTab;
+    
+    if (!passes) {
+      console.log(`🔍 Filtered out consultation: ${consultation.patientName} - Status: ${consultation.status}, ActiveTab: ${activeTab}, FilterStatus: ${filterStatus}`);
+    }
+    
+    return passes;
   });
+  
+  console.log('🔍 Filtered consultations:', filteredConsultations.length, 'of', consultations.length);
 
   const addMedicine = () => {
     setPrescriptionForm(prev => ({
@@ -100,17 +144,17 @@ export default function AdminDashboard() {
     if (!selectedConsultation) return;
 
     try {
-      // Update consultation with prescription
-      const updatedConsultations = consultations.map(consultation =>
-        consultation.id === selectedConsultation.id
-          ? {
-              ...consultation,
-              prescription: prescriptionForm,
-              status: 'completed' as const
-            }
-          : consultation
+      toast.info('Creating prescription...');
+      
+      // Call the backend API to create prescription
+      await adminService.createPrescription(
+        selectedConsultation.id, 
+        prescriptionForm, 
+        user?.name || 'Dr. Ilango S. Prakasam'
       );
       
+      // Reload consultations to get updated data from backend
+      const updatedConsultations = await adminService.getConsultations();
       setConsultations(updatedConsultations);
       
       // Reset form
@@ -123,8 +167,9 @@ export default function AdminDashboard() {
       setIsCreatingPrescription(false);
       setSelectedConsultation(null);
       
-      toast.success('Prescription created and sent to patient!');
+      toast.success('Prescription created and consultation completed!');
     } catch (error) {
+      console.error('Error creating prescription:', error);
       toast.error('Failed to create prescription');
     }
   };
@@ -248,25 +293,9 @@ export default function AdminDashboard() {
                       >
                         Completed ({completedCount})
                       </Button>
-                      <Button
-                        variant={activeTab === 'tests' ? 'default' : 'outline'}
-                        onClick={() => setActiveTab('tests')}
-                        className={activeTab === 'tests' ? 'bg-[#006f6f] hover:bg-[#005555]' : ''}
-                      >
-                        <TestTube className="w-4 h-4 mr-2" />
-                        Data Tests
-                      </Button>
+                      
                     </div>
                     
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input
-                        placeholder="Search patients..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
                       <SelectTrigger className="w-32">
                         <SelectValue />
@@ -282,15 +311,9 @@ export default function AdminDashboard() {
               </CardHeader>
               
               <CardContent className="p-0">
-                {/* Test Runner Tab */}
-                {activeTab === 'tests' && (
-                  <div className="p-6">
-                    <TestRunner />
-                  </div>
-                )}
 
                 {/* Consultations Tab */}
-                {activeTab !== 'tests' && (
+                <div>
                   <div className="max-h-96 overflow-y-auto">
                     {filteredConsultations.map((consultation) => (
                     <motion.div
@@ -378,7 +401,7 @@ export default function AdminDashboard() {
                     </motion.div>
                   ))}
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -420,26 +443,79 @@ export default function AdminDashboard() {
                     </p>
                   </div>
 
-                  {/* Documents */}
-                  {selectedConsultation.documents.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Uploaded Documents</h3>
+                  {/* Documents Section - Always show */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Patient Documents</h3>
+                    {selectedConsultation.documents && selectedConsultation.documents.length > 0 ? (
                       <div className="space-y-2">
-                        {selectedConsultation.documents.map((doc, index) => (
-                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                            <span className="text-sm">{doc}</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => downloadDocument(doc)}
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
+                        {selectedConsultation.documents.map((doc: any, index: any) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="flex items-center space-x-3">
+                              <FileText className="w-5 h-5 text-blue-600" />
+                              <div>
+                                <p className="text-sm font-medium text-blue-900">
+                                  {typeof doc === 'string' ? doc : doc.name || `Document ${index + 1}`}
+                                </p>
+                                {doc.size && (
+                                  <p className="text-xs text-blue-600">Size: {doc.size}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                onClick={() => {
+                                  // Handle document viewing
+                                  if (typeof doc === 'string' && doc.startsWith('data:')) {
+                                    // Base64 document - open in new tab
+                                    const newWindow = window.open();
+                                    if (newWindow) {
+                                      newWindow.document.write(`<iframe src="${doc}" style="width:100%;height:100%;border:none;"></iframe>`);
+                                    }
+                                  } else {
+                                    console.log('Document:', doc);
+                                    toast.info('Opening document viewer...');
+                                    // In a real app, this would download/view the document
+                                    window.open(doc, '_blank');
+                                  }
+                                }}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                onClick={() => {
+                                  console.log('Downloading document:', doc);
+                                  toast.info('Document download started...');
+                                  // In a real app, this would trigger file download
+                                  if (typeof doc === 'string' && doc.startsWith('data:')) {
+                                    const link = document.createElement('a');
+                                    link.href = doc;
+                                    link.download = `document_${index + 1}`;
+                                    link.click();
+                                  }
+                                }}
+                              >
+                                <Download className="w-4 h-4 mr-1" />
+                                Download
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="text-center py-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                        <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">No documents uploaded by patient</p>
+                        <p className="text-xs text-gray-400 mt-1">Documents uploaded during booking will appear here</p>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Meeting Details */}
                   {selectedConsultation.status === 'upcoming' && selectedConsultation.meetingLink && (
@@ -456,14 +532,28 @@ export default function AdminDashboard() {
                           <div className="text-xs text-blue-800 font-mono bg-white p-2 rounded border break-all flex-1">
                             {selectedConsultation.meetingLink}
                           </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyMeetingLink(selectedConsultation.meetingLink!)}
-                            className="shrink-0 border-blue-300 text-blue-700 hover:bg-blue-100"
-                          >
-                            <Copy className="w-3 h-3" />
-                          </Button>
+                          <div className="flex space-x-1 shrink-0">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => copyMeetingLink(selectedConsultation.meetingLink!)}
+                              className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="bg-[#006f6f] hover:bg-[#005555] text-white"
+                              onClick={() => {
+                                if (selectedConsultation.meetingLink) {
+                                  window.open(selectedConsultation.meetingLink, '_blank');
+                                }
+                              }}
+                            >
+                              <Video className="w-3 h-3 mr-1" />
+                              Join
+                            </Button>
+                          </div>
                         </div>
                         <p className="text-xs text-blue-600 mt-2">
                           ✓ This URL is automatically shared with the patient

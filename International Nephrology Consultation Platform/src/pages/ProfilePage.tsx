@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { User, Mail, Phone, MapPin, Calendar, Clock, FileText, Heart, Shield, Edit3, Save, Camera, Star, Award, Bell, Video, Upload, Activity, TrendingUp, CheckCircle2, Menu, X, LogOut, CreditCard, Download, Eye, ExternalLink, AlertCircle, Plus } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -268,6 +268,41 @@ function Navigation() {
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
+  
+  // Helper function to get correct currency display
+  const getCorrectCurrency = (appointment: any) => {
+    const userCountry = user?.country || 'US';
+    
+    console.log('💰 Currency function called with:', {
+      appointment_price: appointment.price,
+      user_country: userCountry,
+      api_currency: appointment.price?.currency
+    });
+    
+    // Override API currency based on user's country (API has wrong currency)
+    if (userCountry === 'IN' || userCountry === 'India') {
+      // Convert USD to INR or use appropriate Indian pricing
+      let amount = appointment.price?.amount || 2500;
+      
+      // If API returned USD but user is Indian, convert or use appropriate INR amount
+      if (appointment.price?.currency === 'USD' && appointment.price?.amount) {
+        // Convert: $120 → ₹2500 (rough conversion for consultation pricing)
+        amount = appointment.price.amount <= 150 ? 2500 : 1800; // Initial vs followup
+      }
+      
+      console.log('💰 Using Indian currency (converted):', `₹${amount}`);
+      return `₹${amount}`;
+    } else {
+      // For non-Indian users, use API data as-is
+      if (appointment.price?.symbol && appointment.price?.amount) {
+        console.log('💰 Using API currency:', `${appointment.price.symbol}${appointment.price.amount}`);
+        return `${appointment.price.symbol}${appointment.price.amount}`;
+      }
+      const amount = appointment.price?.amount || 150;
+      console.log('💰 Using USD fallback:', `$${amount}`);
+      return `$${amount}`;
+    }
+  };
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState(user?.role === 'doctor' ? 'doctor-dashboard' : 'dashboard');
@@ -299,106 +334,152 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState<ProfileData>({
     name: user?.name || '',
     email: user?.email || '',
-    phone: '+1 (555) 123-4567',
-    age: '35',
-    gender: 'Male',
-    country: 'United States',
-    address: '123 Main St, New York, NY 10001',
-    emergencyContact: '+1 (555) 987-6543',
-    medicalHistory: 'Hypertension since 2018, managed with medication. Family history of kidney disease.',
-    allergies: 'Penicillin, Shellfish',
-    currentMedications: 'Lisinopril 10mg daily, Metformin 500mg twice daily',
-    bloodType: 'A+'
+    phone: (user as any)?.phone || '+1 (555) 123-4567',
+    age: (user as any)?.age || '35',
+    gender: (user as any)?.gender || 'Male',
+    country: user?.country === 'IN' ? 'India' : 
+             user?.country === 'US' ? 'United States' :
+             user?.country === 'GB' ? 'United Kingdom' :
+             user?.country === 'EU' ? 'Europe' :
+             user?.country || 'United States',
+    address: (user as any)?.address || '123 Main St, New York, NY 10001',
+    emergencyContact: (user as any)?.emergencyContact || '+1 (555) 987-6543',
+    medicalHistory: (user as any)?.medicalHistory || 'Hypertension since 2018, managed with medication. Family history of kidney disease.',
+    allergies: (user as any)?.allergies || 'Penicillin, Shellfish',
+    currentMedications: (user as any)?.currentMedications || 'Lisinopril 10mg daily, Metformin 500mg twice daily',
+    bloodType: (user as any)?.bloodType || 'A+'
   });
 
   // Mock appointments data with enhanced fields
-  const appointments = [
-    {
-      id: 1,
-      date: '2025-10-05',
-      time: '10:00 AM',
-      istTime: '14:30',
-      type: 'Initial Consultation',
-      status: 'Upcoming',
-      doctor: 'Dr. Ilango S. Prakasam',
-      meetLink: 'https://meet.google.com/abc-defg-hij',
-      price: 2500,
-      currency: 'INR',
-      paymentStatus: 'Paid'
-    },
-    {
-      id: 2,
-      date: '2025-09-15',
-      time: '2:30 PM',
-      istTime: '19:00',
-      type: 'Follow-up',
-      status: 'Completed',
-      doctor: 'Dr. Ilango S. Prakasam',
-      meetLink: 'https://meet.google.com/xyz-uvwx-yz',
-      price: 1800,
-      currency: 'INR',
-      paymentStatus: 'Paid',
-      prescription: {
-        id: 'RX001',
-        medicines: [
-          { name: 'Lisinopril 10mg', dosage: '1 tablet daily', url: 'https://1mg.com/drugs/lisinopril' },
-          { name: 'Metformin 500mg', dosage: '2 tablets daily', url: 'https://1mg.com/drugs/metformin' }
-        ],
-        advice: 'Continue current medication. Monitor blood pressure daily.',
-        followUpDate: '2025-10-15'
-      }
-    },
-    {
-      id: 3,
-      date: '2025-08-20',
-      time: '11:00 AM',
-      istTime: '15:30',
-      type: 'Follow-up',
-      status: 'Completed',
-      doctor: 'Dr. Ilango S. Prakasam',
-      meetLink: 'https://meet.google.com/def-ghij-klm',
-      price: 1800,
-      currency: 'INR',
-      paymentStatus: 'Paid',
-      prescription: {
-        id: 'RX002',
-        medicines: [
-          { name: 'Amlodipine 5mg', dosage: '1 tablet daily', url: 'https://1mg.com/drugs/amlodipine' },
-          { name: 'Atorvastatin 20mg', dosage: '1 tablet at night', url: 'https://1mg.com/drugs/atorvastatin' }
-        ],
-        advice: 'Continue medication as prescribed. Regular exercise recommended.',
-        followUpDate: '2025-09-20'
-      }
-    },
-    {
-      id: 4,
-      date: '2025-07-10',
-      time: '3:00 PM',
-      istTime: '19:30',
-      type: 'Initial Consultation',
-      status: 'Completed',
-      doctor: 'Dr. Ilango S. Prakasam',
-      meetLink: 'https://meet.google.com/nop-qrst-uvw',
-      price: 2500,
-      currency: 'INR',
-      paymentStatus: 'Paid',
-      prescription: {
-        id: 'RX003',
-        medicines: [
-          { name: 'Losartan 50mg', dosage: '1 tablet daily', url: 'https://1mg.com/drugs/losartan' },
-          { name: 'Furosemide 40mg', dosage: '1 tablet twice daily', url: 'https://1mg.com/drugs/furosemide' }
-        ],
-        advice: 'Monitor kidney function regularly. Reduce salt intake.',
-        followUpDate: '2025-08-10'
-      }
+  // Fetch real appointments from API
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [doctorAppointments, setDoctorAppointments] = useState<any[]>([]);
+  const [doctorStats, setDoctorStats] = useState({
+    todayAppointments: 0,
+    totalPatients: 0,
+    upcomingConsultations: 0,
+    completedToday: 0
+  });
+  
+  // Update profileData when user changes
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: (user as any)?.phone || '+1 (555) 123-4567',
+        age: (user as any)?.age || '35',
+        gender: (user as any)?.gender || 'Male',
+        country: user?.country === 'IN' ? 'India' : 
+                 user?.country === 'US' ? 'United States' :
+                 user?.country === 'GB' ? 'United Kingdom' :
+                 user?.country === 'EU' ? 'Europe' :
+                 user?.country || 'United States',
+        address: (user as any)?.address || '123 Main St, New York, NY 10001',
+        emergencyContact: (user as any)?.emergencyContact || '+1 (555) 987-6543',
+        medicalHistory: (user as any)?.medicalHistory || 'Hypertension since 2018, managed with medication. Family history of kidney disease.',
+        allergies: (user as any)?.allergies || 'Penicillin, Shellfish',
+        currentMedications: (user as any)?.currentMedications || 'Lisinopril 10mg daily, Metformin 500mg twice daily',
+        bloodType: (user as any)?.bloodType || 'A+'
+      });
     }
-  ];
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.role === 'patient') {
+      fetchAppointments();
+    } else if (user?.role === 'doctor') {
+      fetchDoctorAppointments();
+    }
+  }, [user?.role]);
+  
+  const fetchAppointments = async () => {
+    try {
+      setAppointmentsLoading(true);
+      const response = await fetch('/api/appointments/mine', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📋 API Response:', data);
+        console.log('📋 Appointments array:', data.appointments);
+        if (data.appointments && data.appointments.length > 0) {
+          console.log('📋 First appointment details:', data.appointments[0]);
+          console.log('📋 Meet link field:', data.appointments[0].meetLink);
+          console.log('📋 Price details:', data.appointments[0].price);
+        }
+        setAppointments(data.appointments || []); // Empty array instead of dummy data
+      } else {
+        console.error('Failed to fetch appointments');
+        setAppointments([]); // Empty array instead of dummy data
+      }
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      setAppointments([]); // Empty array instead of dummy data
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  };
+
+  const fetchDoctorAppointments = async () => {
+    try {
+      setAppointmentsLoading(true);
+      const response = await fetch('/api/appointments/doctor', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📋 Doctor appointments:', data);
+        setDoctorAppointments(data.appointments || []);
+        
+        // Calculate real statistics
+        const today = new Date().toDateString();
+        const todayAppointments = data.appointments?.filter((apt: any) => 
+          new Date(apt.date).toDateString() === today
+        ).length || 0;
+        
+        const upcomingConsultations = data.appointments?.filter((apt: any) => 
+          apt.status === 'confirmed' && new Date(apt.date) >= new Date()
+        ).length || 0;
+        
+        const completedToday = data.appointments?.filter((apt: any) => 
+          apt.status === 'completed' && new Date(apt.date).toDateString() === today
+        ).length || 0;
+        
+        const uniquePatients = new Set(data.appointments?.map((apt: any) => apt.patient?.email)).size || 0;
+        
+        setDoctorStats({
+          todayAppointments,
+          totalPatients: uniquePatients,
+          upcomingConsultations,
+          completedToday
+        });
+      } else {
+        console.error('Failed to fetch doctor appointments');
+        setDoctorAppointments([]);
+      }
+    } catch (error) {
+      console.error('Error fetching doctor appointments:', error);
+      setDoctorAppointments([]);
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  };
 
   // Smart appointment filtering logic - Dashboard shows max 2 appointments
   const getDisplayAppointments = () => {
-    const upcoming = appointments.filter(apt => apt.status === 'Upcoming');
-    const completed = appointments.filter(apt => apt.status === 'Completed').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    console.log('Filtering appointments:', appointments);
+    console.log('Available statuses:', appointments.map(apt => apt.status));
+    console.log('First appointment full data:', appointments[0]);
+    console.log('Meet link check:', appointments[0]?.meetLink);
+    console.log('Price check:', appointments[0]?.price);
     
+    // Map API status values to display values
+    const upcoming = appointments.filter(apt => apt.status === 'confirmed' || apt.status === 'Upcoming');
+    const completed = appointments.filter(apt => apt.status === 'completed' || apt.status === 'Completed').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     // Dashboard shows: 1 upcoming + 1 most recent completed (max 2 total)
     const dashboardAppointments = [];
     
@@ -464,9 +545,46 @@ export default function ProfilePage() {
   };
 
   const handleDownloadReceipt = (appointment: any) => {
-    // Simulate receipt download
-    toast.success(`Receipt for ${appointment.type} on ${appointment.date} downloaded successfully!`);
-    // In real app, this would generate and download a PDF receipt
+    // Generate and download receipt
+    const receiptContent = `
+NephroConsult - Payment Receipt
+=====================================
+
+Receipt ID: ${appointment._id || 'APT_' + Date.now()}
+Date: ${new Date().toLocaleDateString()}
+
+CONSULTATION DETAILS:
+Type: ${appointment.type}
+Date: ${appointment.date}
+Time: ${appointment.timeSlot || appointment.time}
+Doctor: ${appointment.doctor?.name || 'Dr. Ilango S. Prakasam'}
+
+PATIENT DETAILS:
+Name: ${appointment.patient?.name || user?.name}
+Email: ${appointment.patient?.email || user?.email}
+
+PAYMENT DETAILS:
+Amount: ${getCorrectCurrency(appointment)}
+Currency: ${user?.country === 'IN' || user?.country === 'India' ? 'INR' : 'USD'}
+Status: ${appointment.paymentStatus || 'Paid'}
+${appointment.price?.discountApplied ? 'Discount Applied: First consultation' : ''}
+
+Thank you for choosing NephroConsult!
+For support: suyambu54321@gmail.com
+    `.trim();
+
+    // Create and download file
+    const blob = new Blob([receiptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Receipt_${appointment.type.replace(' ', '_')}_${appointment.date}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    toast.success('Receipt downloaded successfully!');
   };
 
   const containerVariants = {
@@ -540,30 +658,26 @@ export default function ProfilePage() {
                           onError={(e) => {
                             console.log('Profile image failed to load, trying fallback methods');
                             
-                            // Try alternative Google image URL
                             const currentSrc = e.currentTarget.src;
-                            if (currentSrc.includes('googleusercontent.com') && !currentSrc.includes('proxy')) {
+                            
+                            // Prevent infinite loops - if already tried CORS proxy, fall back to default
+                            if (currentSrc.includes('images.weserv.nl') || currentSrc.includes('proxy')) {
+                              console.log('Already tried CORS proxy, using default avatar');
+                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNTAiIGZpbGw9IiM2MzY2ZjEiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjQwIiByPSIxNSIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMjAgNzVDMjAgNjUgMzUgNTUgNTAgNTVTODAgNjUgODAgNzVWODVIMjBWNzVaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==';
+                              return;
+                            }
+                            
+                            // Try CORS proxy for Google images (only once)
+                            if (currentSrc.includes('googleusercontent.com')) {
                               const newSrc = `https://images.weserv.nl/?url=${encodeURIComponent(currentSrc)}&w=300&h=300&fit=cover&mask=circle`;
                               console.log('Trying CORS proxy:', newSrc);
                               e.currentTarget.src = newSrc;
                               return;
                             }
                             
-                            // Try without size restrictions
-                            if (currentSrc.includes('googleusercontent.com') && currentSrc.includes('=s')) {
-                              const newSrc = currentSrc.replace(/=s\d+-c$/, '');
-                              console.log('Trying without size restrictions:', newSrc);
-                              e.currentTarget.src = newSrc;
-                              return;
-                            }
-                            
-                            // Final fallback to initials
-                            console.log('All image loading attempts failed, showing initials');
-                            e.currentTarget.style.display = 'none';
-                            const parent = e.currentTarget.parentElement;
-                            if (parent) {
-                              parent.innerHTML = `<span class="text-white text-4xl font-bold">${user?.name?.charAt(0) || 'U'}</span>`;
-                            }
+                            // Final fallback - default avatar
+                            console.log('Using default avatar as final fallback');
+                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNTAiIGZpbGw9IiM2MzY2ZjEiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjQwIiByPSIxNSIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMjAgNzVDMjAgNjUgMzUgNTUgNTAgNTVTODAgNjUgODAgNzVWODVIMjBWNzVaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==';
                           }}
                         />
                       ) : (
@@ -593,11 +707,16 @@ export default function ProfilePage() {
 
                   <div className="grid grid-cols-2 gap-4 text-center">
                     <div>
-                      <div className="text-2xl font-bold text-[#006f6f]">12</div>
+                      <div className="text-2xl font-bold text-[#006f6f]">{appointments.length}</div>
                       <div className="text-sm text-gray-600">Consultations</div>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-[#006f6f]">2</div>
+                      <div className="text-2xl font-bold text-[#006f6f]">
+                        {appointments.length > 0 
+                          ? Math.max(1, Math.floor((new Date().getTime() - new Date(appointments[0]?.createdAt || appointments[0]?.date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)))
+                          : 0
+                        }
+                      </div>
                       <div className="text-sm text-gray-600">Years Active</div>
                     </div>
                   </div>
@@ -724,7 +843,7 @@ export default function ProfilePage() {
                               <div className="flex items-center justify-between">
                                 <div>
                                   <p className="text-sm text-gray-600">Today's Appointments</p>
-                                  <p className="text-3xl font-bold text-[#006f6f]">8</p>
+                                  <p className="text-3xl font-bold text-[#006f6f]">{doctorStats.todayAppointments}</p>
                                 </div>
                                 <Calendar className="w-12 h-12 text-[#006f6f]/20" />
                               </div>
@@ -735,7 +854,7 @@ export default function ProfilePage() {
                               <div className="flex items-center justify-between">
                                 <div>
                                   <p className="text-sm text-gray-600">Total Patients</p>
-                                  <p className="text-3xl font-bold text-[#006f6f]">1,247</p>
+                                  <p className="text-3xl font-bold text-[#006f6f]">{doctorStats.totalPatients}</p>
                                 </div>
                                 <User className="w-12 h-12 text-[#006f6f]/20" />
                               </div>
@@ -745,8 +864,8 @@ export default function ProfilePage() {
                             <CardContent className="p-6">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <p className="text-sm text-gray-600">Success Rate</p>
-                                  <p className="text-3xl font-bold text-[#006f6f]">98%</p>
+                                  <p className="text-sm text-gray-600">Upcoming Consultations</p>
+                                  <p className="text-3xl font-bold text-[#006f6f]">{doctorStats.upcomingConsultations}</p>
                                 </div>
                                 <TrendingUp className="w-12 h-12 text-[#006f6f]/20" />
                               </div>
@@ -761,20 +880,32 @@ export default function ProfilePage() {
                             </CardHeader>
                             <CardContent>
                               <div className="space-y-4">
-                                {[
-                                  { time: '9:00 AM', patient: 'John Smith', type: 'Initial Consultation' },
-                                  { time: '10:30 AM', patient: 'Sarah Johnson', type: 'Follow-up' },
-                                  { time: '2:00 PM', patient: 'Michael Brown', type: 'Lab Review' },
-                                  { time: '3:30 PM', patient: 'Emily Davis', type: 'Urgent Consultation' }
-                                ].map((appointment, index) => (
-                                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                {appointmentsLoading ? (
+                                  <p className="text-center text-gray-500">Loading appointments...</p>
+                                ) : doctorAppointments.length === 0 ? (
+                                  <p className="text-center text-gray-500">No appointments scheduled</p>
+                                ) : doctorAppointments.filter(apt => 
+                                  new Date(apt.date).toDateString() === new Date().toDateString()
+                                ).map((appointment) => (
+                                  <div key={appointment._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div>
-                                      <p className="font-medium">{appointment.patient}</p>
+                                      <p className="font-medium">{appointment.patient?.name || 'Patient'}</p>
                                       <p className="text-sm text-gray-600">{appointment.type}</p>
+                                      <p className="text-xs text-gray-500">{appointment.patient?.email}</p>
                                     </div>
                                     <div className="text-right">
-                                      <p className="font-medium text-[#006f6f]">{appointment.time}</p>
-                                      <Button size="sm" variant="outline">View</Button>
+                                      <p className="font-medium text-[#006f6f]">{appointment.timeSlot}</p>
+                                      <div className="flex gap-2 mt-2">
+                                        {appointment.meetLink && (
+                                          <button
+                                            className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                                            onClick={() => window.open(appointment.meetLink, '_blank')}
+                                          >
+                                            Join Meeting
+                                          </button>
+                                        )}
+                                        <Button size="sm" variant="outline">View</Button>
+                                      </div>
                                     </div>
                                   </div>
                                 ))}
@@ -788,26 +919,131 @@ export default function ProfilePage() {
                             </CardHeader>
                             <CardContent>
                               <div className="space-y-3">
-                                <Button className="w-full justify-start" variant="outline">
+                                <Button 
+                                  className="w-full justify-start" 
+                                  variant="outline"
+                                  onClick={() => setActiveTab('schedule')}
+                                >
                                   <Calendar className="w-4 h-4 mr-2" />
-                                  Manage Schedule
+                                  View Today's Schedule
                                 </Button>
-                                <Button className="w-full justify-start" variant="outline">
+                                <Button 
+                                  className="w-full justify-start" 
+                                  variant="outline"
+                                  onClick={() => {
+                                    // Refresh appointments
+                                    fetchDoctorAppointments();
+                                  }}
+                                >
                                   <FileText className="w-4 h-4 mr-2" />
-                                  Patient Records
+                                  Refresh Patient List
                                 </Button>
-                                <Button className="w-full justify-start" variant="outline">
+                                <Button 
+                                  className="w-full justify-start bg-green-600 hover:bg-green-700 text-white"
+                                  onClick={() => {
+                                    // Open the next upcoming meeting
+                                    const upcomingMeeting = doctorAppointments.find(apt => 
+                                      apt.status === 'confirmed' && 
+                                      new Date(apt.date) >= new Date() && 
+                                      apt.meetLink
+                                    );
+                                    if (upcomingMeeting) {
+                                      window.open(upcomingMeeting.meetLink, '_blank');
+                                    } else {
+                                      alert('No upcoming consultations with meeting links available');
+                                    }
+                                  }}
+                                >
                                   <Video className="w-4 h-4 mr-2" />
-                                  Start Consultation
-                                </Button>
-                                <Button className="w-full justify-start" variant="outline">
-                                  <Upload className="w-4 h-4 mr-2" />
-                                  Upload Resources
+                                  Join Next Consultation
                                 </Button>
                               </div>
                             </CardContent>
                           </Card>
                         </div>
+
+                        {/* Doctor Appointment Management */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>All Appointments</CardTitle>
+                            <div className="flex gap-2 mt-4">
+                              <Button 
+                                size="sm" 
+                                variant={activeTab === 'upcoming' ? 'default' : 'outline'}
+                                onClick={() => setActiveTab('upcoming')}
+                              >
+                                Upcoming ({doctorStats.upcomingConsultations})
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant={activeTab === 'completed' ? 'default' : 'outline'}
+                                onClick={() => setActiveTab('completed')}
+                              >
+                                Completed ({doctorStats.completedToday})
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => fetchDoctorAppointments()}
+                              >
+                                🔄 Refresh
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              {appointmentsLoading ? (
+                                <p className="text-center text-gray-500">Loading appointments...</p>
+                              ) : doctorAppointments.length === 0 ? (
+                                <p className="text-center text-gray-500">No appointments found</p>
+                              ) : doctorAppointments
+                                .filter(apt => {
+                                  if (activeTab === 'upcoming') return apt.status === 'confirmed';
+                                  if (activeTab === 'completed') return apt.status === 'completed';
+                                  return true; // show all by default
+                                })
+                                .map((appointment) => (
+                                <div key={appointment._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <h4 className="font-semibold">{appointment.type}</h4>
+                                      <p className="text-sm text-gray-600">
+                                        Patient: {appointment.patient?.name || 'Unknown'}
+                                      </p>
+                                      <p className="text-sm text-gray-600">
+                                        Email: {appointment.patient?.email || 'N/A'}
+                                      </p>
+                                      <p className="text-sm text-gray-500">
+                                        {new Date(appointment.date).toLocaleDateString()} at {appointment.timeSlot}
+                                      </p>
+                                      <span className={`inline-block px-2 py-1 text-xs rounded mt-2 ${
+                                        appointment.status === 'confirmed' 
+                                          ? 'bg-green-100 text-green-800' 
+                                          : 'bg-blue-100 text-blue-800'
+                                      }`}>
+                                        {appointment.status}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                      {appointment.meetLink && appointment.status === 'confirmed' && (
+                                        <button
+                                          className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                                          onClick={() => window.open(appointment.meetLink, '_blank')}
+                                        >
+                                          <Video className="w-4 h-4 inline mr-1" />
+                                          Join Meeting
+                                        </button>
+                                      )}
+                                      <Button size="sm" variant="outline">
+                                        View Details
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
                       </>
                     ) : (
                       // Patient Dashboard
@@ -843,7 +1079,7 @@ export default function ProfilePage() {
                               <div className="space-y-4">
                                 {displayAppointments.map((appointment) => (
                                   <motion.div
-                                    key={appointment.id}
+                                    key={appointment._id || appointment.id}
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: appointment.id * 0.1 }}
@@ -854,9 +1090,16 @@ export default function ProfilePage() {
                                         <div className={`p-3 rounded-full ${
                                           appointment.status === 'Upcoming' ? 'bg-blue-100' : 'bg-green-100'
                                         }`}>
-                                          <Calendar className={`w-5 h-5 ${
-                                            appointment.status === 'Upcoming' ? 'text-blue-600' : 'text-green-600'
-                                          }`} />
+                                          <Badge 
+                                            variant="outline" 
+                                            className={
+                                              appointment.status === 'completed' 
+                                                ? 'text-blue-700 border-blue-300 bg-blue-50' 
+                                                : 'text-green-700 border-green-300'
+                                            }
+                                          >
+                                            {appointment.status || 'confirmed'}
+                                          </Badge>
                                         </div>
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2 mb-2">
@@ -868,52 +1111,74 @@ export default function ProfilePage() {
                                           <div className="space-y-1 text-sm text-gray-600">
                                             <p className="flex items-center">
                                               <Clock className="w-4 h-4 mr-2" />
-                                              {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
-                                              <span className="ml-2 text-xs text-gray-500">(IST: {appointment.istTime})</span>
+                                              {new Date(appointment.date).toLocaleDateString()} at {appointment.timeSlot || appointment.time}
+                                              <span className="ml-2 text-xs text-gray-500">(IST: {appointment.timeSlot || appointment.istTime})</span>
                                             </p>
                                             <p className="flex items-center">
                                               <User className="w-4 h-4 mr-2" />
-                                              {appointment.doctor}
+                                              {appointment.doctor?.name || 'Dr. Ilango S. Prakasam'}
                                             </p>
                                             <p className="flex items-center">
                                               <CreditCard className="w-4 h-4 mr-2" />
-                                              ₹{appointment.price} - {appointment.paymentStatus}
+                                              {getCorrectCurrency(appointment)} - {appointment.paymentStatus || 'Paid'}
                                             </p>
                                           </div>
                                         </div>
                                       </div>
                                       
-                                      <div className="flex flex-col sm:flex-row gap-2">
-                                        {appointment.status === 'Upcoming' && (
-                                          <Button 
-                                            size="sm" 
-                                            className="bg-green-600 hover:bg-green-700"
-                                            onClick={() => window.open(appointment.meetLink, '_blank')}
-                                          >
-                                            <Video className="w-4 h-4 mr-2" />
-                                            Join Meeting
-                                          </Button>
+                                      <div className="flex flex-col sm:flex-row gap-2 items-start">
+                                        {/* Completed consultation actions */}
+                                        {appointment.status === 'completed' && (
+                                          <>
+                                            {appointment.prescription && (
+                                              <Button 
+                                                size="sm" 
+                                                variant="outline"
+                                                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                                                onClick={() => handleViewPrescription(appointment.id)}
+                                              >
+                                                <FileText className="w-4 h-4 mr-2" />
+                                                {expandedPrescriptions.has(appointment.id) ? 'Hide Prescription' : 'View Prescription'}
+                                              </Button>
+                                            )}
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => handleDownloadReceipt(appointment)}
+                                            >
+                                              <Download className="w-4 h-4 mr-2" />
+                                              Download Receipt
+                                            </Button>
+                                          </>
                                         )}
-                                        
-                                        {appointment.prescription && (
-                                          <Button 
-                                            size="sm" 
-                                            variant="outline"
-                                            onClick={() => handleViewPrescription(appointment.id)}
-                                          >
-                                            <FileText className="w-4 h-4 mr-2" />
-                                            {expandedPrescriptions.has(appointment.id) ? 'Hide Prescription' : 'View Prescription'}
-                                          </Button>
+
+                                        {/* Upcoming consultation actions */}
+                                        {appointment.status !== 'completed' && (
+                                          <>
+                                            <Button
+                                              size="sm"
+                                              className="bg-[#006f6f] hover:bg-[#005555] text-white"
+                                              onClick={() => {
+                                                if (appointment.meetLink) {
+                                                  window.open(appointment.meetLink, '_blank');
+                                                } else {
+                                                  alert('Meeting link not available');
+                                                }
+                                              }}
+                                            >
+                                              <Video className="w-4 h-4 mr-2" />
+                                              Join Meeting
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => handleDownloadReceipt(appointment)}
+                                            >
+                                              <Download className="w-4 h-4 mr-2" />
+                                              Download Receipt
+                                            </Button>
+                                          </>
                                         )}
-                                        
-                                        <Button 
-                                          size="sm" 
-                                          variant="outline"
-                                          onClick={() => handleDownloadReceipt(appointment)}
-                                        >
-                                          <Download className="w-4 h-4 mr-2" />
-                                          Download Receipt
-                                        </Button>
                                       </div>
                                     </div>
 
@@ -970,7 +1235,7 @@ export default function ProfilePage() {
                       <div className="space-y-4">
                         {appointments.map((appointment) => (
                           <motion.div
-                            key={appointment.id}
+                            key={appointment._id || appointment.id}
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: appointment.id * 0.1 }}
@@ -991,31 +1256,53 @@ export default function ProfilePage() {
                                     <Badge variant={appointment.status === 'Upcoming' ? 'default' : 'secondary'}>
                                       {appointment.status}
                                     </Badge>
+                                    <button 
+                                      className="ml-2 px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded flex items-center"
+                                      onClick={() => {
+                                        console.log('🎥 History Join Meeting clicked!');
+                                        if (appointment.meetLink) {
+                                          window.open(appointment.meetLink, '_blank');
+                                        } else {
+                                          alert('Meeting link not available');
+                                        }
+                                      }}
+                                    >
+                                      <Video className="w-3 h-3 mr-1" />
+                                      Join Meeting
+                                    </button>
                                   </div>
                                   <div className="space-y-1 text-sm text-gray-600">
                                     <p className="flex items-center">
                                       <Clock className="w-4 h-4 mr-2" />
-                                      {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
-                                      <span className="ml-2 text-xs text-gray-500">(IST: {appointment.istTime})</span>
+                                      {new Date(appointment.date).toLocaleDateString()} at {appointment.timeSlot || appointment.time}
+                                      <span className="ml-2 text-xs text-gray-500">(IST: {appointment.timeSlot || appointment.istTime})</span>
                                     </p>
                                     <p className="flex items-center">
                                       <User className="w-4 h-4 mr-2" />
-                                      {appointment.doctor}
+                                      {appointment.doctor?.name || 'Dr. Ilango S. Prakasam'}
                                     </p>
                                     <p className="flex items-center">
                                       <CreditCard className="w-4 h-4 mr-2" />
-                                      ₹{appointment.price} - {appointment.paymentStatus}
+                                      {getCorrectCurrency(appointment)} - {appointment.paymentStatus || 'Paid'}
                                     </p>
                                   </div>
                                 </div>
                               </div>
                               
                               <div className="flex flex-col sm:flex-row gap-2">
-                                {appointment.status === 'Upcoming' && (
+                                {(appointment.status === 'Upcoming' || appointment.status === 'confirmed') && (
                                   <Button 
                                     size="sm" 
                                     className="bg-green-600 hover:bg-green-700"
-                                    onClick={() => window.open(appointment.meetLink, '_blank')}
+                                    onClick={() => {
+                                      const meetLink = appointment.meetLink;
+                                      console.log('🎥 Trying to open meet link:', meetLink);
+                                      if (meetLink && meetLink.trim() !== '') {
+                                        window.open(meetLink, '_blank');
+                                      } else {
+                                        toast.error('Meeting link not available yet. It will be provided closer to your appointment time.');
+                                      }
+                                    }}
                                   >
                                     <Video className="w-4 h-4 mr-2" />
                                     Join Meeting
@@ -1032,6 +1319,21 @@ export default function ProfilePage() {
                                     {expandedPrescriptions.has(appointment.id) ? 'Hide Prescription' : 'View Prescription'}
                                   </Button>
                                 )}
+                                
+                                <button 
+                                  className="mr-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md flex items-center"
+                                  onClick={() => {
+                                    console.log('HISTORY JOIN MEETING CLICKED!');
+                                    if (appointment.meetLink) {
+                                      window.open(appointment.meetLink, '_blank');
+                                    } else {
+                                      alert('Meeting link not available');
+                                    }
+                                  }}
+                                >
+                                  <Video className="w-4 h-4 mr-2" />
+                                  Join Meeting
+                                </button>
                                 
                                 <Button 
                                   size="sm" 

@@ -63,7 +63,7 @@ router.post('/create-order', requireAuth, async (req, res) => {
     const options = {
       amount: amount * 100, // Amount in paise
       currency: currency.toUpperCase(),
-      receipt: `${isLive ? 'live' : 'test'}_order_${Date.now()}_${req.session.user.id}`,
+      receipt: `${isLive ? 'L' : 'T'}_${Date.now().toString().slice(-8)}_${req.session.user.id.toString().slice(-6)}`,
       notes: {
         consultation_type: consultationType,
         patient_name: patientName,
@@ -349,7 +349,7 @@ router.post('/test-create-order', async (req, res) => {
     const options = {
       amount: amount * 100, // Amount in paise
       currency: currency.toUpperCase(),
-      receipt: `${isLive ? 'live' : 'test'}_order_${Date.now()}`,
+      receipt: `${isLive ? 'L' : 'T'}_${Date.now().toString().slice(-10)}`,
       notes: {
         consultation_type: consultationType,
         patient_name: patientName,

@@ -1,5 +1,4 @@
 // Admin service for managing consultations, prescriptions, and notifications
-import meetingService from './meetingService';
 
 export interface Consultation {
   id: string;
@@ -33,239 +32,149 @@ export interface Medicine {
 }
 
 class AdminService {
-  private consultations: Consultation[] = [
-    {
-      id: '1',
-      patientName: 'John Smith',
-      patientEmail: 'john@example.com',
-      patientPhone: '+1234567890',
-      date: '2024-01-15',
-      time: '10:00 AM',
-      istTime: '10:30 PM IST',
-      type: 'Initial Consultation',
-      status: 'upcoming',
-      documents: ['kidney_report.pdf', 'blood_test.pdf'],
-      query: 'Experiencing kidney pain and frequent urination for the past 2 weeks.',
-      meetingLink: 'https://meet.google.com/abc-defg-hij',
-      country: 'US'
-    },
-    {
-      id: '2',
-      patientName: 'Sarah Johnson',
-      patientEmail: 'sarah@example.com',
-      patientPhone: '+1987654321',
-      date: '2024-01-16',
-      time: '2:00 PM',
-      istTime: '12:30 AM IST',
-      type: 'Follow-up',
-      status: 'completed',
-      documents: ['followup_labs.pdf'],
-      query: 'Follow-up consultation for kidney stone treatment.',
-      prescription: {
-        medicines: [
-          { name: 'Potassium Citrate', dosage: '10mg twice daily', url: 'https://1mg.com/potassium-citrate' },
-          { name: 'Tamsulosin', dosage: '0.4mg once daily', url: 'https://1mg.com/tamsulosin' }
-        ],
-        instructions: 'Take medications as prescribed. Increase water intake to 3-4 liters daily.',
-        nextVisit: '2024-02-16',
-        createdAt: '2024-01-16',
-        doctorName: 'Dr. Ilango S. Prakasam'
-      },
-      country: 'US'
-    },
-    {
-      id: '3',
-      patientName: 'Raj Patel',
-      patientEmail: 'raj@example.com',
-      patientPhone: '+919876543210',
-      date: '2024-01-17',
-      time: '4:00 PM',
-      istTime: '4:00 PM IST',
-      type: 'Initial Consultation',
-      status: 'upcoming',
-      documents: ['ultrasound.pdf', 'creatinine_report.pdf'],
-      query: 'High creatinine levels and swelling in legs.',
-      meetingLink: 'https://meet.google.com/xyz-uvwx-rst',
-      country: 'IN'
-    }
-  ];
-
-  // Get all consultations
   async getConsultations(): Promise<Consultation[]> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Initialize meeting service with existing consultations
-    meetingService.initializeMeetingsFromConsultations(this.consultations);
-    
-    // Ensure all consultations have meeting links
-    const consultationsWithMeetings = this.consultations.map(consultation => {
-      if (!consultation.meetingLink) {
-        consultation.meetingLink = meetingService.generateMeetingURL(consultation.id, consultation.patientEmail);
+    try {
+      // Use the real doctor endpoint
+      const response = await fetch('/api/appointments/doctor', {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        console.error('❌ API Error:', response.status, response.statusText);
+        if (response.status === 401) {
+          console.error('❌ Unauthorized - user not logged in or session expired');
+        } else if (response.status === 403) {
+          console.error('❌ Forbidden - insufficient permissions (need doctor/admin role)');
+        }
+        throw new Error(`Failed to fetch consultations: ${response.status} ${response.statusText}`);
       }
-      return consultation;
-    });
-    
-    return [...consultationsWithMeetings];
+      
+      const data = await response.json();
+      console.log('📋 Raw appointments from API:', data.appointments);
+      console.log('📋 Number of appointments:', data.appointments?.length || 0);
+      
+      // Transform appointment data to consultation format  
+      const consultations: Consultation[] = (data.appointments || []).map((apt: any) => {
+        console.log('🔍 Raw appointment data for transformation:', apt);
+        
+        return {
+          id: apt._id,
+          patientName: apt.patient?.name || 'Unknown Patient',
+          patientEmail: apt.patient?.email || 'N/A',
+          // Try to get phone from multiple sources
+          patientPhone: apt.patient?.phone || apt.patientPhone || 'N/A',
+          date: apt.date,
+          time: apt.timeSlot,
+          istTime: apt.timeSlot,
+          type: apt.type as 'Initial Consultation' | 'Follow-up',
+          status: apt.status === 'confirmed' ? 'upcoming' : 
+                  apt.status === 'completed' ? 'completed' : 
+                  apt.status === 'pending' ? 'upcoming' : 'upcoming',
+          // Better document handling
+          documents: apt.files || apt.intake?.documents || apt.documents || [],
+          query: apt.intake?.description || apt.intake?.reason || apt.query || 'No query provided',
+          meetingLink: apt.meetLink,
+          // Better country handling
+          country: (apt.patient?.country && apt.patient.country !== 'default') 
+                   ? apt.patient.country 
+                   : apt.country || 'Unknown',
+          prescription: apt.prescription ? {
+            medicines: apt.prescription.medicines || [],
+            instructions: apt.prescription.notes || '',
+            nextVisit: apt.prescription.nextConsultationDate || '',
+            createdAt: apt.prescription.createdAt,
+            doctorName: apt.doctor?.name || 'Dr. Ilango S. Prakasam'
+          } : undefined
+        };
+      });
+      
+      console.log('📋 Transformed consultations:', consultations);
+      console.log('📋 Consultations count:', consultations.length);
+      if (consultations.length > 0) {
+        console.log('📋 First consultation example:', consultations[0]);
+      }
+      
+      return consultations;
+    } catch (error) {
+      console.error('Error fetching consultations:', error);
+      return [];
+    }
   }
 
-  // Get consultation by ID
+  // Placeholder methods for other functionality
   async getConsultationById(id: string): Promise<Consultation | null> {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    return this.consultations.find(c => c.id === id) || null;
+    const consultations = await this.getConsultations();
+    return consultations.find(c => c.id === id) || null;
   }
 
-  // Update consultation
   async updateConsultation(id: string, updates: Partial<Consultation>): Promise<Consultation> {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    const index = this.consultations.findIndex(c => c.id === id);
-    if (index === -1) {
-      throw new Error('Consultation not found');
-    }
-    
-    this.consultations[index] = { ...this.consultations[index], ...updates };
-    return this.consultations[index];
+    // In a real app, this would make an API call to update the consultation
+    const consultation = await this.getConsultationById(id);
+    if (!consultation) throw new Error('Consultation not found');
+    return { ...consultation, ...updates };
   }
 
-  // Create prescription and mark consultation as completed
-  async createPrescription(
-    consultationId: string, 
-    prescription: Prescription,
-    doctorName: string
-  ): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const consultation = this.consultations.find(c => c.id === consultationId);
-    if (!consultation) {
-      throw new Error('Consultation not found');
-    }
+  async createPrescription(consultationId: string, prescription: Prescription, doctorName: string): Promise<void> {
+    try {
+      const response = await fetch(`/api/appointments/${consultationId}/prescription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          prescription: {
+            notes: prescription.instructions,
+            medicines: prescription.medicines.map(med => ({
+              name: med.name,
+              dosage: med.dosage,
+              frequency: 'As prescribed', // You can enhance this
+              link: med.url || ''
+            })),
+            nextConsultationDate: prescription.nextVisit ? new Date(prescription.nextVisit) : null
+          }
+        })
+      });
 
-    // Add prescription with metadata
-    const prescriptionWithMeta = {
-      ...prescription,
-      createdAt: new Date().toISOString(),
-      doctorName
-    };
-    
-    // Update consultation
-    await this.updateConsultation(consultationId, {
-      prescription: prescriptionWithMeta,
-      status: 'completed'
-    });
-
-    // Send email notification to patient
-    await this.sendPrescriptionEmail(consultation.patientEmail, consultation.patientName, prescriptionWithMeta);
-    
-    console.log(`Prescription created for consultation ${consultationId}`);
-  }
-
-  // Send prescription email to patient
-  private async sendPrescriptionEmail(
-    patientEmail: string, 
-    patientName: string, 
-    prescription: Prescription
-  ): Promise<void> {
-    // Simulate email sending
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    console.log(`📧 Prescription email sent to ${patientEmail}`);
-    console.log('Email content:', {
-      to: patientEmail,
-      subject: '🏥 Your Prescription from NephroConsult',
-      content: {
-        patientName,
-        doctorName: prescription.doctorName,
-        medicines: prescription.medicines,
-        instructions: prescription.instructions,
-        nextVisit: prescription.nextVisit
+      if (!response.ok) {
+        throw new Error('Failed to create prescription');
       }
-    });
-    
-    // In a real application, this would integrate with an email service like:
-    // - SendGrid
-    // - AWS SES
-    // - Nodemailer
-    // - etc.
-  }
 
-  // Send meeting reminder
-  async sendMeetingReminder(consultationId: string): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    const consultation = this.consultations.find(c => c.id === consultationId);
-    if (!consultation) {
-      throw new Error('Consultation not found');
+      console.log('✅ Prescription created successfully for consultation:', consultationId);
+      
+      // Also mark consultation as completed
+      console.log('🔄 Marking consultation as completed...');
+      await this.updateConsultationStatus(consultationId, 'completed');
+      console.log('✅ Consultation marked as completed');
+      
+    } catch (error) {
+      console.error('Error creating prescription:', error);
+      throw error;
     }
-    
-    console.log(`📧 Meeting reminder sent to ${consultation.patientEmail}`);
-    console.log('Reminder content:', {
-      to: consultation.patientEmail,
-      subject: '⏰ Upcoming Consultation Reminder - NephroConsult',
-      content: {
-        patientName: consultation.patientName,
-        date: consultation.date,
-        time: consultation.time,
-        istTime: consultation.istTime,
-        meetingLink: consultation.meetingLink
+  }
+
+  async updateConsultationStatus(consultationId: string, status: 'completed' | 'cancelled'): Promise<void> {
+    try {
+      const response = await fetch(`/api/appointments/${consultationId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update consultation status');
       }
-    });
-  }
 
-  // Get consultation statistics
-  async getStatistics(): Promise<{
-    upcoming: number;
-    completed: number;
-    total: number;
-    completedToday: number;
-  }> {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    const today = new Date().toISOString().split('T')[0];
-    
-    return {
-      upcoming: this.consultations.filter(c => c.status === 'upcoming').length,
-      completed: this.consultations.filter(c => c.status === 'completed').length,
-      total: this.consultations.length,
-      completedToday: this.consultations.filter(c => 
-        c.status === 'completed' && c.date === today
-      ).length
-    };
-  }
-
-  // Generate Google Meet link using meeting service
-  generateMeetingLink(consultationId: string, patientEmail: string): string {
-    return meetingService.generateMeetingURL(consultationId, patientEmail);
-  }
-
-  // Get meeting URL for a consultation (ensures consistency)
-  getMeetingURL(consultationId: string, patientEmail: string): string {
-    return meetingService.getMeetingURL(consultationId, patientEmail);
-  }
-
-  // Download patient document (placeholder)
-  async downloadDocument(documentName: string): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    console.log(`📄 Downloading document: ${documentName}`);
-    // In a real application, this would download from cloud storage
-  }
-
-  // Mark consultation as completed
-  async markConsultationCompleted(consultationId: string): Promise<void> {
-    await this.updateConsultation(consultationId, { status: 'completed' });
-  }
-
-  // Cancel consultation
-  async cancelConsultation(consultationId: string, reason?: string): Promise<void> {
-    await this.updateConsultation(consultationId, { status: 'cancelled' });
-    
-    const consultation = this.consultations.find(c => c.id === consultationId);
-    if (consultation) {
-      console.log(`📧 Cancellation email sent to ${consultation.patientEmail}`);
-      // Send cancellation email to patient
+      console.log('✅ Consultation status updated:', consultationId, status);
+    } catch (error) {
+      console.error('Error updating consultation status:', error);
+      throw error;
     }
   }
 }
 
-export const adminService = new AdminService();
+const adminService = new AdminService();
 export default adminService;

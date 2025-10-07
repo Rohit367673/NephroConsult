@@ -601,17 +601,47 @@ export default function BookingPage() {
         setPaymentCompleted(true);
         toast.success('Payment successful! Appointment booked successfully.', { id: 'payment-verification' });
         
-        // Store booking details (in real app, this would be saved to database)
-        const appointmentData = {
-          ...bookingDetails,
-          paymentId: response.razorpay_payment_id,
-          orderId: response.razorpay_order_id,
-          bookingId: `APT_${Date.now()}`,
-          status: 'confirmed',
-          createdAt: new Date().toISOString()
-        };
+        // Create actual booking in database
+        try {
+          const appointmentResponse = await fetch('/api/appointments', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              date: bookingDetails.date,
+              timeSlot: bookingDetails.time,
+              typeId: bookingDetails.consultationType, // Use consultationType directly (matches server mapping)
+              paymentMethod: 'card', // Razorpay processes as card payment
+              patientPhone: bookingDetails.patientInfo.phone,
+              patientCountry: bookingDetails.currency === 'INR' ? 'IN' : 
+                             bookingDetails.currency === 'USD' ? 'US' : 
+                             bookingDetails.currency === 'EUR' ? 'EU' : 
+                             bookingDetails.currency === 'GBP' ? 'GB' : 'default',
+              intake: {
+                description: bookingDetails.patientInfo.medicalHistory,
+                documents: bookingData.uploadedFiles.map((file: File) => {
+                  console.log('📄 Sending document to backend:', file.name, 'Size:', file.size);
+                  return file.name;
+                })
+              }
+            })
+          });
 
-        console.log('Appointment booked:', appointmentData);
+          if (appointmentResponse.ok) {
+            const appointmentData = await appointmentResponse.json();
+            console.log('✅ Appointment created in database:', appointmentData);
+            toast.success('Appointment successfully created!');
+          } else {
+            const errorData = await appointmentResponse.json();
+            console.error('❌ Failed to create appointment:', errorData);
+            toast.error('Payment successful but booking creation failed. Contact support.');
+          }
+        } catch (bookingError) {
+          console.error('❌ Booking creation error:', bookingError);
+          toast.error('Payment successful but booking creation failed. Contact support.');
+        }
       
       // Add the new booking to the booked appointments list
       const newBooking = {

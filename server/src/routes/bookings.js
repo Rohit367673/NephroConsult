@@ -30,6 +30,179 @@ router.get('/appointments/mine', requireAuth, async (req, res) => {
   }
 });
 
+// Test endpoint to check if appointments exist (no auth for debugging)
+router.get('/appointments/test', async (req, res) => {
+  try {
+    const appointments = await Appointment.find({})
+      .sort({ date: 1, timeSlot: 1 })
+      .limit(10)
+      .lean();
+    
+    console.log(`🧪 TEST: Found ${appointments.length} appointments in database`);
+    
+    // Enhance appointments with full user data
+    const enhancedAppointments = await Promise.all(
+      appointments.map(async (apt) => {
+        try {
+          // Fetch full user data if patient ID exists
+          if (apt.patient?.id) {
+            const User = (await import('../models/User.js')).default;
+            const fullUser = await User.findById(apt.patient.id).lean();
+            if (fullUser) {
+              console.log(`🧪 Found full user data for ${fullUser.email}:`, {
+                phone: fullUser.phone,
+                country: fullUser.country,
+                name: fullUser.name
+              });
+              
+              // Merge user data with appointment
+              apt.patient = {
+                ...apt.patient,
+                phone: fullUser.phone,
+                country: fullUser.country,
+                name: fullUser.name
+              };
+            }
+          }
+          return apt;
+        } catch (userError) {
+          console.warn('Could not fetch user data:', userError);
+          return apt;
+        }
+      })
+    );
+    
+    if (enhancedAppointments.length > 0) {
+      console.log('🧪 TEST: Enhanced first appointment:', enhancedAppointments[0]);
+    }
+    
+    return res.json({ 
+      appointments: enhancedAppointments,
+      total: enhancedAppointments.length,
+      message: 'This is a test endpoint without authentication (with enhanced user data)'
+    });
+  } catch (e) {
+    console.error('Error in test endpoint:', e);
+    return res.status(500).json({ error: 'Test endpoint failed' });
+  }
+});
+
+// SIMPLE cleanup endpoint via GET (easier to test)
+router.get('/appointments/force-cleanup', async (req, res) => {
+  try {
+    console.log('🧹 FORCE CLEANUP: Starting...');
+    const result = await Appointment.deleteMany({});
+    console.log('🧹 FORCE CLEANUP: Done -', result.deletedCount, 'deleted');
+    return res.json({ success: true, deleted: result.deletedCount });
+  } catch (e) {
+    console.error('🧹 FORCE CLEANUP ERROR:', e);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// CLEANUP endpoint to remove all appointments (TESTING ONLY)
+router.delete('/appointments/cleanup', async (req, res) => {
+  try {
+    console.log('🧹 CLEANUP: Starting cleanup process...');
+    
+    // First check how many appointments exist
+    const countBefore = await Appointment.countDocuments({});
+    console.log(`🧹 CLEANUP: Found ${countBefore} appointments before deletion`);
+    
+    // Delete all appointments
+    const result = await Appointment.deleteMany({});
+    console.log(`🧹 CLEANUP: Delete operation result:`, result);
+    
+    // Verify deletion
+    const countAfter = await Appointment.countDocuments({});
+    console.log(`🧹 CLEANUP: Found ${countAfter} appointments after deletion`);
+    
+    console.log(`🧹 CLEANUP: Successfully deleted ${result.deletedCount} appointments`);
+    
+    return res.json({ 
+      message: 'All appointments deleted successfully',
+      deletedCount: result.deletedCount,
+      countBefore,
+      countAfter,
+      timestamp: new Date().toISOString()
+    });
+  } catch (e) {
+    console.error('🧹 CLEANUP ERROR:', e);
+    return res.status(500).json({ error: 'Cleanup failed', details: e.message });
+  }
+});
+
+// Doctor-specific appointments endpoint  
+router.get('/appointments/doctor', requireRole('doctor', 'admin'), async (req, res) => {
+  try {
+    // Fetch all appointments for doctors (they can see all appointments)
+    const appointments = await Appointment.find({})
+      .sort({ date: 1, timeSlot: 1 })
+      .limit(100)
+      .lean();
+    
+    const sessionUser = req.session.user;
+    console.log(`📋 Doctor ${sessionUser?.email} fetched ${appointments.length} appointments`);
+    
+    return res.json({ 
+      appointments,
+      total: appointments.length 
+    });
+  } catch (e) {
+    console.error('Error fetching doctor appointments:', e);
+    return res.status(500).json({ error: 'Failed to fetch doctor appointments' });
+  }
+});
+
+// Add prescription to appointment
+router.post('/appointments/:id/prescription', requireRole('doctor', 'admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { prescription } = req.body;
+    
+    const appointment = await Appointment.findById(id);
+    if (!appointment) {
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+    
+    // Add prescription to appointment
+    appointment.prescription = prescription;
+    await appointment.save();
+    
+    console.log(`✅ Prescription added to appointment ${id}`);
+    return res.json({ message: 'Prescription added successfully', appointment });
+  } catch (error) {
+    console.error('Error adding prescription:', error);
+    return res.status(500).json({ error: 'Failed to add prescription' });
+  }
+});
+
+// Update appointment status
+router.patch('/appointments/:id/status', requireRole('doctor', 'admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!['pending', 'confirmed', 'completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    
+    const appointment = await Appointment.findById(id);
+    if (!appointment) {
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+    
+    appointment.status = status;
+    await appointment.save();
+    
+    console.log(`✅ Appointment ${id} status updated to ${status}`);
+    return res.json({ message: 'Status updated successfully', appointment });
+  } catch (error) {
+    console.error('Error updating appointment status:', error);
+    return res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
 // Create appointment
 router.post('/appointments', requireAuth, async (req, res) => {
   try {
@@ -38,6 +211,9 @@ router.post('/appointments', requireAuth, async (req, res) => {
       timeSlot: z.string().min(3),
       typeId: z.string().min(2),
       paymentMethod: z.enum(['card', 'paypal', 'bank']).optional(),
+      // Add patient info fields
+      patientPhone: z.string().optional(),
+      patientCountry: z.string().optional(),
       intake: z
         .object({
           address: z.string().max(500).optional(),
@@ -48,14 +224,28 @@ router.post('/appointments', requireAuth, async (req, res) => {
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
-    const { date, timeSlot, typeId, paymentMethod = 'card', intake } = parsed.data;
+    const { date, timeSlot, typeId, paymentMethod = 'card', intake, patientPhone, patientCountry } = parsed.data;
 
     // Collision prevention
     const existing = await Appointment.findOne({ date, timeSlot, status: { $ne: 'cancelled' } });
     if (existing) return res.status(409).json({ error: 'Time slot already booked' });
 
-    const userDoc = await User.findById(req.session.user.id);
-    const country = userDoc?.country || 'default';
+    // Update user with phone/country if provided
+    const updateData = {};
+    if (patientPhone) updateData.phone = patientPhone;
+    if (patientCountry) updateData.country = patientCountry;
+    
+    let userDoc = await User.findById(req.session.user.id);
+    if (Object.keys(updateData).length > 0) {
+      userDoc = await User.findByIdAndUpdate(
+        req.session.user.id,
+        updateData,
+        { new: true }
+      );
+      console.log('📱 Updated user profile:', updateData);
+    }
+    
+    const country = patientCountry || userDoc?.country || 'default';
     const pricing = priceFor(country);
 
     const previousCount = await Appointment.countDocuments({ 'patient.id': userDoc?._id });

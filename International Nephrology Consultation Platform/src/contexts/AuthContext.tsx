@@ -95,42 +95,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
               console.log('Loaded user from cookie (immediate):', userData);
               console.log('Cookie - avatar URL:', userData.avatar);
               console.log('Cookie - avatar length:', userData.avatar ? userData.avatar.length : 0);
-              setLoading(false); // Set loading to false immediately when we have cookie data
-            } else {
-              console.error('Invalid user data in cookie:', userData);
-              deleteCookie('nephro_user');
-              setLoading(false);
             }
           } catch (error) {
             console.error('Error parsing user cookie:', error);
             deleteCookie('nephro_user');
-            setLoading(false);
           }
         } else {
           console.log('AuthContext: No saved user cookie found');
-          setLoading(false);
         }
 
-        // Skip backend sync for now as it might interfere with Google login
-        // In a production app, you would sync with backend here
-        // const response = await apiService.getCurrentUser();
-        // if (response.success && response.data) {
-        //   setUser(response.data as User);
-        //   console.log('Synced user from backend:', response.data);
-        // } else if (!savedUser) {
-        //   setLoading(false);
-        // }
-        
-        // For Google login, we rely on cookie data
-        if (!savedUser) {
-          setLoading(false);
-        }
+        setLoading(false);
       } catch (error) {
         console.error('Error loading user:', error);
-        // Only set loading to false if we didn't already load from cookie
-        if (!getCookie('nephro_user')) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
     
