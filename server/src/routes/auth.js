@@ -6,6 +6,7 @@ import { auth as firebaseAuth } from '../config/firebase.js';
 import { generateOTP, storeOTP, verifyOTP } from '../utils/otp.js';
 import { getOTPEmailTemplate } from '../utils/emailTemplates.js';
 import { sendOTPEmail } from '../utils/email.js';
+import { requireAuth } from '../middlewares/auth.js';
 import { env } from '../config.js';
 
 const router = express.Router();
