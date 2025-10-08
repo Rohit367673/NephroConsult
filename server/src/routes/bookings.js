@@ -13,6 +13,52 @@ import { z } from 'zod';
 
 const router = express.Router();
 
+// Create test appointment for debugging
+router.post('/appointments/create-test', async (req, res) => {
+  try {
+    const testAppointment = new Appointment({
+      patient: {
+        id: 'test-patient-id',
+        name: 'Test Patient',
+        email: 'test@example.com',
+        phone: '1234567890'
+      },
+      doctor: {
+        id: 'test-doctor-id',
+        name: 'Dr. Test',
+        email: 'doctor@test.com'
+      },
+      date: '2025-10-09',
+      timeSlot: '10:00 AM IST',
+      status: 'confirmed',
+      meetLink: 'https://meet.jit.si/TestConsultation', 
+      type: 'Initial Consultation',
+      price: {
+        amount: 2500,
+        currency: 'INR',
+        symbol: '₹',
+        region: 'IN'
+      },
+      intake: {
+        description: 'Test consultation for debugging admin panel',
+        documents: []
+      }
+    });
+    
+    await testAppointment.save();
+    console.log('✅ Test appointment created:', testAppointment._id);
+    
+    res.json({ 
+      success: true, 
+      appointmentId: testAppointment._id,
+      message: 'Test appointment created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating test appointment:', error);
+    res.status(500).json({ error: 'Failed to create test appointment' });
+  }
+});
+
 // List current user's appointments
 router.get('/appointments/mine', requireAuth, async (req, res) => {
   try {
