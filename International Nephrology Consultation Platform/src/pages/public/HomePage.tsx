@@ -720,7 +720,7 @@ export default function HomePage() {
                   whileHover={{ scale: 1.05 }}
                 >
                   <span className="bg-gradient-to-r from-[#006f6f] to-[#004f4f] bg-clip-text text-transparent">
-                    Dr. Ilango (Sr. Nephrologist)
+                    Dr. ILANGO (Sr. Nephrologist)
                   </span>
                   <motion.div
                     className="absolute -bottom-0.5 sm:-bottom-1 md:-bottom-2 left-0 right-0 h-[2px] sm:h-0.5 md:h-1 bg-gradient-to-r from-[#006f6f] to-[#004f4f] rounded-full"
@@ -777,7 +777,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 <p className="text-xs text-blue-600 mt-3 text-center">
-                  All consultations during Dr. Ilango's evening hours (6-10 PM IST)
+                  All consultations during Dr. ILANGO's evening hours (6-10 PM IST)
                 </p>
               </div>
             </motion.div>
@@ -802,8 +802,8 @@ export default function HomePage() {
                 >
                   <Calendar className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 flex-shrink-0" />
                   <span className="font-semibold">
-                    <span className="hidden sm:inline">Book Consultation (From {pricing.symbol}{pricing.followup})</span>
-                    <span className="sm:hidden">Book Now (From {pricing.symbol}{pricing.followup})</span>
+                    <span className="hidden sm:inline">Book Consultation</span>
+                    <span className="sm:hidden">Book Now</span>
                   </span>
                   <motion.div
                     className="absolute inset-0 bg-white/20 rounded-xl"
@@ -1092,7 +1092,7 @@ export default function HomePage() {
               <div className="bg-gradient-to-br from-blue-500/5 to-transparent p-4 sm:p-5 md:p-8 rounded-xl sm:rounded-2xl border border-[#006f6f]/10">
                 <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-2.5 sm:mb-3 md:mb-4">Conditions We Treat</h3>
                 <p className="text-[13px] sm:text-sm md:text-base text-gray-600 mb-3.5 sm:mb-4 md:mb-6 leading-relaxed">
-                  Dr. Ilango specializes in comprehensive nephrology care, treating a wide range of kidney conditions with personalized treatment plans and cutting-edge medical expertise.
+                  Dr. ILANGO specializes in comprehensive nephrology care, treating a wide range of kidney conditions with personalized treatment plans and cutting-edge medical expertise.
                 </p>
                 <ul className="space-y-1.5 sm:space-y-2 md:space-y-3">
                   {[
@@ -1178,7 +1178,7 @@ export default function HomePage() {
                 Take Control of Your Kidney Health Today
               </h3>
               <p className="text-[13px] sm:text-sm md:text-base text-gray-600 mb-4 sm:mb-5 md:mb-6 max-w-2xl mx-auto leading-relaxed">
-                Schedule a consultation with Dr. Ilango to discuss your kidney health concerns and receive expert guidance on prevention, diagnosis, and treatment.
+                Schedule a consultation with Dr. ILANGO to discuss your kidney health concerns and receive expert guidance on prevention, diagnosis, and treatment.
               </p>
               <Button
                 size="lg"
@@ -1299,7 +1299,7 @@ export default function HomePage() {
               </span>
             </h2>
             <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 mb-7 sm:mb-10 md:mb-12 max-w-3xl mx-auto leading-relaxed px-2">
-              Join thousands of patients who trust Dr. Ilango for their nephrology needs. 
+              Join thousands of patients who trust Dr. ILANGO for their nephrology needs. 
               Book your consultation today and take the first step towards better kidney health.
             </p>
             

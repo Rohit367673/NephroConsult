@@ -395,8 +395,24 @@ function Navigation() {
 }
 
 export default function BookingPage() {
-  const { user } = useContext(AuthContext);
+  // Get user context and enforce authentication
+  const authContext = useContext(AuthContext);
+  const { user, logout, loading } = authContext || {};
   const navigate = useNavigate();
+  
+  // Redirect to home with login prompt if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      toast.error('Please login to book an appointment');
+      navigate('/', { state: { showLogin: true } });
+    }
+  }, [user, loading, navigate]);
+
+  // Early return if not authenticated
+  if (!user && !loading) {
+    return null;
+  }
+
   const [step, setStep] = useState(1);
   const [userTimezone, setUserTimezone] = useState('');
   const [userCountry, setUserCountry] = useState('');
@@ -670,6 +686,45 @@ export default function BookingPage() {
     console.error('Payment error:', error);
     toast.error(error.message || 'Payment failed. Please try again.');
     setIsProcessingPayment(false);
+  };
+
+  // Step validation function
+  const isStepValid = () => {
+    switch (step) {
+      case 1:
+        return bookingData.consultationType !== '';
+      case 2:
+        return bookingData.date && bookingData.time;
+      case 3:
+        return bookingData.patientInfo.name && 
+               bookingData.patientInfo.email && 
+               bookingData.patientInfo.phone;
+      case 4:
+        return bookingData.paymentMethod !== '';
+      default:
+        return false;
+    }
+  };
+
+  // Payment handler function  
+  const handlePayment = async () => {
+    if (!isStepValid()) {
+      toast.error('Please complete all required fields');
+      return;
+    }
+    
+    toast.success('Payment functionality will be implemented');
+    // Payment logic would go here
+  };
+
+  // Get consultation price helper
+  const getConsultationPrice = (type: string, currency: string) => {
+    const prices: any = {
+      'initial': { USD: 30, INR: 2500, EUR: 28, GBP: 25 },
+      'followup': { USD: 22, INR: 1800, EUR: 20, GBP: 18 },
+      'urgent': { USD: 45, INR: 3750, EUR: 42, GBP: 38 }
+    };
+    return prices[type]?.[currency] || prices['initial'][currency] || 30;
   };
 
   const containerVariants = {
@@ -1225,28 +1280,28 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Navigation />
-      <div className="container-medical py-12">
+      <div className="container mx-auto px-4 py-6 md:py-12 max-w-6xl">
         {/* Progress Steps */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex justify-center mb-12"
+          className="flex justify-center mb-8 md:mb-12 overflow-x-auto"
         >
-          <div className="flex items-center space-x-8">
+          <div className="flex items-center space-x-2 md:space-x-8 min-w-max px-4">
             {[1, 2, 3, 4].map((s) => (
               <div key={s} className="flex items-center">
                 <motion.div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold ${
+                  className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center text-sm md:text-base font-semibold ${
                     s <= step ? 'bg-[#006f6f] text-white' : 'bg-gray-200 text-gray-600'
                   }`}
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  {s < step ? <CheckCircle2 className="w-6 h-6" /> : s}
+                  {s < step ? <CheckCircle2 className="w-4 h-4 md:w-6 md:h-6" /> : s}
                 </motion.div>
                 {s < 4 && (
                   <div
-                    className={`w-16 h-1 mx-4 ${
+                    className={`w-8 md:w-16 h-1 mx-2 md:mx-4 ${
                       s < step ? 'bg-[#006f6f]' : 'bg-gray-200'
                     }`}
                   />
@@ -1257,7 +1312,7 @@ export default function BookingPage() {
         </motion.div>
 
         {/* Step Content */}
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto px-2">
           {renderStep()}
 
           {/* Navigation Buttons */}
@@ -1265,40 +1320,28 @@ export default function BookingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="flex justify-between mt-12"
+            className="flex flex-col sm:flex-row justify-between gap-4 mt-8 md:mt-12"
           >
             <Button
               variant="outline"
-              onClick={handleBack}
+              onClick={() => step > 1 ? setStep(step - 1) : null}
               disabled={step === 1}
-              className="px-8 py-3"
+              className="flex items-center justify-center w-full sm:w-auto order-2 sm:order-1"
             >
-              Back
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              Previous
             </Button>
-            
             <Button
-              onClick={step === 4 ? handleBooking : handleNext}
-              disabled={
-                isProcessingPayment ||
-                paymentCompleted ||
-                (step === 1 && !bookingData.consultationType) ||
-                (step === 2 && (!bookingData.date || !bookingData.time)) ||
-                (step === 3 && (!bookingData.patientInfo.name || !bookingData.patientInfo.email || !bookingData.patientInfo.phone || !bookingData.patientInfo.age || !bookingData.patientInfo.gender || !bookingData.patientInfo.medicalHistory)) ||
-                (step === 4 && !bookingData.paymentMethod)
-              }
-              className="px-8 py-3 bg-[#006f6f] hover:bg-[#005555] disabled:opacity-50"
+              onClick={step === 4 ? handlePayment : () => setStep(step + 1)}
+              disabled={!isStepValid()}
+              className="bg-[#006f6f] hover:bg-[#005555] flex items-center justify-center w-full sm:w-auto order-1 sm:order-2"
             >
               {step === 4 ? (
                 <>
                   {isProcessingPayment ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Processing Payment...
-                    </>
-                  ) : paymentCompleted ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Payment Successful!
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Processing...
                     </>
                   ) : (
                     <>

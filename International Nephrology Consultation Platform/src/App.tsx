@@ -822,7 +822,7 @@ function HomePage() {
                   whileHover={{ scale: 1.05 }}
                 >
                   <span className="bg-gradient-to-r from-[#006f6f] to-[#004f4f] bg-clip-text text-transparent">
-                    Dr. Ilango
+                    Dr. ILANGO
                   </span>
                   <motion.div
                     className="absolute -bottom-0.5 sm:-bottom-1 md:-bottom-2 left-0 right-0 h-[2px] sm:h-0.5 md:h-1 bg-gradient-to-r from-[#006f6f] to-[#004f4f] rounded-full"
@@ -871,8 +871,8 @@ function HomePage() {
                 >
                   <Calendar className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 flex-shrink-0" />
                   <span className="font-semibold">
-                    <span className="hidden sm:inline">Book Consultation ({pricing.symbol}{pricing.consultation})</span>
-                    <span className="sm:hidden">Book Now ({pricing.symbol}{pricing.consultation})</span>
+                    <span className="hidden sm:inline">Book Consultation</span>
+                    <span className="sm:hidden">Book Now</span>
                   </span>
                   <motion.div
                     className="absolute inset-0 bg-white/20 rounded-xl"
