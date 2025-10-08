@@ -847,7 +847,23 @@ export default function BookingPage() {
           toast.success('Appointment successfully created!');
         } catch (bookingError) {
           console.error('❌ Booking creation error:', bookingError);
-          toast.error('Payment successful but booking creation failed. Contact support.');
+          
+          if (bookingError instanceof Error && bookingError.message === 'Time slot already booked') {
+            toast.error('⚠️ Payment successful but this time slot was just taken by another user. Please contact support to reschedule or get a refund.', {
+              duration: 8000,
+              id: 'appointment-creation'
+            });
+          } else if (bookingError instanceof Error && bookingError.message === 'Authentication required') {
+            toast.error('⚠️ Payment successful but session expired. Please log in and contact support with your payment details.', {
+              duration: 8000,
+              id: 'appointment-creation'
+            });
+          } else {
+            toast.error('⚠️ Payment successful but booking creation failed. Please contact support with your payment reference.', {
+              duration: 8000,
+              id: 'appointment-creation'
+            });
+          }
         }
       
       // Add the new booking to the booked appointments list
