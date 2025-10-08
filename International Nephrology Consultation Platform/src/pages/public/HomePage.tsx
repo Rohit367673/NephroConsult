@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Calendar, Shield, Globe, Star, Video, FileText, Upload, CheckCircle2, ArrowRight, MessageCircle, Heart, Clock, Phone, MapPin, Menu, X } from 'lucide-react';
 import { Button } from '../../components/ui/button';
@@ -634,6 +634,7 @@ export default function HomePage() {
   const [userCountry, setUserCountry] = useState('');
   const [pricing, setPricing] = useState({ initial: 150, followup: 105, currency: 'USD', symbol: '$' });
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Get user's timezone and pricing
@@ -642,6 +643,15 @@ export default function HomePage() {
     setUserCountry(getCountryFromTimezone(tz));
     setPricing(getPricingForTimezone(tz));
   }, []);
+
+  // Check if redirected from booking page with showLogin state
+  useEffect(() => {
+    if (location.state?.showLogin && !user) {
+      setIsLoginOpen(true);
+      // Clear the state to avoid reopening login on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, user, navigate, location.pathname]);
 
   return (
     <motion.div 
