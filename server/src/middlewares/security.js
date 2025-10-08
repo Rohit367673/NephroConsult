@@ -23,22 +23,49 @@ export function verifyOrigin(req, res, next) {
   // Allow same-origin requests only; compare hostnames
   try {
     const allowedOrigins = String(env.CLIENT_URL || '').split(',').map(s => s.trim()).filter(Boolean);
-    const allowedHosts = allowedOrigins.map((u) => {
+    
+    // Add common frontend domains for production
+    const productionDomains = [
+      'nephro-consult.vercel.app',
+      'nephroconsult.vercel.app', 
+      'nephro-consult-git-main-rohit367673s-projects.vercel.app',
+      'nephro-consult-rohit367673s-projects.vercel.app'
+    ];
+    
+    // Combine configured origins with known production domains
+    const allAllowedOrigins = [...allowedOrigins, ...productionDomains.map(d => `https://${d}`)];
+    
+    const allowedHosts = allAllowedOrigins.map((u) => {
       try { return new URL(u).hostname; } catch { return null; }
     }).filter(Boolean);
+    
     const isLoopback = (h) => h === '127.0.0.1' || h === 'localhost';
+
+    console.log('🔍 Origin check - Origin:', origin);
+    console.log('🔍 Origin check - Referer:', referer);
+    console.log('🔍 Origin check - Allowed hosts:', allowedHosts);
 
     if (origin) {
       const o = new URL(origin);
-      if (allowedHosts.includes(o.hostname) || (isLoopback(o.hostname) && allowedHosts.some(isLoopback))) return next();
+      console.log('🔍 Origin hostname:', o.hostname);
+      if (allowedHosts.includes(o.hostname) || (isLoopback(o.hostname) && allowedHosts.some(isLoopback))) {
+        console.log('✅ Origin check passed via origin header');
+        return next();
+      }
     }
     if (referer) {
       const r = new URL(referer);
-      if (allowedHosts.includes(r.hostname) || (isLoopback(r.hostname) && allowedHosts.some(isLoopback))) return next();
+      console.log('🔍 Referer hostname:', r.hostname);
+      if (allowedHosts.includes(r.hostname) || (isLoopback(r.hostname) && allowedHosts.some(isLoopback))) {
+        console.log('✅ Origin check passed via referer header');
+        return next();
+      }
     }
-  } catch {
+  } catch (error) {
+    console.error('🔍 Origin check error:', error);
     // fallthrough
   }
 
+  console.log('❌ Origin check failed');
   return res.status(403).json({ error: 'Forbidden (origin check failed)' });
 }

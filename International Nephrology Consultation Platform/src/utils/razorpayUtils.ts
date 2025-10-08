@@ -82,8 +82,7 @@ export const createRazorpayOrder = async (bookingDetails: BookingDetails): Promi
     
     // Use environment variable for API URL or fallback to relative path for localhost
     const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-    // Temporarily use debug endpoint to bypass auth issues
-    const endpoint = apiBaseUrl ? `${apiBaseUrl}/api/payments/create-order-debug` : '/api/payments/create-order-debug';
+    const endpoint = apiBaseUrl ? `${apiBaseUrl}/api/payments/create-order` : '/api/payments/create-order';
     
     console.log('Using payment endpoint:', endpoint);
     console.log('Request payload:', {
