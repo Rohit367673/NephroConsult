@@ -54,6 +54,8 @@ const AppointmentSchema = new mongoose.Schema(
       description: String, // disease description / medical history
       documents: [String], // uploaded docs (base64/data URLs or URLs)
     },
+    // Telegram notification tracking
+    reminderSent: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

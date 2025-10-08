@@ -24,6 +24,7 @@ import chatRoutes from './routes/chat.js';
 import prescriptionRoutes from './routes/prescriptions.js';
 import paymentRoutes from './routes/payments.js';
 import { startJobs } from './jobs.js';
+import './services/telegramService.js'; // Initialize Telegram service
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -118,6 +119,7 @@ const sessionConfig = {
     sameSite: isProd ? 'none' : 'lax',
     secure: isProd, // set true behind HTTPS/proxy in production
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    domain: isProd ? undefined : undefined, // Let browser set domain in dev
   },
 };
 

@@ -1,101 +1,46 @@
 import express from 'express';
-import Razorpay from 'razorpay';
-import crypto from 'crypto';
-import { z } from 'zod';
 import { requireAuth } from '../middlewares/auth.js';
-import { env, flags } from '../config.js';
 import { sendPaymentEmail } from '../utils/email.js';
-import { validatePaymentEnvironment, getPaymentEnvironmentInfo, logPaymentEnvironment } from '../utils/paymentValidation.js';
+import { razorpayService } from '../services/razorpayService.js';
+import { z } from 'zod';
 
 const router = express.Router();
-
-// Initialize Razorpay instance
-let razorpay = null;
-if (flags.paymentsEnabled) {
-  // Validate and log payment environment
-  const paymentInfo = logPaymentEnvironment();
-  
-  if (!paymentInfo.isValid) {
-    console.error('❌ Payment configuration invalid:', paymentInfo.issues);
-  }
-  
-  razorpay = new Razorpay({
-    key_id: env.RAZORPAY_KEY_ID,
-    key_secret: env.RAZORPAY_KEY_SECRET,
-  });
-  
-  console.log(`✅ Razorpay initialized in ${paymentInfo.environment.toUpperCase()} mode`);
-}
 
 // Create Razorpay order
 router.post('/create-order', requireAuth, async (req, res) => {
   try {
-    if (!flags.paymentsEnabled) {
-      return res.status(503).json({ 
-        error: 'Payment service not configured',
-        message: 'Razorpay credentials not provided'
+    console.log('💳 Payment order request from user:', req.session?.user?.email);
+    console.log('💳 Request body:', req.body);
+    
+    // Check if service is available
+    const status = razorpayService.getStatus();
+    console.log('💳 Razorpay service status:', status);
+    
+    if (!status.initialized) {
+      console.error('❌ Razorpay service not initialized');
+      return res.status(503).json({
+        error: 'Payment service unavailable',
+        message: 'Razorpay service not properly initialized',
+        debug: status
       });
     }
 
-    const orderSchema = z.object({
-      amount: z.number().positive(),
-      currency: z.string().min(3).max(3),
-      consultationType: z.string(),
-      patientName: z.string(),
-      patientEmail: z.string().email(),
-      patientPhone: z.string(),
-      date: z.string(),
-      time: z.string(),
-    });
-
-    const parsed = orderSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ 
-        error: 'Invalid request data',
-        details: parsed.error.flatten()
-      });
-    }
-
-    const { amount, currency, consultationType, patientName, patientEmail, patientPhone, date, time } = parsed.data;
-
-    // Create Razorpay order
-    const isLive = !env.RAZORPAY_KEY_ID.includes('test');
-    const options = {
-      amount: amount * 100, // Amount in paise
-      currency: currency.toUpperCase(),
-      receipt: `${isLive ? 'L' : 'T'}_${Date.now().toString().slice(-8)}_${req.session.user.id.toString().slice(-6)}`,
-      notes: {
-        consultation_type: consultationType,
-        patient_name: patientName,
-        patient_email: patientEmail,
-        patient_phone: patientPhone,
-        appointment_date: date,
-        appointment_time: time,
-        user_id: req.session.user.id,
-        environment: isLive ? 'live' : 'test',
-      },
-    };
-
-    const order = await razorpay.orders.create(options);
-
-    console.log('Razorpay order created:', order);
-
-    res.json({
-      success: true,
-      order: {
-        id: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        receipt: order.receipt,
-      },
-      razorpay_key: env.RAZORPAY_KEY_ID, // Send key to frontend
-    });
+    console.log('💳 Creating order with service...');
+    
+    // Create order using the service
+    const result = await razorpayService.createOrder(req.body, req.session.user.id);
+    
+    console.log('✅ Order created successfully:', result);
+    return res.json(result);
 
   } catch (error) {
-    console.error('Error creating Razorpay order:', error);
-    res.status(500).json({ 
+    console.error('❌ Payment order creation failed:', error);
+    console.error('❌ Error stack:', error.stack);
+    
+    return res.status(500).json({
       error: 'Failed to create payment order',
-      message: error.message
+      message: error.message,
+      details: error.stack
     });
   }
 });
@@ -103,63 +48,25 @@ router.post('/create-order', requireAuth, async (req, res) => {
 // Verify Razorpay payment
 router.post('/verify-payment', requireAuth, async (req, res) => {
   try {
-    if (!flags.paymentsEnabled) {
-      return res.status(503).json({ 
-        error: 'Payment service not configured'
-      });
-    }
-
-    const verifySchema = z.object({
-      razorpay_order_id: z.string(),
-      razorpay_payment_id: z.string(),
-      razorpay_signature: z.string(),
-      booking_details: z.object({
-        consultationType: z.string(),
-        patientName: z.string(),
-        patientEmail: z.string(),
-        date: z.string(),
-        time: z.string(),
-        amount: z.number(),
-        currency: z.string(),
-      }),
-    });
-
-    const parsed = verifySchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ 
-        error: 'Invalid verification data',
-        details: parsed.error.flatten()
-      });
-    }
-
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, booking_details } = parsed.data;
-
-    // Verify payment signature
-    const sign = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSign = crypto
-      .createHmac("sha256", env.RAZORPAY_KEY_SECRET)
-      .update(sign.toString())
-      .digest("hex");
-
-    const isAuthentic = expectedSign === razorpay_signature;
-
-    if (!isAuthentic) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Payment verification failed',
-        message: 'Invalid payment signature'
-      });
-    }
-
-    // Get payment details from Razorpay
-    const payment = await razorpay.payments.fetch(razorpay_payment_id);
+    console.log('💳 Payment verification request from user:', req.session?.user?.email);
     
-    console.log('Payment verified successfully:', {
-      payment_id: razorpay_payment_id,
-      order_id: razorpay_order_id,
-      amount: payment.amount / 100,
-      status: payment.status
-    });
+    // Check if service is available
+    const status = razorpayService.getStatus();
+    if (!status.initialized) {
+      return res.status(503).json({
+        error: 'Payment service unavailable',
+        message: 'Razorpay service not properly initialized'
+      });
+    }
+
+    // Verify payment using the service
+    const result = await razorpayService.verifyPayment(req.body);
+    
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    const { payment } = result;
 
     // Send payment confirmation email
     try {
@@ -189,17 +96,17 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
               </div>
               <div class="details">
                 <h4>Payment Details:</h4>
-                <p><strong>Payment ID:</strong> ${razorpay_payment_id}</p>
-                <p><strong>Order ID:</strong> ${razorpay_order_id}</p>
-                <p><strong>Amount:</strong> ${payment.amount / 100} ${payment.currency}</p>
+                <p><strong>Payment ID:</strong> ${payment.id}</p>
+                <p><strong>Order ID:</strong> ${payment.order_id}</p>
+                <p><strong>Amount:</strong> ${payment.amount} ${payment.currency}</p>
                 <p><strong>Status:</strong> ${payment.status}</p>
               </div>
               <div class="details">
                 <h4>Consultation Details:</h4>
-                <p><strong>Type:</strong> ${booking_details.consultationType}</p>
-                <p><strong>Patient:</strong> ${booking_details.patientName}</p>
-                <p><strong>Date:</strong> ${booking_details.date}</p>
-                <p><strong>Time:</strong> ${booking_details.time}</p>
+                <p><strong>Type:</strong> ${req.body.booking_details.consultationType}</p>
+                <p><strong>Patient:</strong> ${req.body.booking_details.patientName}</p>
+                <p><strong>Date:</strong> ${req.body.booking_details.date}</p>
+                <p><strong>Time:</strong> ${req.body.booking_details.time}</p>
                 <p><strong>Doctor:</strong> Dr. Ilango Krishnamurthy (Sr. Nephrologist)</p>
               </div>
               <p>You will receive your consultation link closer to the appointment time.</p>
@@ -210,7 +117,7 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
       `;
 
       await sendPaymentEmail(
-        booking_details.patientEmail,
+        req.body.booking_details.patientEmail,
         'Payment Successful - NephroConsult',
         emailHtml
       );
@@ -222,15 +129,7 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
     res.json({
       success: true,
       message: 'Payment verified successfully',
-      payment: {
-        id: razorpay_payment_id,
-        order_id: razorpay_order_id,
-        amount: payment.amount / 100,
-        currency: payment.currency,
-        status: payment.status,
-        method: payment.method,
-        created_at: new Date(payment.created_at * 1000).toISOString(),
-      },
+      payment: payment
     });
 
   } catch (error) {
@@ -479,6 +378,47 @@ router.post('/test-verify-payment', async (req, res) => {
       success: false,
       error: 'Test payment verification failed',
       message: error.message
+    });
+  }
+});
+
+// Get payment configuration and status
+router.get('/config', (req, res) => {
+  const status = razorpayService.getStatus();
+  
+  res.json({
+    paymentsEnabled: status.initialized,
+    razorpayKeyId: status.initialized ? status.keyId : null,
+    environment: status.environment,
+    isLive: status.environment === 'live',
+    isTest: status.environment === 'test',
+    nodeEnv: process.env.NODE_ENV,
+  });
+});
+
+// Health check endpoint
+router.get('/health', async (req, res) => {
+  try {
+    const healthCheck = await razorpayService.healthCheck();
+    
+    if (healthCheck.healthy) {
+      res.json({
+        status: 'healthy',
+        environment: healthCheck.environment,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(503).json({
+        status: 'unhealthy',
+        error: healthCheck.error,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    res.status(503).json({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
     });
   }
 });

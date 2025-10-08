@@ -10,6 +10,20 @@ import { env } from '../config.js';
 
 const router = express.Router();
 
+// Get current user session
+router.get('/me', (req, res) => {
+  console.log('🔍 Auth check - Session exists:', !!req.session);
+  console.log('🔍 Auth check - Session user:', req.session?.user);
+  console.log('🔍 Auth check - Session ID:', req.sessionID);
+  console.log('🔍 Auth check - Cookie header:', req.headers.cookie);
+  
+  if (req.session && req.session.user) {
+    res.json({ user: req.session.user });
+  } else {
+    res.json({ user: null });
+  }
+});
+
 // Debug endpoint to check configuration  
 router.get('/debug', (req, res) => {
   res.json({
@@ -257,7 +271,15 @@ router.post('/login', async (req, res) => {
     const ok = await bcrypt.compare(password, userDoc.passwordHash);
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
+    // Create session
     req.session.user = { id: userDoc._id.toString(), role: userDoc.role, email: userDoc.email, name: userDoc.name };
+    
+    console.log('✅ [LOGIN] Session created:', {
+      sessionId: req.sessionID,
+      user: req.session.user,
+      cookie: req.session.cookie
+    });
+    
     const clean = userDoc.toJSON();
     const user = { ...clean, id: String(userDoc._id) };
     return res.json({ user });
@@ -439,6 +461,58 @@ router.post('/fix-admin-role', async (req, res) => {
   } catch (error) {
     console.error('Error fixing admin role:', error);
     return res.status(500).json({ error: 'Failed to update role' });
+  }
+});
+
+// Simple user creation endpoint for testing (development only)
+router.post('/create-test-user', async (req, res) => {
+  try {
+    if (env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Endpoint not found' });
+    }
+
+    const { email, password, name } = req.body;
+    
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(409).json({ error: 'User already exists' });
+    }
+
+    // Create new user
+    const passwordHash = await bcrypt.hash(password, 10);
+    const newUser = await User.create({
+      name: name || 'Test User',
+      email: email.toLowerCase(),
+      passwordHash,
+      role: 'patient',
+      phone: '+91-9876543210',
+      country: 'IN'
+    });
+
+    // Log them in immediately
+    req.session.user = { 
+      id: newUser._id.toString(), 
+      role: 'patient', 
+      email: newUser.email, 
+      name: newUser.name 
+    };
+
+    const user = { 
+      id: String(newUser._id), 
+      role: 'patient',
+      email: newUser.email,
+      name: newUser.name,
+      phone: newUser.phone,
+      country: newUser.country
+    };
+
+    console.log('Created and logged in test user:', user.email);
+    return res.json({ user });
+    
+  } catch (error) {
+    console.error('Error creating test user:', error);
+    return res.status(500).json({ error: 'Failed to create user' });
   }
 });
 

@@ -8,6 +8,7 @@ import { sendBookingEmail } from '../utils/email.js';
 import { generateMeetLink } from '../utils/meet.js';
 import { scheduleAppointmentReminder } from '../jobs.js';
 import { getConsultationReminderTemplate } from '../utils/emailTemplates.js';
+import { telegramService } from '../services/telegramService.js';
 import { z } from 'zod';
 
 const router = express.Router();
@@ -285,6 +286,24 @@ router.post('/appointments', requireAuth, async (req, res) => {
 
     // Schedule 10-min reminder email
     try { await scheduleAppointmentReminder(appointment); } catch {}
+
+    // Send Telegram notification to doctor (best-effort)
+    try {
+      await telegramService.notifyNewAppointment({
+        patientName: userDoc?.name,
+        patientEmail: userDoc?.email,
+        phone: userDoc?.phone,
+        date: appointment.date,
+        timeSlot: appointment.timeSlot,
+        amount: appointment.price.amount,
+        consultationType: appointment.type,
+        symptoms: appointment.intake?.description,
+        medicalHistory: appointment.intake?.address
+      });
+      console.log('📱 Telegram notification sent for new appointment');
+    } catch (telegramError) {
+      console.log('📱 Telegram notification failed (non-critical):', telegramError.message);
+    }
 
     // Send confirmation email (best-effort)
     try {
