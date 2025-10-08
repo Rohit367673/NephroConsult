@@ -81,6 +81,12 @@ export default function DoctorAdminPanel() {
     fetchAppointments();
   }, []);
 
+  // Add manual refresh function
+  const handleRefresh = () => {
+    console.log('🔄 Manual refresh triggered');
+    fetchAppointments();
+  };
+
   const fetchAppointments = async () => {
     try {
       setLoading(true);
@@ -91,6 +97,9 @@ export default function DoctorAdminPanel() {
       const response = await fetch(doctorEndpoint, {
         credentials: 'include'
       });
+      
+      console.log('📋 Doctor API Response Status:', response.status);
+      console.log('📋 Doctor API Response Headers:', Object.fromEntries(response.headers.entries()));
       
       if (response.ok) {
         const data = await response.json();
@@ -160,8 +169,22 @@ export default function DoctorAdminPanel() {
         setAppointments(transformedAppointments);
         console.log('📋 Transformed appointments:', transformedAppointments);
       } else {
-        console.error('Failed to fetch doctor appointments');
-        toast.error('Failed to load appointments');
+        const errorText = await response.text();
+        console.error('Failed to fetch doctor appointments:', response.status, errorText);
+        
+        // Handle authentication errors specifically
+        if (response.status === 401 || response.status === 403) {
+          console.log('🚫 Authentication failed for doctor appointments');
+          toast.error('🚫 Authentication failed. Please ensure you\'re logged in as doctor/admin.');
+          // Force a page reload to trigger proper authentication flow
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        } else if (response.status === 404) {
+          toast.error('Doctor appointments endpoint not found. Please check server configuration.');
+        } else {
+          toast.error(`Failed to load appointments (${response.status})`);
+        }
       }
     } catch (error) {
       console.error('Error fetching appointments:', error);
@@ -348,7 +371,18 @@ export default function DoctorAdminPanel() {
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle>Appointments</CardTitle>
+                <div className="flex items-center space-x-3">
+                  <CardTitle>Appointments</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={loading}
+                    className="h-8"
+                  >
+                    {loading ? 'Loading...' : '🔄 Refresh'}
+                  </Button>
+                </div>
                 <div className="flex items-center space-x-4">
                   <div className="relative">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
