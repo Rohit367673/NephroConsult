@@ -844,7 +844,17 @@ export default function BookingPage() {
 
           const appointmentData = await appointmentResponse.json();
           console.log('✅ Appointment created successfully in database:', appointmentData);
-          toast.success('Appointment successfully created!');
+          
+          // Show success message and redirect to profile
+          toast.success('🎉 Appointment successfully created! Redirecting to your dashboard...', {
+            duration: 4000,
+            id: 'appointment-success'
+          });
+          
+          // Redirect to profile page after 2 seconds
+          setTimeout(() => {
+            window.location.href = '/profile';
+          }, 2000);
         } catch (bookingError) {
           console.error('❌ Booking creation error:', bookingError);
           
@@ -873,11 +883,6 @@ export default function BookingPage() {
         patientName: bookingDetails.patientInfo.name
       };
       setBookedAppointments(prev => [...prev, newBooking]);
-      
-      // Redirect to profile page after successful booking
-      setTimeout(() => {
-        navigate('/profile');
-      }, 2000);
       } else {
         throw new Error('Payment verification failed');
       }
