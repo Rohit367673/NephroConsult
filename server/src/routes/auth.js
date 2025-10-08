@@ -408,9 +408,18 @@ router.post('/firebase-login', async (req, res) => {
       await user.save();
     }
 
-    // Create session - ensure admin users get correct role
-    const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
-    const sessionRole = adminEmails.includes(user.email) ? 'admin' : user.role;
+    // Create session - ensure admin/doctor users get correct role  
+    let sessionRole = user.role;
+    
+    // Force admin role for admin emails
+    if (adminEmails.includes(user.email)) {
+      sessionRole = 'admin';
+    }
+    
+    // Also ensure doctor role for suyambu email
+    if (user.email === 'suyambu54321@gmail.com') {
+      sessionRole = 'doctor'; // Doctor can also see all appointments
+    }
     
     console.log(`🔐 Creating session for ${user.email} with role: ${sessionRole} (DB role: ${user.role})`);
     

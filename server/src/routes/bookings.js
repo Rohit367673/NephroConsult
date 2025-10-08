@@ -182,6 +182,10 @@ router.delete('/appointments/cleanup', async (req, res) => {
 // Doctor-specific appointments endpoint  
 router.get('/appointments/doctor', requireRole('doctor', 'admin'), async (req, res) => {
   try {
+    console.log('📋 Doctor appointments endpoint called');
+    console.log('📋 Session user:', req.session?.user);
+    console.log('📋 User role:', req.session?.user?.role);
+    
     // Fetch all appointments for doctors (they can see all appointments)
     const appointments = await Appointment.find({})
       .sort({ date: 1, timeSlot: 1 })
@@ -190,6 +194,7 @@ router.get('/appointments/doctor', requireRole('doctor', 'admin'), async (req, r
     
     const sessionUser = req.session.user;
     console.log(`📋 Doctor ${sessionUser?.email} fetched ${appointments.length} appointments`);
+    console.log('📋 Sample appointment data:', appointments[0]);
     
     return res.json({ 
       appointments,
