@@ -37,6 +37,35 @@ router.get('/debug', (req, res) => {
   });
 });
 
+// Fix admin role for specific users
+router.get('/fix-admin-role', async (req, res) => {
+  try {
+    const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
+    
+    const updateResults = await Promise.all(
+      adminEmails.map(async (email) => {
+        const user = await User.findOne({ email });
+        if (user && user.role !== 'admin') {
+          user.role = 'admin';
+          await user.save();
+          console.log(`🔧 Updated ${email} to admin role`);
+          return { email, updated: true, oldRole: user.role };
+        }
+        return { email, updated: false, currentRole: user?.role || 'not found' };
+      })
+    );
+    
+    res.json({ 
+      success: true, 
+      results: updateResults,
+      message: 'Admin roles updated successfully'
+    });
+  } catch (error) {
+    console.error('Error fixing admin roles:', error);
+    res.status(500).json({ error: 'Failed to fix admin roles' });
+  }
+});
+
 // Send OTP for email verification
 router.post('/send-otp', async (req, res) => {
   try {
