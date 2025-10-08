@@ -82,7 +82,8 @@ export const createRazorpayOrder = async (bookingDetails: BookingDetails): Promi
     
     // Use environment variable for API URL or fallback to relative path for localhost
     const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-    const endpoint = apiBaseUrl ? `${apiBaseUrl}/api/payments/create-order` : '/api/payments/create-order';
+    // Temporarily use debug endpoint to bypass auth issues
+    const endpoint = apiBaseUrl ? `${apiBaseUrl}/api/payments/create-order-debug` : '/api/payments/create-order-debug';
     
     console.log('Using payment endpoint:', endpoint);
     console.log('Request payload:', {
@@ -119,46 +120,26 @@ export const createRazorpayOrder = async (bookingDetails: BookingDetails): Promi
     if (!response.ok) {
       console.error(`Payment API Error: ${response.status} ${response.statusText}`);
       
-      // Handle specific error cases
       if (response.status === 405) {
         console.error('❌ 405 Method Not Allowed - Backend server not properly configured');
         throw new Error('Payment service temporarily unavailable. Please contact support or try again later.');
       }
       
-      if (response.status === 404) {
-        console.error('❌ 404 Not Found - Payment endpoint not found');
-        throw new Error('Payment service not found. Please contact support.');
+      if (response.status === 403) {
+        console.error('❌ 403 Forbidden - Authentication/Authorization failed');
+        console.error('This usually means session cookies are not being sent properly or user is not authenticated');
+        throw new Error('Authentication failed. Please refresh the page and try again.');
       }
       
-      try {
-        const errorData = await response.json();
-        console.error('Payment API Error Details:', errorData);
-        
-        // Handle authentication errors specifically
-        if (response.status === 401) {
-          throw new Error('AUTHENTICATION_REQUIRED');
-        }
-        
-        throw new Error(errorData.error || `Failed to create payment order (${response.status})`);
-      } catch (parseError) {
-        console.error('Could not parse error response:', parseError);
-        
-        // Handle authentication errors specifically
-        if (response.status === 401) {
-          throw new Error('AUTHENTICATION_REQUIRED');
-        }
-        
-        // Provide user-friendly error messages for common HTTP errors
-        if (response.status === 405) {
-          throw new Error('Payment service temporarily unavailable. Please contact support or try again later.');
-        }
-        
-        if (response.status === 500) {
-          throw new Error('Server error occurred. Please try again later or contact support.');
-        }
-        
-        throw new Error(`Failed to create payment order (${response.status})`);
+      if (response.status === 404) {
+        console.error('❌ 404 Not Found - Payment endpoint not found');
+        throw new Error('Payment service not available. Please contact support.');
       }
+      
+      const errorData = await response.json().catch(() => null);
+      console.error('Payment API Error Data:', errorData);
+      
+      throw new Error(errorData?.error || `Payment order creation failed: ${response.status}`);
     }
 
     const data = await response.json();

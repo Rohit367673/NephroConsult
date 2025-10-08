@@ -9,7 +9,11 @@ const router = express.Router();
 // Create Razorpay order
 router.post('/create-order', requireAuth, async (req, res) => {
   try {
-    console.log('💳 Payment order request from user:', req.session?.user?.email);
+    console.log('💳 Payment order request received');
+    console.log('💳 Session exists:', !!req.session);
+    console.log('💳 Session user:', req.session?.user?.email);
+    console.log('💳 Session ID:', req.sessionID);
+    console.log('💳 Request headers:', req.headers);
     console.log('💳 Request body:', req.body);
     
     // Check if service is available
@@ -419,6 +423,79 @@ router.get('/health', async (req, res) => {
       status: 'unhealthy',
       error: error.message,
       timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Temporary endpoint without auth for debugging (will remove after fixing)
+router.post('/create-order-debug', async (req, res) => {
+  try {
+    console.log('💳 DEBUG: Payment order request without auth');
+    console.log('💳 DEBUG: Request body:', req.body);
+    
+    // Check if service is available
+    const status = razorpayService.getStatus();
+    console.log('💳 DEBUG: Razorpay service status:', status);
+    
+    if (!status.initialized) {
+      return res.status(503).json({
+        error: 'Payment service unavailable',
+        message: 'Razorpay service not properly configured'
+      });
+    }
+
+    // Validate request
+    const schema = z.object({
+      amount: z.number().positive(),
+      currency: z.string().min(3).max(3),
+      consultationType: z.string(),
+      patientName: z.string(),
+      patientEmail: z.string().email(),
+      patientPhone: z.string(),
+      date: z.string(),
+      time: z.string(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Invalid request data',
+        details: parsed.error.flatten()
+      });
+    }
+
+    const { amount, currency, consultationType, patientName, patientEmail, patientPhone, date, time } = parsed.data;
+
+    // Create order
+    const result = await razorpayService.createOrder({
+      amount,
+      currency,
+      consultationType,
+      patientName,
+      patientEmail,
+      patientPhone,
+      date,
+      time
+    });
+
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+
+    console.log('💳 DEBUG: Order created successfully:', result.data.orderId);
+
+    res.json({
+      success: true,
+      order: result.data,
+      message: 'Debug: Order created without authentication'
+    });
+
+  } catch (error) {
+    console.error('💳 DEBUG: Error creating payment order:', error);
+    res.status(500).json({ 
+      error: 'Failed to create payment order',
+      message: error.message,
+      debug: true
     });
   }
 });
