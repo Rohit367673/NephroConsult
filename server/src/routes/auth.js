@@ -66,6 +66,40 @@ router.get('/fix-admin-role', async (req, res) => {
   }
 });
 
+// Force refresh current session with correct admin role
+router.post('/refresh-session', requireAuth, async (req, res) => {
+  try {
+    const currentUser = req.session.user;
+    const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
+    
+    if (adminEmails.includes(currentUser.email)) {
+      // Update session with admin role
+      req.session.user = {
+        ...currentUser,
+        role: 'admin'
+      };
+      
+      console.log(`🔐 Session refreshed for ${currentUser.email} - now has admin role`);
+      
+      await req.session.save();
+      
+      res.json({
+        success: true,
+        user: req.session.user,
+        message: 'Session refreshed with admin privileges'
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'User is not in admin list'
+      });
+    }
+  } catch (error) {
+    console.error('Error refreshing session:', error);
+    res.status(500).json({ error: 'Failed to refresh session' });
+  }
+});
+
 // Send OTP for email verification
 router.post('/send-otp', async (req, res) => {
   try {
@@ -374,12 +408,17 @@ router.post('/firebase-login', async (req, res) => {
       await user.save();
     }
 
-    // Create session
+    // Create session - ensure admin users get correct role
+    const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
+    const sessionRole = adminEmails.includes(user.email) ? 'admin' : user.role;
+    
+    console.log(`🔐 Creating session for ${user.email} with role: ${sessionRole} (DB role: ${user.role})`);
+    
     req.session.user = {
       id: String(user._id),
       email: user.email,
       name: user.name,
-      role: user.role,
+      role: sessionRole,
       photoURL: user.photoURL
     };
 
@@ -387,7 +426,7 @@ router.post('/firebase-login', async (req, res) => {
       id: String(user._id),
       name: user.name,
       email: user.email,
-      role: user.role,
+      role: sessionRole, // Use session role, not DB role
       photoURL: user.photoURL,
       isEmailVerified: user.isEmailVerified
     };
