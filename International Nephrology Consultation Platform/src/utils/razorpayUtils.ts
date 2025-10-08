@@ -80,8 +80,9 @@ export const createRazorpayOrder = async (bookingDetails: BookingDetails): Promi
   try {
     console.log('Creating Razorpay order for:', bookingDetails);
     
-    // Always use authenticated endpoint
-    const endpoint = '/api/payments/create-order';
+    // Use environment variable for API URL or fallback to relative path for localhost
+    const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+    const endpoint = apiBaseUrl ? `${apiBaseUrl}/api/payments/create-order` : '/api/payments/create-order';
     
     console.log('Using payment endpoint:', endpoint);
     console.log('Request payload:', {
@@ -117,6 +118,18 @@ export const createRazorpayOrder = async (bookingDetails: BookingDetails): Promi
 
     if (!response.ok) {
       console.error(`Payment API Error: ${response.status} ${response.statusText}`);
+      
+      // Handle specific error cases
+      if (response.status === 405) {
+        console.error('❌ 405 Method Not Allowed - Backend server not properly configured');
+        throw new Error('Payment service temporarily unavailable. Please contact support or try again later.');
+      }
+      
+      if (response.status === 404) {
+        console.error('❌ 404 Not Found - Payment endpoint not found');
+        throw new Error('Payment service not found. Please contact support.');
+      }
+      
       try {
         const errorData = await response.json();
         console.error('Payment API Error Details:', errorData);
@@ -133,6 +146,15 @@ export const createRazorpayOrder = async (bookingDetails: BookingDetails): Promi
         // Handle authentication errors specifically
         if (response.status === 401) {
           throw new Error('AUTHENTICATION_REQUIRED');
+        }
+        
+        // Provide user-friendly error messages for common HTTP errors
+        if (response.status === 405) {
+          throw new Error('Payment service temporarily unavailable. Please contact support or try again later.');
+        }
+        
+        if (response.status === 500) {
+          throw new Error('Server error occurred. Please try again later or contact support.');
         }
         
         throw new Error(`Failed to create payment order (${response.status})`);
@@ -224,8 +246,9 @@ export const verifyRazorpayPayment = async (
   try {
     console.log('Verifying payment:', paymentResponse);
     
-    // Always use authenticated endpoint
-    const endpoint = '/api/payments/verify-payment';
+    // Use environment variable for API URL or fallback to relative path for localhost
+    const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+    const endpoint = apiBaseUrl ? `${apiBaseUrl}/api/payments/verify-payment` : '/api/payments/verify-payment';
     
     const response = await fetch(endpoint, {
       method: 'POST',

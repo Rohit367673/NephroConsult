@@ -22,7 +22,7 @@ interface Patient {
   medicalHistory: string;
   currentMedications: string;
   allergies: string;
-  uploadedFiles: Array<{ name: string; type: string; url: string }>;
+  uploadedFiles: Array<{ name: string; type: string; url: string; base64: string }>;
 }
 
 interface Appointment {
@@ -107,8 +107,11 @@ export default function DoctorAdminPanel() {
             currentMedications: 'Not specified',
             allergies: 'Not specified',
             uploadedFiles: (apt.intake?.documents || []).map((doc: string, index: number) => {
-              if (doc.includes('|')) {
-                const [filename] = doc.split('|');
+              console.log(`📄 Processing document ${index + 1} for appointment ${apt._id}:`, doc?.substring(0, 100) + '...');
+              
+              if (doc && doc.includes('|')) {
+                const [filename, base64Data] = doc.split('|');
+                console.log(`📄 Parsed document: ${filename}, base64 length: ${base64Data?.length || 0}`);
                 return {
                   name: filename,
                   type: filename.includes('.pdf') ? 'application/pdf' : 
@@ -118,8 +121,11 @@ export default function DoctorAdminPanel() {
                   base64: doc
                 };
               }
+              
+              // Handle legacy format or malformed documents
+              console.log(`📄 Legacy/unknown format document ${index + 1}:`, typeof doc, doc?.length || 0);
               return {
-                name: `Document ${index + 1}`,
+                name: doc || `Document ${index + 1}`,
                 type: 'unknown',
                 url: doc,
                 base64: doc
@@ -564,7 +570,20 @@ export default function DoctorAdminPanel() {
 
               <TabsContent value="files" className="mt-6">
                 <div className="space-y-4">
-                  <h3 className="font-semibold">Uploaded Documents</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold">Uploaded Documents</h3>
+                    <span className="text-sm text-gray-500">
+                      {selectedAppointment.patient.uploadedFiles.length} file(s) found
+                    </span>
+                  </div>
+                  
+                  {/* Debug Info */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="bg-gray-50 p-3 rounded text-xs">
+                      <strong>Debug Info:</strong><br/>
+                      Raw intake documents: {selectedAppointment ? JSON.stringify((selectedAppointment as any).intake?.documents || [], null, 2) : 'None'}
+                    </div>
+                  )}
                   {selectedAppointment.patient.uploadedFiles.length > 0 ? (
                     <div className="grid gap-4">
                       {selectedAppointment.patient.uploadedFiles.map((file, index) => (
@@ -576,9 +595,44 @@ export default function DoctorAdminPanel() {
                               <p className="text-sm text-gray-600">{file.type}</p>
                             </div>
                           </div>
-                          <Button variant="outline" size="sm">
-                            View
-                          </Button>
+                          <div className="flex space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                if (file.base64 && file.base64.includes('|')) {
+                                  const [, base64Data] = file.base64.split('|');
+                                  const link = document.createElement('a');
+                                  link.href = base64Data;
+                                  link.target = '_blank';
+                                  link.click();
+                                } else {
+                                  console.error('Invalid document format:', file);
+                                }
+                              }}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                if (file.base64 && file.base64.includes('|')) {
+                                  const [filename, base64Data] = file.base64.split('|');
+                                  const link = document.createElement('a');
+                                  link.href = base64Data;
+                                  link.download = filename;
+                                  link.click();
+                                } else {
+                                  console.error('Invalid document format for download:', file);
+                                }
+                              }}
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              Download
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>

@@ -788,7 +788,11 @@ export default function BookingPage() {
             })
           );
 
-          const appointmentResponse = await fetch('/api/appointments', {
+          // Use environment variable for API URL or fallback to relative path for localhost
+          const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+          const appointmentEndpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments` : '/api/appointments';
+          
+          const appointmentResponse = await fetch(appointmentEndpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
