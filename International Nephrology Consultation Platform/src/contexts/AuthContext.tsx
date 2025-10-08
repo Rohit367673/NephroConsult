@@ -93,6 +93,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
               setUser(userData);
               console.log('Loaded user from cookie (immediate):', userData);
               
+              // For admin users, skip backend verification to prevent logout issues
+              const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
+              if (adminEmails.includes(userData.email)) {
+                console.log('🔐 Admin user detected - skipping backend verification to prevent logout');
+                setLoading(false);
+                return;
+              }
+              
               // Verify session with backend
               try {
                 const response = await apiService.makeRequest<{user: User}>('/auth/me', {});
@@ -108,6 +116,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                   // For admin/doctor users, be more lenient to prevent false logouts
                   if (userData.role === 'admin' || userData.role === 'doctor') {
                     console.log('Admin/Doctor user - keeping session despite backend verification failure');
+                    // Don't clear admin sessions - they should persist through network issues
                   } else {
                     console.log('Regular user - clearing session');
                     setUser(null);
