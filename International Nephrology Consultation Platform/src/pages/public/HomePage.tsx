@@ -11,94 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from "sonner@2.0.3";
 import { useAuth } from '../../contexts/AuthContext';
 import Footer from '../../components/Footer';
-import { OTPSignupModal } from '../../components/OTPSignupModal';
 import { getUserTimezone, getPricingForTimezone, getCountryFromTimezone } from '../../utils/timezoneUtils';
 
-// Login Modal Component
-function LoginModal({ isOpen, onClose, onSignupOpen }: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  onSignupOpen: () => void; 
-}) {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    const success = await login(formData.email, formData.password);
-    
-    if (success) {
-      onClose();
-      toast.success('Welcome back!');
-      navigate('/profile');
-    } else {
-      toast.error('Invalid credentials. Please try again.');
-    }
-    
-    setIsLoading(false);
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-gray-900 text-center">Welcome Back</DialogTitle>
-          <DialogDescription className="text-gray-600 text-center">
-            Sign in to your NephroConsult account
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div>
-            <Label>Email Address</Label>
-            <Input
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="Enter your email"
-            />
-          </div>
-          <div>
-            <Label>Password</Label>
-            <Input
-              type="password"
-              required
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder="Enter your password"
-            />
-          </div>
-          <Button
-            type="submit"
-            className="w-full bg-[#006f6f] hover:bg-[#005555]"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Signing in...' : 'Sign In'}
-          </Button>
-        </form>
-        <div className="mt-4 text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
-            <Button
-              variant="link"
-              onClick={() => {
-                onClose();
-                onSignupOpen();
-              }}
-              className="text-[#006f6f] hover:underline p-0"
-            >
-              Sign up here
-            </Button>
-          </p>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 // Floating Elements Component
 function FloatingElements() {
@@ -1466,9 +1380,13 @@ export default function HomePage() {
           setIsSignupOpen(true);
         }}
       />
-      <OTPSignupModal 
+      <SignupModal 
         isOpen={isSignupOpen} 
         onClose={() => setIsSignupOpen(false)}
+        onLoginOpen={() => {
+          setIsSignupOpen(false);
+          setIsLoginOpen(true);
+        }}
       />
     </motion.div>
   );
