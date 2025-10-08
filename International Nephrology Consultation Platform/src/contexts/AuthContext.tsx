@@ -82,7 +82,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // First, try to load from cookie immediately for faster UX
         const savedUser = getCookie('nephro_user');
         console.log('AuthContext: Checking for saved user cookie:', !!savedUser);
-        console.log('AuthContext: Raw cookie value:', savedUser ? savedUser.substring(0, 100) + '...' : 'null');
         
         if (savedUser) {
           try {
@@ -93,8 +92,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
             if (userData && userData.email && userData.name) {
               setUser(userData);
               console.log('Loaded user from cookie (immediate):', userData);
-              console.log('Cookie - avatar URL:', userData.avatar);
-              console.log('Cookie - avatar length:', userData.avatar ? userData.avatar.length : 0);
+              
+              // Verify session with backend
+              try {
+                const response = await apiService.makeRequest<{user: User}>('/auth/me', {});
+                if (response.success && response.data?.user) {
+                  console.log('Session verified with backend:', response.data.user);
+                  // Update user data from backend if different
+                  if (JSON.stringify(userData) !== JSON.stringify(response.data.user)) {
+                    setUser(response.data.user);
+                    setCookie('nephro_user', encodeURIComponent(JSON.stringify(response.data.user)), 7);
+                  }
+                } else {
+                  console.log('Session not found on backend, clearing local user');
+                  setUser(null);
+                  deleteCookie('nephro_user');
+                }
+              } catch (error) {
+                console.error('Error verifying session with backend:', error);
+                // Keep local user data if backend verification fails (might be offline)
+              }
             }
           } catch (error) {
             console.error('Error parsing user cookie:', error);
@@ -102,6 +119,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
         } else {
           console.log('AuthContext: No saved user cookie found');
+          // Try to get session from backend anyway
+          try {
+            const response = await apiService.makeRequest<{user: User}>('/auth/me', {});
+            if (response.success && response.data?.user) {
+              console.log('Found session on backend without cookie:', response.data.user);
+              setUser(response.data.user);
+              setCookie('nephro_user', encodeURIComponent(JSON.stringify(response.data.user)), 7);
+            }
+          } catch (error) {
+            console.error('Error checking backend session:', error);
+          }
         }
 
         setLoading(false);

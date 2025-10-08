@@ -3,7 +3,7 @@ import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { BookingFlow } from './BookingFlow';
-import { Video, MessageCircle, Phone, Calendar, Clock, DollarSign, Users } from 'lucide-react';
+import { Video, MessageCircle, Phone, Calendar, Clock, DollarSign, Users, MapPin } from 'lucide-react';
 
 export const BookingSection: React.FC = () => {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);

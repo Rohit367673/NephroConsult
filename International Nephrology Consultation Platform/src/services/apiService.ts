@@ -50,12 +50,20 @@ class ApiService {
     }
   }
 
+  // Generic request method (public)
+  async makeRequest<T>(endpoint: string, options: RequestInit = {}) {
+    return this.request<T>(endpoint, options);
+  }
+
   // Authentication
   async login(email: string, password: string) {
-    return this.request('/auth/login', {
+    console.log('API: Attempting login for:', email);
+    const response = await this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
+    console.log('API: Login response:', response);
+    return response;
   }
 
   async register(userData: {

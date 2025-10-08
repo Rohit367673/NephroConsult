@@ -1,30 +1,96 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Calendar, Clock, Video, Phone, FileText, Upload, CreditCard, CheckCircle2, ArrowRight, User, Star, Heart, Menu, X, LogOut, MapPin, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, Video, Phone, FileText, Upload, CreditCard, CheckCircle2, ArrowRight, User, Star, Heart, Menu, X, LogOut, MapPin, Globe, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Badge } from '../components/ui/badge';
 import { Textarea } from '../components/ui/textarea';
-import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import Footer from '../components/Footer';
+import { toast } from 'sonner';
+import { getUserTimezone, getCountryFromTimezone, getPricingForTimezone, getAvailableTimeSlotsForUser } from '../utils/timezoneUtils';
+import { loadRazorpayScript, initiateRazorpayPayment, verifyRazorpayPayment } from '../utils/razorpayUtils';
 import { 
-  getUserTimezone, 
-  getPricingForTimezone, 
-  getAvailableTimeSlotsForUser, 
-  getCountryFromTimezone
-} from '../utils/timezoneUtils';
-import {
-  initiateRazorpayPayment,
-  verifyRazorpayPayment,
-  getConsultationPrice,
-  type BookingDetails,
-  type RazorpayResponse
-} from '../utils/razorpayUtils';
+  validatePatientInfo, 
+  validatePhoneNumber, 
+  validateEmail, 
+  validateAge, 
+  validateName, 
+  validateMedicalHistory,
+  formatPhoneNumber
+} from '../utils/formValidation';
+import Footer from '../components/Footer';
+
+// Type definitions
+interface BookingDetails {
+  consultationType: string;
+  date: string;
+  time: string;
+  patientInfo: {
+    name: string;
+    email: string;
+    phone: string;
+    age: string;
+    gender: string;
+    medicalHistory: string;
+    currentMedications: string;
+  };
+  amount: number;
+  currency: string;
+}
+
+interface RazorpayResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+}
+
+// Helper functions (outside component to prevent re-creation)
+const getConsultationPrice = (type: string, currency: string) => {
+  const prices: any = {
+    'initial': { USD: 30, INR: 2500, EUR: 28, GBP: 25 },
+    'followup': { USD: 22, INR: 1800, EUR: 20, GBP: 18 },
+    'urgent': { USD: 45, INR: 3750, EUR: 42, GBP: 38 }
+  };
+  return prices[type]?.[currency] || prices['initial'][currency] || 30;
+};
+
+// Animation variants (outside component to prevent re-creation)
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.5
+    }
+  }
+};
+
+// Date formatting options (outside component to prevent re-creation)
+const dateFormatOptions: Intl.DateTimeFormatOptions = {
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+};
+
+// Navigation state for login redirect (outside component to prevent re-creation)
+const loginRedirectState = { state: { showLogin: true } };
 
 // Calendar Component
 interface CalendarComponentProps {
@@ -274,40 +340,53 @@ function Navigation() {
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate('/profile')}
               >
-                <div className="w-8 h-8 rounded-full overflow-hidden">
+                <div className="w-8 h-8 rounded-full overflow-hidden relative">
                   {user.avatar ? (
-                    <img 
-                      src={user.avatar} 
-                      alt={user.name}
-                      className="w-full h-full object-cover"
-                      crossOrigin="anonymous"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        console.log('Profile image failed to load, trying fallback methods');
-                        
-                        // Try alternative Google image URL
-                        const currentSrc = e.currentTarget.src;
-                        if (currentSrc.includes('googleusercontent.com') && !currentSrc.includes('proxy')) {
-                          const newSrc = `https://images.weserv.nl/?url=${encodeURIComponent(currentSrc)}&w=200&h=200&fit=cover&mask=circle`;
-                          e.currentTarget.src = newSrc;
-                          return;
-                        }
-                        
-                        // If all methods fail, show fallback
-                        e.currentTarget.style.display = 'none';
-                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                        if (fallback) fallback.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <div 
-                    className="w-full h-full bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center"
-                    style={{ display: user.avatar ? 'none' : 'flex' }}
-                  >
-                    <span className="text-white text-xs font-semibold">
-                      {user.name?.charAt(0)?.toUpperCase() || 'U'}
-                    </span>
-                  </div>
+                    <>
+                      <img 
+                        src={user.avatar} 
+                        alt={user.name}
+                        className="w-full h-full object-cover absolute inset-0"
+                        crossOrigin="anonymous"
+                        referrerPolicy="no-referrer"
+                        onLoad={(e) => {
+                          // Hide fallback when image loads
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'none';
+                        }}
+                        onError={(e) => {
+                          console.log('BookingPage nav image failed to load, trying fallback methods');
+                          
+                          // Try alternative Google image URL
+                          const currentSrc = e.currentTarget.src;
+                          if (currentSrc.includes('googleusercontent.com') && !currentSrc.includes('proxy')) {
+                            const newSrc = `https://images.weserv.nl/?url=${encodeURIComponent(currentSrc)}&w=200&h=200&fit=cover&mask=circle`;
+                            e.currentTarget.src = newSrc;
+                            return;
+                          }
+                          
+                          // If all methods fail, hide image and show fallback
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                      <div 
+                        className="w-full h-full bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center absolute inset-0"
+                        style={{ display: 'flex' }}
+                      >
+                        <span className="text-white text-xs font-semibold">
+                          {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center">
+                      <span className="text-white text-xs font-semibold">
+                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </motion.button>
             )}
@@ -400,19 +479,7 @@ export default function BookingPage() {
   const { user, logout, loading } = authContext || {};
   const navigate = useNavigate();
   
-  // Redirect to home with login prompt if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      toast.error('Please login to book an appointment');
-      navigate('/', { state: { showLogin: true } });
-    }
-  }, [user, loading, navigate]);
-
-  // Early return if not authenticated
-  if (!user && !loading) {
-    return null;
-  }
-
+  // All hooks must be declared at the top before any conditional logic
   const [step, setStep] = useState(1);
   const [userTimezone, setUserTimezone] = useState('');
   const [userCountry, setUserCountry] = useState('');
@@ -421,8 +488,9 @@ export default function BookingPage() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [bookedAppointments, setBookedAppointments] = useState<Array<{ date: string, time: string, patientName: string }>>([]);
-
-  
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [isValidating, setIsValidating] = useState(false);
+  const countrySetRef = useRef(false);
   const [bookingData, setBookingData] = useState({
     consultationType: '',
     date: '',
@@ -442,15 +510,22 @@ export default function BookingPage() {
     country: ''
   });
 
+  // Redirect to home with login prompt if not authenticated
   useEffect(() => {
-    // Get user's timezone and pricing
+    if (!loading && !user) {
+      toast.error('Please login to book an appointment');
+      navigate('/', loginRedirectState);
+    }
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    // Get user's timezone and pricing (only run once on mount)
     const tz = getUserTimezone();
     setUserTimezone(tz);
     const country = getCountryFromTimezone(tz);
     setUserCountry(country);
     setPricing(getPricingForTimezone(tz));
-    setBookingData(prev => ({ ...prev, country }));
-
+    
     // Initialize with some mock booked appointments for demonstration
     const mockBookedAppointments = [
       { date: '2025-10-05', time: '10:00 AM', patientName: 'John Doe' },
@@ -460,6 +535,14 @@ export default function BookingPage() {
     ];
     setBookedAppointments(mockBookedAppointments);
   }, []);
+
+  // Set country only once when userCountry is available
+  useEffect(() => {
+    if (userCountry && !countrySetRef.current) {
+      setBookingData(prev => ({ ...prev, country: userCountry }));
+      countrySetRef.current = true;
+    }
+  }, [userCountry]);
 
   useEffect(() => {
     // Update available time slots when date or consultation type changes
@@ -487,9 +570,79 @@ export default function BookingPage() {
       
       setAvailableSlots(slotsWithBookingStatus);
     }
-  }, [bookingData.date, userTimezone, bookingData.consultationType, bookedAppointments]);
+  }, [bookingData.date, userTimezone, bookingData.consultationType]); // Removed bookedAppointments from deps
 
-  const consultationTypes = [
+  // Validation functions
+  const validateAllFields = () => {
+    const validation = validatePatientInfo(bookingData.patientInfo);
+    
+    // Map validation errors to state
+    const errorMap: {[key: string]: string} = {};
+    validation.errors.forEach(error => {
+      if (error.includes('Name')) errorMap.name = error;
+      else if (error.includes('Email') || error.includes('email')) errorMap.email = error;
+      else if (error.includes('Phone') || error.includes('phone')) errorMap.phone = error;
+      else if (error.includes('Age') || error.includes('age')) errorMap.age = error;
+      else if (error.includes('Gender') || error.includes('gender')) errorMap.gender = error;
+      else if (error.includes('Medical') || error.includes('medical')) errorMap.medicalHistory = error;
+    });
+
+    setValidationErrors(errorMap);
+    return validation.isValid;
+  };
+
+  // Pure validation check without state updates - memoized for performance
+  const checkFieldsValid = useMemo(() => {
+    const validation = validatePatientInfo(bookingData.patientInfo);
+    return validation.isValid;
+  }, [bookingData.patientInfo]);
+
+  // Enhanced input change handler with validation
+  const handleInputChange = useCallback((field: string, value: string) => {
+    // Update booking data
+    setBookingData(prev => ({
+      ...prev,
+      patientInfo: {
+        ...prev.patientInfo,
+        [field]: value
+      }
+    }));
+
+    // Clear previous validation error immediately for better UX
+    setValidationErrors(prev => ({
+      ...prev,
+      [field]: ''
+    }));
+  }, []);
+
+  // Enhanced step validation (pure function - no state updates)
+  const isStepValid = () => {
+    switch (step) {
+      case 1:
+        return bookingData.consultationType !== '';
+      case 2:
+        return bookingData.date !== '' && bookingData.time !== '';
+      case 3:
+        // Use basic field checks to avoid triggering validation during render
+        return bookingData.patientInfo.name.trim() !== '' &&
+               bookingData.patientInfo.email.trim() !== '' &&
+               bookingData.patientInfo.phone.trim() !== '' &&
+               bookingData.patientInfo.age.trim() !== '' &&
+               bookingData.patientInfo.gender.trim() !== '' &&
+               bookingData.patientInfo.medicalHistory.trim().length >= 10;
+      case 4:
+        return true; // Payment step
+      default:
+        return false;
+    }
+  };
+
+  // Early return if not authenticated (now safe after all hooks are declared)
+  if (!user && !loading) {
+    return null;
+  }
+
+  const consultationTypes = useMemo(() => [
     { 
       id: 'initial', 
       name: 'Initial Consultation', 
@@ -517,21 +670,21 @@ export default function BookingPage() {
       icon: Clock,
       features: ['Same-day availability', 'Priority scheduling (10 AM - 10 PM IST)', 'Urgent symptom evaluation', 'Immediate treatment plan']
     }
-  ];
+  ], [pricing.initial, pricing.followup]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (step < 4) {
       setStep(step + 1);
       // Auto-select Razorpay when reaching payment step
       if (step + 1 === 4 && !bookingData.paymentMethod) {
-        setBookingData({ ...bookingData, paymentMethod: 'razorpay' });
+        setBookingData(prev => ({ ...prev, paymentMethod: 'razorpay' }));
       }
     }
-  };
+  }, [step, bookingData.paymentMethod]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (step > 1) setStep(step - 1);
-  };
+  }, [step]);
 
   const handleSlotSelection = (slot: { time: string, istTime: string, available: boolean, isBooked?: boolean }) => {
     if (!slot.available) {
@@ -543,11 +696,11 @@ export default function BookingPage() {
       return;
     }
 
-    setBookingData({ 
-      ...bookingData, 
+    setBookingData(prev => ({ 
+      ...prev, 
       time: slot.time,
       istTime: slot.istTime 
-    });
+    }));
     toast.success(`Time slot ${slot.time} selected successfully!`);
   };
 
@@ -619,6 +772,22 @@ export default function BookingPage() {
         
         // Create actual booking in database
         try {
+          // Convert files to base64 first
+          const processedDocuments = await Promise.all(
+            bookingData.uploadedFiles.map(async (file: File) => {
+              console.log('📄 Processing document:', file.name, 'Size:', file.size);
+              
+              return new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const base64 = reader.result as string;
+                  resolve(`${file.name}|${base64}`); // Format: filename|base64data
+                };
+                reader.readAsDataURL(file);
+              });
+            })
+          );
+
           const appointmentResponse = await fetch('/api/appointments', {
             method: 'POST',
             headers: {
@@ -637,10 +806,7 @@ export default function BookingPage() {
                              bookingDetails.currency === 'GBP' ? 'GB' : 'default',
               intake: {
                 description: bookingDetails.patientInfo.medicalHistory,
-                documents: bookingData.uploadedFiles.map((file: File) => {
-                  console.log('📄 Sending document to backend:', file.name, 'Size:', file.size);
-                  return file.name;
-                })
+                documents: processedDocuments
               }
             })
           });
@@ -688,56 +854,59 @@ export default function BookingPage() {
     setIsProcessingPayment(false);
   };
 
-  // Step validation function
-  const isStepValid = () => {
-    switch (step) {
-      case 1:
-        return bookingData.consultationType !== '';
-      case 2:
-        return bookingData.date && bookingData.time;
-      case 3:
-        return bookingData.patientInfo.name && 
-               bookingData.patientInfo.email && 
-               bookingData.patientInfo.phone;
-      case 4:
-        return bookingData.paymentMethod !== '';
-      default:
-        return false;
-    }
-  };
-
   // Payment handler function  
   const handlePayment = async () => {
     if (!isStepValid()) {
       toast.error('Please complete all required fields');
       return;
     }
-    
-    toast.success('Payment functionality will be implemented');
-    // Payment logic would go here
-  };
 
-  // Get consultation price helper
-  const getConsultationPrice = (type: string, currency: string) => {
-    const prices: any = {
-      'initial': { USD: 30, INR: 2500, EUR: 28, GBP: 25 },
-      'followup': { USD: 22, INR: 1800, EUR: 20, GBP: 18 },
-      'urgent': { USD: 45, INR: 3750, EUR: 42, GBP: 38 }
-    };
-    return prices[type]?.[currency] || prices['initial'][currency] || 30;
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
+    if (isProcessingPayment) {
+      return;
     }
-  };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1 }
+    setIsProcessingPayment(true);
+    
+    try {
+      // Prepare booking details for payment
+      const bookingDetails: BookingDetails = {
+        consultationType: bookingData.consultationType,
+        date: bookingData.date,
+        time: bookingData.time,
+        patientInfo: {
+          name: bookingData.patientInfo.name,
+          email: bookingData.patientInfo.email,
+          phone: bookingData.patientInfo.phone,
+          age: bookingData.patientInfo.age,
+          gender: bookingData.patientInfo.gender,
+          medicalHistory: bookingData.patientInfo.medicalHistory,
+          currentMedications: bookingData.patientInfo.currentMedications,
+        },
+        amount: getConsultationPrice(bookingData.consultationType, pricing.currency),
+        currency: pricing.currency,
+      };
+
+      console.log('Initiating payment with details:', bookingDetails);
+
+      // Initiate Razorpay payment
+      await initiateRazorpayPayment(
+        bookingDetails,
+        handlePaymentSuccess,
+        handlePaymentError
+      );
+    } catch (error) {
+      console.error('Payment processing error:', error);
+      
+      if (error instanceof Error && error.message === 'AUTHENTICATION_REQUIRED') {
+        toast.error('Session expired. Please log in again.');
+        // Redirect to login
+        navigate('/', { state: { showLogin: true } });
+      } else {
+        toast.error('Failed to initiate payment. Please try again.');
+      }
+      
+      setIsProcessingPayment(false);
+    }
   };
 
   const stepVariants = {
@@ -786,12 +955,12 @@ export default function BookingPage() {
                           ? 'border-[#006f6f] bg-[#006f6f]/5 shadow-lg'
                           : 'border-gray-200 hover:border-[#006f6f]/50'
                       }`}
-                      onClick={() => setBookingData({ 
-                        ...bookingData, 
+                      onClick={() => setBookingData(prev => ({ 
+                        ...prev, 
                         consultationType: type.id,
                         time: '', // Clear time when consultation type changes
-                        istTime: ''
-                      })}
+                        istTime: '' // Clear IST time as well
+                      }))}
                     >
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
@@ -870,12 +1039,12 @@ export default function BookingPage() {
                   {/* Calendar Component */}
                   <CalendarComponent 
                     selectedDate={bookingData.date}
-                    onDateSelect={(date) => setBookingData({ 
-                      ...bookingData, 
+                    onDateSelect={(date) => setBookingData(prev => ({ 
+                      ...prev, 
                       date, 
                       time: '', 
                       istTime: '' 
-                    })}
+                    }))}
                   />
                   
                   {bookingData.date && (
@@ -883,12 +1052,7 @@ export default function BookingPage() {
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="h-4 w-4 text-green-600" />
                         <p className="text-sm text-green-800 font-medium">
-                          Selected: {new Date(bookingData.date).toLocaleDateString('en-US', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
+                          Selected: {new Date(bookingData.date).toLocaleDateString('en-US', dateFormatOptions)}
                         </p>
                       </div>
                     </div>
@@ -1018,28 +1182,34 @@ export default function BookingPage() {
                   <Label>Full Name *</Label>
                   <Input
                     value={bookingData.patientInfo.name}
-                    onChange={(e) => setBookingData({
-                      ...bookingData,
-                      patientInfo: { ...bookingData.patientInfo, name: e.target.value }
-                    })}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
                     className="p-4"
                     required
                     placeholder="Enter your full name"
                   />
+                  {validationErrors.name && (
+                    <div className="flex items-center mt-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {validationErrors.name}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label>Email Address *</Label>
                   <Input
                     type="email"
                     value={bookingData.patientInfo.email}
-                    onChange={(e) => setBookingData({
-                      ...bookingData,
-                      patientInfo: { ...bookingData.patientInfo, email: e.target.value }
-                    })}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
                     className="p-4"
                     required
                     placeholder="Enter your email address"
                   />
+                  {validationErrors.email && (
+                    <div className="flex items-center mt-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {validationErrors.email}
+                    </div>
+                  )}
                 </div>
               </motion.div>
 
@@ -1049,42 +1219,55 @@ export default function BookingPage() {
                   <Input
                     type="tel"
                     value={bookingData.patientInfo.phone}
-                    onChange={(e) => setBookingData({
-                      ...bookingData,
-                      patientInfo: { ...bookingData.patientInfo, phone: e.target.value }
-                    })}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
                     className="p-4"
                     required
-                    placeholder="Enter your phone number"
+                    placeholder="Enter your phone number (7-15 digits)"
                   />
+                  {validationErrors.phone && (
+                    <div className="flex items-center mt-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {validationErrors.phone}
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-500 mt-1">
+                    Examples: +91 98765 43210, (555) 123-4567, 9876543210
+                  </div>
                 </div>
                 <div>
                   <Label>Age *</Label>
                   <Input
                     type="number"
                     value={bookingData.patientInfo.age}
-                    onChange={(e) => setBookingData({
-                      ...bookingData,
-                      patientInfo: { ...bookingData.patientInfo, age: e.target.value }
-                    })}
+                    onChange={(e) => handleInputChange('age', e.target.value)}
                     className="p-4"
                     required
                     placeholder="Enter your age"
                     min="1"
                     max="150"
                   />
+                  {validationErrors.age && (
+                    <div className="flex items-center mt-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {validationErrors.age}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label>Gender *</Label>
                   <Select
                     value={bookingData.patientInfo.gender}
-                    onValueChange={(value) => setBookingData({
-                      ...bookingData,
-                      patientInfo: { ...bookingData.patientInfo, gender: value }
-                    })}
+                    onValueChange={(value) => {
+                      setBookingData(prev => ({
+                        ...prev,
+                        patientInfo: { ...prev.patientInfo, gender: value }
+                      }));
+                      // Clear gender validation error when selected
+                      setValidationErrors(prev => ({ ...prev, gender: '' }));
+                    }}
                     required
                   >
-                    <SelectTrigger className="p-4">
+                    <SelectTrigger className={`p-4 ${validationErrors.gender ? 'border-red-300' : ''}`}>
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1094,6 +1277,12 @@ export default function BookingPage() {
                       <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
                     </SelectContent>
                   </Select>
+                  {validationErrors.gender && (
+                    <div className="flex items-center mt-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {validationErrors.gender}
+                    </div>
+                  )}
                 </div>
               </motion.div>
 
@@ -1101,24 +1290,30 @@ export default function BookingPage() {
                 <Label>Medical History & Current Symptoms *</Label>
                 <Textarea
                   value={bookingData.patientInfo.medicalHistory}
-                  onChange={(e) => setBookingData({
-                    ...bookingData,
-                    patientInfo: { ...bookingData.patientInfo, medicalHistory: e.target.value }
-                  })}
-                  placeholder="Please describe your current symptoms, relevant medical history, and any concerns you'd like to discuss..."
+                  onChange={(e) => handleInputChange('medicalHistory', e.target.value)}
+                  placeholder="Please describe your current symptoms, relevant medical history, and any concerns you'd like to discuss (minimum 10 characters)..."
                   className="min-h-32 p-4"
                   required
                 />
+                {validationErrors.medicalHistory && (
+                  <div className="flex items-center mt-1 text-sm text-red-600">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {validationErrors.medicalHistory}
+                  </div>
+                )}
+                <div className="text-xs text-gray-500 mt-1">
+                  Characters: {bookingData.patientInfo.medicalHistory.length}/2000
+                </div>
               </motion.div>
 
               <motion.div variants={itemVariants}>
                 <Label>Current Medications (Optional)</Label>
                 <Textarea
                   value={bookingData.patientInfo.currentMedications}
-                  onChange={(e) => setBookingData({
-                    ...bookingData,
-                    patientInfo: { ...bookingData.patientInfo, currentMedications: e.target.value }
-                  })}
+                  onChange={(e) => setBookingData(prev => ({
+                    ...prev,
+                    patientInfo: { ...prev.patientInfo, currentMedications: e.target.value }
+                  }))}
                   placeholder="List any medications you're currently taking..."
                   className="p-4"
                 />
@@ -1147,10 +1342,10 @@ export default function BookingPage() {
                         e.target.value = '';
                         return;
                       }
-                      setBookingData({
-                        ...bookingData,
-                        uploadedFiles: [...bookingData.uploadedFiles, ...files]
-                      });
+                      setBookingData(prev => ({
+                        ...prev,
+                        uploadedFiles: [...prev.uploadedFiles, ...files]
+                      }));
                     }}
                     disabled={bookingData.uploadedFiles.length >= 5}
                   />
@@ -1245,7 +1440,7 @@ export default function BookingPage() {
                           ? 'bg-[#006f6f] hover:bg-[#005555]' 
                           : ''
                       }`}
-                      onClick={() => setBookingData({ ...bookingData, paymentMethod: 'razorpay' })}
+                      onClick={() => setBookingData(prev => ({ ...prev, paymentMethod: 'razorpay' }))}
                     >
                       <CreditCard className="w-5 h-5 mr-3" />
                       <div className="text-left">
@@ -1320,43 +1515,58 @@ export default function BookingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="flex flex-col sm:flex-row justify-between gap-4 mt-8 md:mt-12"
           >
-            <Button
-              variant="outline"
-              onClick={() => step > 1 ? setStep(step - 1) : null}
-              disabled={step === 1}
-              className="flex items-center justify-center w-full sm:w-auto order-2 sm:order-1"
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Previous
-            </Button>
-            <Button
-              onClick={step === 4 ? handlePayment : () => setStep(step + 1)}
-              disabled={!isStepValid()}
-              className="bg-[#006f6f] hover:bg-[#005555] flex items-center justify-center w-full sm:w-auto order-1 sm:order-2"
-            >
-              {step === 4 ? (
-                <>
-                  {isProcessingPayment ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      Pay {pricing.symbol}{getConsultationPrice(bookingData.consultationType, pricing.currency)}
-                      <CreditCard className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </>
-              ) : (
-                <>
-                  Continue
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </>
-              )}
-            </Button>
+            {/* Validation Summary for Step 3 */}
+            {step === 3 && Object.keys(validationErrors).some(key => validationErrors[key]) && (
+              <Alert className="border-red-200 bg-red-50 mb-6">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800">
+                  <div className="font-medium mb-2">Please fix the following errors:</div>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    {Object.entries(validationErrors).map(([field, error]) => 
+                      error && (
+                        <li key={field}>
+                          <span className="capitalize">{field.replace(/([A-Z])/g, ' $1')}</span>: {error}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex justify-between pt-6 border-t border-gray-200">
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                className="flex items-center space-x-2"
+                disabled={step === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span>Previous</span>
+              </Button>
+              
+              <Button
+                onClick={step === 4 ? handlePayment : () => {
+                  if (step === 3) {
+                    // Force validation check before proceeding
+                    const isValid = validateAllFields();
+                    if (isValid) {
+                      handleNext();
+                    } else {
+                      toast.error('Please fix all validation errors before proceeding');
+                    }
+                  } else {
+                    handleNext();
+                  }
+                }}
+                className="bg-[#006f6f] hover:bg-[#005555] text-white flex items-center space-x-2"
+                disabled={!isStepValid() || (step === 4 && isProcessingPayment)}
+              >
+                <span>{step === 4 ? (isProcessingPayment ? 'Processing...' : 'Pay Now') : 'Next'}</span>
+                {step === 4 ? <CreditCard className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </Button>
+            </div>
           </motion.div>
         </div>
       </div>

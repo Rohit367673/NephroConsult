@@ -146,40 +146,53 @@ function Navigation() {
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {}} // Already on profile page
               >
-                <div className="w-8 h-8 rounded-full overflow-hidden">
+                <div className="w-8 h-8 rounded-full overflow-hidden relative">
                   {user.avatar ? (
-                    <img 
-                      src={user.avatar} 
-                      alt={user.name}
-                      className="w-full h-full object-cover"
-                      crossOrigin="anonymous"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        console.log('Profile image failed to load, trying fallback methods');
-                        
-                        // Try alternative Google image URL
-                        const currentSrc = e.currentTarget.src;
-                        if (currentSrc.includes('googleusercontent.com') && !currentSrc.includes('proxy')) {
-                          const newSrc = `https://images.weserv.nl/?url=${encodeURIComponent(currentSrc)}&w=200&h=200&fit=cover&mask=circle`;
-                          e.currentTarget.src = newSrc;
-                          return;
-                        }
-                        
-                        // If all methods fail, show fallback
-                        e.currentTarget.style.display = 'none';
-                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                        if (fallback) fallback.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <div 
-                    className="w-full h-full bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center"
-                    style={{ display: user.avatar ? 'none' : 'flex' }}
-                  >
-                    <span className="text-white text-xs font-semibold">
-                      {user.name?.charAt(0)?.toUpperCase() || 'U'}
-                    </span>
-                  </div>
+                    <>
+                      <img 
+                        src={user.avatar} 
+                        alt={user.name}
+                        className="w-full h-full object-cover absolute inset-0"
+                        crossOrigin="anonymous"
+                        referrerPolicy="no-referrer"
+                        onLoad={(e) => {
+                          // Hide fallback when image loads
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'none';
+                        }}
+                        onError={(e) => {
+                          console.log('Mobile nav image failed to load, trying fallback methods');
+                          
+                          // Try alternative Google image URL
+                          const currentSrc = e.currentTarget.src;
+                          if (currentSrc.includes('googleusercontent.com') && !currentSrc.includes('proxy')) {
+                            const newSrc = `https://images.weserv.nl/?url=${encodeURIComponent(currentSrc)}&w=200&h=200&fit=cover&mask=circle`;
+                            e.currentTarget.src = newSrc;
+                            return;
+                          }
+                          
+                          // If all methods fail, hide image and show fallback
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                      <div 
+                        className="w-full h-full bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center absolute inset-0"
+                        style={{ display: 'flex' }}
+                      >
+                        <span className="text-white text-xs font-semibold">
+                          {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center">
+                      <span className="text-white text-xs font-semibold">
+                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </motion.button>
             )}
@@ -647,42 +660,50 @@ For support: suyambu54321@gmail.com
                     whileHover={{ scale: 1.05 }}
                     className="relative mb-6"
                   >
-                    <div className="w-32 h-32 rounded-full mx-auto overflow-hidden bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center">
+                    <div className="w-32 h-32 rounded-full mx-auto overflow-hidden bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center relative">
                       {user?.avatar && user.avatar.trim() !== '' ? (
-                        <img 
-                          src={user.avatar} 
-                          alt={user.name || 'Profile'} 
-                          className="w-full h-full object-cover"
-                          crossOrigin="anonymous"
-                          onLoad={() => console.log('Profile image loaded successfully:', user.avatar)}
-                          onError={(e) => {
-                            console.log('Profile image failed to load, trying fallback methods');
-                            
-                            const currentSrc = e.currentTarget.src;
-                            
-                            // Prevent infinite loops - if already tried CORS proxy, fall back to default
-                            if (currentSrc.includes('images.weserv.nl') || currentSrc.includes('proxy')) {
-                              console.log('Already tried CORS proxy, using default avatar');
-                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNTAiIGZpbGw9IiM2MzY2ZjEiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjQwIiByPSIxNSIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMjAgNzVDMjAgNjUgMzUgNTUgNTAgNTVTODAgNjUgODAgNzVWODVIMjBWNzVaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==';
-                              return;
-                            }
-                            
-                            // Try CORS proxy for Google images (only once)
-                            if (currentSrc.includes('googleusercontent.com')) {
-                              const newSrc = `https://images.weserv.nl/?url=${encodeURIComponent(currentSrc)}&w=300&h=300&fit=cover&mask=circle`;
-                              console.log('Trying CORS proxy:', newSrc);
-                              e.currentTarget.src = newSrc;
-                              return;
-                            }
-                            
-                            // Final fallback - default avatar
-                            console.log('Using default avatar as final fallback');
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNTAiIGZpbGw9IiM2MzY2ZjEiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjQwIiByPSIxNSIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMjAgNzVDMjAgNjUgMzUgNTUgNTAgNTVTODAgNjUgODAgNzVWODVIMjBWNzVaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==';
-                          }}
-                        />
+                        <>
+                          <img 
+                            src={user.avatar} 
+                            alt={user.name || 'Profile'} 
+                            className="w-full h-full object-cover absolute inset-0"
+                            crossOrigin="anonymous"
+                            referrerPolicy="no-referrer"
+                            onLoad={(e) => {
+                              console.log('Profile image loaded successfully:', user.avatar);
+                              // Hide fallback when image loads
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (fallback) fallback.style.display = 'none';
+                            }}
+                            onError={(e) => {
+                              console.log('Profile image failed to load, trying fallback methods');
+                              
+                              // Try alternative Google image URL
+                              const currentSrc = e.currentTarget.src;
+                              if (currentSrc.includes('googleusercontent.com') && !currentSrc.includes('proxy')) {
+                                const newSrc = `https://images.weserv.nl/?url=${encodeURIComponent(currentSrc)}&w=300&h=300&fit=cover&mask=circle`;
+                                e.currentTarget.src = newSrc;
+                                return;
+                              }
+                              
+                              // If all methods fail, hide image and show fallback
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                          <div 
+                            className="w-full h-full bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center absolute inset-0"
+                            style={{ display: 'flex' }}
+                          >
+                            <span className="text-white text-4xl font-bold">
+                              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                            </span>
+                          </div>
+                        </>
                       ) : (
                         <span className="text-white text-4xl font-bold">
-                          {user?.name?.charAt(0) || 'U'}
+                          {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                         </span>
                       )}
                     </div>
@@ -1057,12 +1078,17 @@ For support: suyambu54321@gmail.com
                               <div className="flex flex-col sm:flex-row gap-4">
                                 <Button 
                                   className="bg-[#006f6f] hover:bg-[#005555]"
-                                  onClick={() => window.location.href = '/booking'}
+                                  onClick={() => navigate('/booking')}
                                 >
                                   <Plus className="w-4 h-4 mr-2" />
                                   Book New Consultation
                                 </Button>
-                                <Button variant="outline">
+                                <Button 
+                                  variant="outline"
+                                  onClick={() => {
+                                    toast.info('Calendar feature coming soon!');
+                                  }}
+                                >
                                   <Calendar className="w-4 h-4 mr-2" />
                                   View Calendar
                                 </Button>
@@ -1190,14 +1216,18 @@ For support: suyambu54321@gmail.com
                                           <div>
                                             <p className="text-sm font-medium text-blue-800">Medicines:</p>
                                             <div className="space-y-1">
-                                              {appointment.prescription.medicines.map((medicine, index) => (
+                                              {appointment.prescription.medicines.map((medicine: any, index: number) => (
                                                 <div key={index} className="flex items-center justify-between text-sm">
                                                   <span>{medicine.name} - {medicine.dosage}</span>
                                                   <Button 
                                                     size="sm" 
                                                     variant="ghost" 
                                                     className="text-blue-600 hover:text-blue-800 p-1 h-auto"
-                                                    onClick={() => window.open(medicine.url, '_blank')}
+                                                    onClick={() => {
+                                                      const searchQuery = encodeURIComponent(`${medicine.name} ${medicine.dosage}`);
+                                                      const pharmacyUrl = `https://www.1mg.com/search/all?name=${searchQuery}`;
+                                                      window.open(pharmacyUrl, '_blank');
+                                                    }}
                                                   >
                                                     <ExternalLink className="w-3 h-3 mr-1" />
                                                     Buy Online
@@ -1361,7 +1391,11 @@ For support: suyambu54321@gmail.com
                                             size="sm" 
                                             variant="ghost" 
                                             className="text-blue-600 hover:text-blue-800 p-1 h-auto"
-                                            onClick={() => window.open(medicine.url, '_blank')}
+                                            onClick={() => {
+                                              const searchQuery = encodeURIComponent(`${medicine.name} ${medicine.dosage}`);
+                                              const pharmacyUrl = `https://www.1mg.com/search/all?name=${searchQuery}`;
+                                              window.open(pharmacyUrl, '_blank');
+                                            }}
                                           >
                                             <ExternalLink className="w-3 h-3 mr-1" />
                                             Buy Online

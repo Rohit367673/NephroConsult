@@ -867,7 +867,13 @@ function HomePage() {
                 <Button
                   size="lg"
                   className="relative w-full sm:w-auto px-5 sm:px-7 md:px-10 py-4 sm:py-5 md:py-6 bg-gradient-to-r from-[#006f6f] to-[#004f4f] hover:from-[#005555] hover:to-[#003f3f] text-white border-0 rounded-xl shadow-xl text-[13px] sm:text-sm md:text-base lg:text-lg min-h-[48px] sm:min-h-[52px]"
-                  onClick={() => navigate('/booking')}
+                  onClick={() => {
+                    if (!user) {
+                      setIsLoginOpen(true);
+                    } else {
+                      navigate('/booking');
+                    }
+                  }}
                 >
                   <Calendar className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 flex-shrink-0" />
                   <span className="font-semibold">
@@ -1382,7 +1388,13 @@ function HomePage() {
                 <Button
                   size="lg"
                   className="relative w-full sm:w-auto px-6 sm:px-8 md:px-12 py-4 sm:py-5 md:py-6 bg-gradient-to-r from-[#006f6f] to-[#004f4f] hover:from-[#005555] hover:to-[#003f3f] text-white border-0 rounded-xl sm:rounded-2xl shadow-2xl text-[13px] sm:text-sm md:text-base lg:text-lg font-semibold min-h-[48px] sm:min-h-[52px]"
-                  onClick={() => navigate('/booking')}
+                  onClick={() => {
+                    if (!user) {
+                      setIsLoginOpen(true);
+                    } else {
+                      navigate('/booking');
+                    }
+                  }}
                 >
                   <Calendar className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 flex-shrink-0" />
                   <span className="hidden sm:inline">Book Consultation Now</span>

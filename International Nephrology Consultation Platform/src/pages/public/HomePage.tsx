@@ -11,7 +11,94 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from "sonner@2.0.3";
 import { useAuth } from '../../contexts/AuthContext';
 import Footer from '../../components/Footer';
+import { OTPSignupModal } from '../../components/OTPSignupModal';
 import { getUserTimezone, getPricingForTimezone, getCountryFromTimezone } from '../../utils/timezoneUtils';
+
+// Simple Login Modal Component
+function LoginModal({ isOpen, onClose, onSignupOpen }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSignupOpen: () => void; 
+}) {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    const success = await login(formData.email, formData.password);
+    
+    if (success) {
+      onClose();
+      toast.success('Welcome back!');
+      navigate('/profile');
+    } else {
+      toast.error('Invalid credentials. Please try again.');
+    }
+    
+    setIsLoading(false);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-center">Welcome Back</DialogTitle>
+          <DialogDescription className="text-center">
+            Sign in to your NephroConsult account
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div>
+            <Label>Email Address</Label>
+            <Input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="Enter your email"
+            />
+          </div>
+          <div>
+            <Label>Password</Label>
+            <Input
+              type="password"
+              required
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              placeholder="Enter your password"
+            />
+          </div>
+          <Button
+            type="submit"
+            className="w-full bg-[#006f6f] hover:bg-[#005555]"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Signing in...' : 'Sign In'}
+          </Button>
+        </form>
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <Button
+              variant="link"
+              onClick={() => {
+                onClose();
+                onSignupOpen();
+              }}
+              className="text-[#006f6f] hover:underline p-0"
+            >
+              Sign up here
+            </Button>
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 
 // Floating Elements Component
@@ -72,343 +159,7 @@ function FloatingElements() {
   );
 }
 
-// Login Modal Component
-function LoginModal({ isOpen, onClose, onSignupOpen }: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  onSignupOpen: () => void; 
-}) {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({ email: '', password: '', role: 'patient' });
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    const success = await login(formData.email, formData.password, formData.role);
-    
-    if (success) {
-      onClose();
-      toast.success('Welcome back!');
-      navigate('/profile');
-    } else {
-      toast.error('Invalid credentials. Please try again.');
-    }
-    
-    setIsLoading(false);
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="sr-only">Login to NephroConsult</DialogTitle>
-          <DialogDescription className="sr-only">
-            Sign in to your NephroConsult account to access your dashboard and book appointments
-          </DialogDescription>
-        </DialogHeader>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-        >
-          <div className="text-center mb-6">
-            <motion.div 
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="w-16 h-16 bg-gradient-to-br from-[#006f6f] to-[#004f4f] rounded-xl flex items-center justify-center mx-auto mb-4"
-            >
-              <span className="text-white text-2xl font-bold">N</span>
-            </motion.div>
-            <motion.h1 
-              initial={{ y: -10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="text-2xl font-bold text-gray-900"
-            >
-              Welcome Back
-            </motion.h1>
-            <motion.p 
-              initial={{ y: -10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="text-gray-600 mt-2"
-            >
-              Sign in to your NephroConsult account
-            </motion.p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <motion.div
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Label>Account Type</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="patient">Patient</SelectItem>
-                  <SelectItem value="doctor">Doctor</SelectItem>
-                </SelectContent>
-              </Select>
-            </motion.div>
-
-            <motion.div
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              <Label>Email Address</Label>
-              <Input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="Enter your email"
-              />
-            </motion.div>
-
-            <motion.div
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
-            >
-              <Label>Password</Label>
-              <Input
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Enter your password"
-              />
-            </motion.div>
-
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.7 }}
-            >
-              <Button
-                type="submit"
-                className="w-full bg-[#006f6f] hover:bg-[#005555]"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Signing in...' : 'Sign In'}
-              </Button>
-            </motion.div>
-          </form>
-
-          <motion.div 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="mt-6 text-center space-y-4"
-          >
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Button
-                variant="link"
-                onClick={() => {
-                  onClose();
-                  onSignupOpen();
-                }}
-                className="text-[#006f6f] hover:underline p-0"
-              >
-                Sign up here
-              </Button>
-            </p>
-            
-            <div className="border-t pt-4">
-              <p className="text-xs text-gray-500 mb-2">Demo Accounts:</p>
-              <p className="text-xs text-gray-400">
-                Patient: any email/password | Doctor: admin@nephroconsult.com / admin123
-              </p>
-            </div>
-          </motion.div>
-        </motion.div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Signup Modal Component
-function SignupModal({ isOpen, onClose, onLoginOpen }: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  onLoginOpen: () => void; 
-}) {
-  const { register } = useAuth();
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: 'patient',
-    phone: '',
-    country: getCountryFromTimezone(getUserTimezone())
-  });
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    const success = await register(formData);
-    
-    if (success) {
-      onClose();
-      toast.success('Account created successfully! Welcome to NephroConsult.');
-      navigate('/profile');
-    } else {
-      toast.error('Failed to create account. Please try again.');
-    }
-    
-    setIsLoading(false);
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="sr-only">Create NephroConsult Account</DialogTitle>
-          <DialogDescription className="sr-only">
-            Join NephroConsult to access expert nephrology care and book consultations with Dr. Ilango S. Prakasam
-          </DialogDescription>
-        </DialogHeader>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-        >
-          <div className="text-center mb-6">
-            <motion.div 
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="w-16 h-16 bg-gradient-to-br from-[#006f6f] to-[#004f4f] rounded-xl flex items-center justify-center mx-auto mb-4"
-            >
-              <span className="text-white text-2xl font-bold">N</span>
-            </motion.div>
-            <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
-            <p className="text-gray-600 mt-2">Join NephroConsult today</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label>Account Type</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="patient">Patient</SelectItem>
-                  <SelectItem value="doctor">Doctor</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Full Name</Label>
-              <Input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter your name"
-              />
-            </div>
-
-            <div>
-              <Label>Email Address</Label>
-              <Input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="Enter your email"
-              />
-            </div>
-
-            <div>
-              <Label>Phone Number</Label>
-              <Input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="Enter your phone number"
-              />
-            </div>
-
-            <div>
-              <Label>Password</Label>
-              <Input
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Create a password"
-              />
-            </div>
-
-            <div>
-              <Label>Confirm Password</Label>
-              <Input
-                type="password"
-                required
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                placeholder="Confirm your password"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full bg-[#006f6f] hover:bg-[#005555]"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Button
-                variant="link"
-                onClick={() => {
-                  onClose();
-                  onLoginOpen();
-                }}
-                className="text-[#006f6f] hover:underline p-0"
-              >
-                Sign in here
-              </Button>
-            </p>
-          </div>
-        </motion.div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+// (Removed duplicate/broken Navigation and unused local SignupModal)
 
 // Navigation Component (Embedded for standalone use)
 function Navigation({ onLoginOpen, onSignupOpen }: { 
@@ -1380,13 +1131,9 @@ export default function HomePage() {
           setIsSignupOpen(true);
         }}
       />
-      <SignupModal 
+      <OTPSignupModal 
         isOpen={isSignupOpen} 
         onClose={() => setIsSignupOpen(false)}
-        onLoginOpen={() => {
-          setIsSignupOpen(false);
-          setIsLoginOpen(true);
-        }}
       />
     </motion.div>
   );

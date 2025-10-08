@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Calendar, Clock, User, FileText, Video, Phone, Mail, MapPin, Stethoscope, Heart, Activity, Plus, Search, Filter, MoreVertical, Edit3, Save, X } from 'lucide-react';
+import { Calendar, Clock, User, FileText, Video, Phone, Mail, MapPin, Stethoscope, Heart, Activity, Plus, Search, Filter, MoreVertical, Edit3, Save, X, Download, Eye } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
@@ -68,100 +68,99 @@ export default function DoctorAdminPanel() {
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [prescriptionForm, setPrescriptionForm] = useState<PrescriptionFormData>({
     medications: [{ name: '', dosage: '', frequency: '', duration: '', instructions: '', link: '' }],
     notes: '',
     followUpDate: ''
   });
 
-  // Mock data - replace with real API calls
-  const appointments: Appointment[] = [
-    {
-      id: '1',
-      patientId: '1',
-      patient: {
-        id: '1',
-        name: 'John Smith',
-        email: 'john.smith@email.com',
-        phone: '+1 (555) 123-4567',
-        age: 45,
-        gender: 'Male',
-        medicalHistory: 'Hypertension since 2018, Family history of kidney disease, Recent episodes of proteinuria',
-        currentMedications: 'Lisinopril 10mg daily, Metformin 500mg twice daily',
-        allergies: 'Penicillin, Shellfish',
-        uploadedFiles: [
-          { name: 'Lab_Results_Sept_2024.pdf', type: 'application/pdf', url: '#' },
-          { name: 'Kidney_Ultrasound.jpg', type: 'image/jpeg', url: '#' }
-        ]
-      },
-      date: '2024-09-25',
-      time: '10:00 AM',
-      type: 'Initial Consultation',
-      status: 'scheduled',
-      duration: 45,
-      meetingUrl: 'https://meet.google.com/abc-defg-hij'
-    },
-    {
-      id: '2',
-      patientId: '2',
-      patient: {
-        id: '2',
-        name: 'Sarah Johnson',
-        email: 'sarah.johnson@email.com',
-        phone: '+1 (555) 987-6543',
-        age: 38,
-        gender: 'Female',
-        medicalHistory: 'Chronic kidney disease stage 3, Diabetes type 2',
-        currentMedications: 'Insulin glargine, Losartan 50mg daily',
-        allergies: 'None known',
-        uploadedFiles: [
-          { name: 'Blood_Tests_Aug_2024.pdf', type: 'application/pdf', url: '#' }
-        ]
-      },
-      date: '2024-09-25',
-      time: '11:30 AM',
-      type: 'Follow-up',
-      status: 'scheduled',
-      duration: 30,
-      meetingUrl: 'https://meet.google.com/xyz-uvwx-rst'
-    },
-    {
-      id: '3',
-      patientId: '3',
-      patient: {
-        id: '3',
-        name: 'Michael Brown',
-        email: 'michael.brown@email.com',
-        phone: '+1 (555) 456-7890',
-        age: 52,
-        gender: 'Male',
-        medicalHistory: 'End-stage renal disease, on dialysis 3x/week',
-        currentMedications: 'Sevelamer carbonate, Epoetin alfa',
-        allergies: 'Aspirin',
-        uploadedFiles: []
-      },
-      date: '2024-09-24',
-      time: '2:00 PM',
-      type: 'Follow-up',
-      status: 'completed',
-      duration: 30,
-      meetingUrl: 'https://meet.google.com/def-ghi-jkl',
-      prescription: {
-        medications: [
-          {
-            name: 'Sevelamer Carbonate',
-            dosage: '800mg',
-            frequency: '3 times daily',
-            duration: '1 month',
-            instructions: 'Take with meals to bind phosphorus',
-            link: 'https://pharmacy.example.com/sevelamer'
-          }
-        ],
-        notes: 'Patient responding well to current treatment. Phosphorus levels improved.',
-        followUpDate: '2024-10-24'
+  // Fetch real appointments from API
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/appointments/doctor', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📋 Doctor appointments data:', data);
+        
+        // Transform API data to match component interface
+        const transformedAppointments = (data.appointments || []).map((apt: any) => ({
+          id: apt._id,
+          patientId: apt.patient?.id || apt.patient?.email,
+          patient: {
+            id: apt.patient?.id || apt.patient?.email,
+            name: apt.patient?.name || 'Unknown Patient',
+            email: apt.patient?.email || '',
+            phone: apt.patient?.phone || '',
+            age: 35, // Default age, not in API
+            gender: 'Not specified', // Default gender, not in API
+            medicalHistory: apt.intake?.description || 'No medical history provided',
+            currentMedications: 'Not specified',
+            allergies: 'Not specified',
+            uploadedFiles: (apt.intake?.documents || []).map((doc: string, index: number) => {
+              if (doc.includes('|')) {
+                const [filename] = doc.split('|');
+                return {
+                  name: filename,
+                  type: filename.includes('.pdf') ? 'application/pdf' : 
+                        filename.includes('.jpg') || filename.includes('.jpeg') ? 'image/jpeg' :
+                        filename.includes('.png') ? 'image/png' : 'unknown',
+                  url: doc,
+                  base64: doc
+                };
+              }
+              return {
+                name: `Document ${index + 1}`,
+                type: 'unknown',
+                url: doc,
+                base64: doc
+              };
+            })
+          },
+          date: apt.date,
+          time: apt.timeSlot || apt.time,
+          type: apt.type,
+          status: apt.status === 'confirmed' ? 'scheduled' : apt.status === 'completed' ? 'completed' : apt.status,
+          duration: apt.type?.includes('Initial') ? 45 : 30,
+          meetingUrl: apt.meetLink || 'https://meet.google.com/new',
+          notes: apt.prescription?.notes || '',
+          prescription: apt.prescription ? {
+            medications: (apt.prescription.medicines || []).map((med: any) => ({
+              name: med.name,
+              dosage: med.dosage || '',
+              frequency: med.frequency || '',
+              duration: '1 month', // Default duration
+              instructions: med.frequency || 'Take as prescribed',
+              link: med.link || ''
+            })),
+            notes: apt.prescription.notes || '',
+            followUpDate: apt.prescription.nextConsultationDate ? new Date(apt.prescription.nextConsultationDate).toISOString().split('T')[0] : ''
+          } : undefined
+        }));
+        
+        setAppointments(transformedAppointments);
+        console.log('📋 Transformed appointments:', transformedAppointments);
+      } else {
+        console.error('Failed to fetch doctor appointments');
+        toast.error('Failed to load appointments');
       }
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      toast.error('Error loading appointments');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
 
   const addMedication = () => {
     setPrescriptionForm({
@@ -172,7 +171,7 @@ export default function DoctorAdminPanel() {
 
   const removeMedication = (index: number) => {
     const newMedications = prescriptionForm.medications.filter((_, i) => i !== index);
-    setPrescriptionForm({ ...prescriptionForm, medications: newMedizations });
+    setPrescriptionForm({ ...prescriptionForm, medications: newMedications });
   };
 
   const updateMedication = (index: number, field: string, value: string) => {
@@ -197,6 +196,50 @@ export default function DoctorAdminPanel() {
   const startConsultation = (appointment: Appointment) => {
     window.open(appointment.meetingUrl, '_blank');
     toast.success(`Consultation started with ${appointment.patient.name}`);
+  };
+
+  const viewDocument = (file: any) => {
+    if (file.base64 && file.base64.includes('|')) {
+      const [filename, base64Data] = file.base64.split('|');
+      
+      // Create blob from base64
+      const byteCharacters = atob(base64Data.split(',')[1]);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: file.type });
+      
+      // Create object URL and open in new tab
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      
+      // Clean up the object URL after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      
+      toast.success(`Opening ${filename}`);
+    } else {
+      toast.error('Document data not available');
+    }
+  };
+
+  const downloadDocument = (file: any) => {
+    if (file.base64 && file.base64.includes('|')) {
+      const [filename, base64Data] = file.base64.split('|');
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = base64Data;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success(`Downloaded ${filename}`);
+    } else {
+      toast.error('Document data not available');
+    }
   };
 
   const filteredAppointments = appointments.filter(appointment => {

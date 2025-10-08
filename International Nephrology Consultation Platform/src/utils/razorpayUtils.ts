@@ -80,7 +80,22 @@ export const createRazorpayOrder = async (bookingDetails: BookingDetails): Promi
   try {
     console.log('Creating Razorpay order for:', bookingDetails);
     
-    const response = await fetch('/api/payments/create-order', {
+    // Always use authenticated endpoint
+    const endpoint = '/api/payments/create-order';
+    
+    console.log('Using payment endpoint:', endpoint);
+    console.log('Request payload:', {
+      amount: bookingDetails.amount,
+      currency: bookingDetails.currency,
+      consultationType: bookingDetails.consultationType,
+      patientName: bookingDetails.patientInfo.name,
+      patientEmail: bookingDetails.patientInfo.email,
+      patientPhone: bookingDetails.patientInfo.phone,
+      date: bookingDetails.date,
+      time: bookingDetails.time,
+    });
+    
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -98,24 +113,41 @@ export const createRazorpayOrder = async (bookingDetails: BookingDetails): Promi
       }),
     });
 
+    console.log('Payment API Response status:', response.status, response.statusText);
+
     if (!response.ok) {
       console.error(`Payment API Error: ${response.status} ${response.statusText}`);
       try {
         const errorData = await response.json();
         console.error('Payment API Error Details:', errorData);
+        
+        // Handle authentication errors specifically
+        if (response.status === 401) {
+          throw new Error('AUTHENTICATION_REQUIRED');
+        }
+        
         throw new Error(errorData.error || `Failed to create payment order (${response.status})`);
       } catch (parseError) {
         console.error('Could not parse error response:', parseError);
+        
+        // Handle authentication errors specifically
+        if (response.status === 401) {
+          throw new Error('AUTHENTICATION_REQUIRED');
+        }
+        
         throw new Error(`Failed to create payment order (${response.status})`);
       }
     }
 
     const data = await response.json();
+    console.log('Payment API Success Response:', data);
     
     if (!data.success) {
+      console.error('Payment order creation failed:', data.error);
       throw new Error(data.error || 'Failed to create order');
     }
 
+    console.log('Order created successfully:', data.order.id);
     return {
       orderId: data.order.id,
       razorpayKey: data.razorpay_key,
@@ -192,7 +224,10 @@ export const verifyRazorpayPayment = async (
   try {
     console.log('Verifying payment:', paymentResponse);
     
-    const response = await fetch('/api/payments/verify-payment', {
+    // Always use authenticated endpoint
+    const endpoint = '/api/payments/verify-payment';
+    
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
