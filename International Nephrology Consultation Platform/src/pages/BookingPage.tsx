@@ -801,8 +801,8 @@ export default function BookingPage() {
             body: JSON.stringify({
               date: bookingDetails.date,
               timeSlot: bookingDetails.time,
-              typeId: bookingDetails.consultationType, // Use consultationType directly (matches server mapping)
-              paymentMethod: 'card', // Razorpay processes as card payment
+              typeId: bookingDetails.consultationType,
+              paymentMethod: 'card',
               patientPhone: bookingDetails.patientInfo.phone,
               patientCountry: bookingDetails.currency === 'INR' ? 'IN' : 
                              bookingDetails.currency === 'USD' ? 'US' : 
@@ -813,7 +813,7 @@ export default function BookingPage() {
                 documents: processedDocuments
               }
             })
-          );
+          });
 
           if (!appointmentResponse.ok) {
             console.error('Failed to create appointment:', appointmentResponse.status, appointmentResponse.statusText);
