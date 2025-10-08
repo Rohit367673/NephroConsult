@@ -84,7 +84,11 @@ export default function DoctorAdminPanel() {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/appointments/doctor', {
+      // Use environment variable for API URL or fallback to relative path for localhost
+      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+      const doctorEndpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments/doctor` : '/api/appointments/doctor';
+      
+      const response = await fetch(doctorEndpoint, {
         credentials: 'include'
       });
       
