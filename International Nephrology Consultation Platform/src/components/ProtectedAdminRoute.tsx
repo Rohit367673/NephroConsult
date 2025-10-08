@@ -18,7 +18,9 @@ export function ProtectedAdminRoute({ children }: ProtectedAdminRouteProps) {
 
   useEffect(() => {
     // Only show unauthorized toast if we're sure user is not an admin after loading is complete
+    // And only if we actually tried to access the admin panel
     if (!loading && user && !ADMIN_EMAILS.includes(user.email || '')) {
+      console.log('User not authorized for admin panel:', user.email);
       toast.error('🚫 Unauthorized access to admin panel');
     }
   }, [user, loading]);

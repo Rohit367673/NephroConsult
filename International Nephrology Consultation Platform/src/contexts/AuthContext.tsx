@@ -104,13 +104,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     setCookie('nephro_user', encodeURIComponent(JSON.stringify(response.data.user)), 7);
                   }
                 } else {
-                  console.log('Session not found on backend, clearing local user');
-                  setUser(null);
-                  deleteCookie('nephro_user');
+                  console.log('Session verification failed. Response:', response);
+                  // For admin/doctor users, be more lenient to prevent false logouts
+                  if (userData.role === 'admin' || userData.role === 'doctor') {
+                    console.log('Admin/Doctor user - keeping session despite backend verification failure');
+                  } else {
+                    console.log('Regular user - clearing session');
+                    setUser(null);
+                    deleteCookie('nephro_user');
+                  }
                 }
               } catch (error) {
                 console.error('Error verifying session with backend:', error);
                 // Keep local user data if backend verification fails (might be offline)
+                console.log('Keeping local user data due to backend verification failure');
               }
             }
           } catch (error) {
