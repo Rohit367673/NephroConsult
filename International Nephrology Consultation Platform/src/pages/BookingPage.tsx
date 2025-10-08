@@ -813,17 +813,38 @@ export default function BookingPage() {
                 documents: processedDocuments
               }
             })
-          });
+          );
 
-          if (appointmentResponse.ok) {
-            const appointmentData = await appointmentResponse.json();
-            console.log('✅ Appointment created in database:', appointmentData);
-            toast.success('Appointment successfully created!');
-          } else {
-            const errorData = await appointmentResponse.json();
-            console.error('❌ Failed to create appointment:', errorData);
-            toast.error('Payment successful but booking creation failed. Contact support.');
+          if (!appointmentResponse.ok) {
+            console.error('Failed to create appointment:', appointmentResponse.status, appointmentResponse.statusText);
+            
+            // Handle specific error cases
+            if (appointmentResponse.status === 409) {
+              const errorData = await appointmentResponse.json().catch(() => ({}));
+              toast.error('This time slot has already been booked. Please select a different time slot.', { id: 'appointment-creation' });
+              throw new Error('Time slot already booked');
+            }
+            
+            if (appointmentResponse.status === 401) {
+              toast.error('Please log in again to complete your booking.', { id: 'appointment-creation' });
+              throw new Error('Authentication required');
+            }
+            
+            if (appointmentResponse.status === 422) {
+              const errorData = await appointmentResponse.json().catch(() => ({}));
+              const errors = errorData.errors || {};
+              const errorMessages = Object.values(errors).map((error: any) => error.message).join(', ');
+              toast.error(`Failed to create appointment: ${errorMessages}`, { id: 'appointment-creation' });
+              throw new Error('Failed to create appointment');
+            }
+            
+            toast.error('Failed to create appointment. Please try again.', { id: 'appointment-creation' });
+            throw new Error('Failed to create appointment');
           }
+
+          const appointmentData = await appointmentResponse.json();
+          console.log('✅ Appointment created successfully in database:', appointmentData);
+          toast.success('Appointment successfully created!');
         } catch (bookingError) {
           console.error('❌ Booking creation error:', bookingError);
           toast.error('Payment successful but booking creation failed. Contact support.');

@@ -72,26 +72,54 @@ app.use(
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
+        
+      // Add common Vercel/Netlify domains if not explicitly set
+      const defaultAllowed = [
+        'https://nephro-consult-cea9.vercel.app',
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:5173'
+      ];
+      
+      const allAllowed = [...new Set([...allowed, ...defaultAllowed])];
+      
+      console.log('🌐 CORS Check - Origin:', origin);
+      console.log('🌐 CORS Check - Allowed origins:', allAllowed);
+      
       // Allow requests with no origin (e.g. mobile apps or curl)
-      if (!origin) return callback(null, true);
+      if (!origin) {
+        console.log('✅ CORS Allow - No origin (mobile/curl)');
+        return callback(null, true);
+      }
+      
       try {
         const o = new URL(origin);
         const originHost = o.hostname; // ignore port for matching
-        const ok = allowed.some((u) => {
+        const ok = allAllowed.some((u) => {
           try {
             const au = new URL(u);
             const allowedHost = au.hostname;
             const loopback = (h) => h === '127.0.0.1' || h === 'localhost';
             return (
               allowedHost === originHost ||
-              (loopback(allowedHost) && loopback(originHost))
+              (loopback(allowedHost) && loopback(originHost)) ||
+              origin === u // Exact match
             );
           } catch {
             return false;
           }
         });
-        return ok ? callback(null, true) : callback(new Error('Not allowed by CORS'));
-      } catch {
+        
+        if (ok) {
+          console.log('✅ CORS Allow - Origin matched:', origin);
+          return callback(null, true);
+        } else {
+          console.log('❌ CORS Deny - Origin not allowed:', origin);
+          return callback(new Error('Not allowed by CORS'));
+        }
+      } catch (err) {
+        console.log('❌ CORS Error - Invalid origin format:', origin, err.message);
         return callback(new Error('Not allowed by CORS'));
       }
     },
