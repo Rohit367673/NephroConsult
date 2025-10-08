@@ -46,7 +46,7 @@ CLIENT_URL=https://nephro-consult-cea9.vercel.app
 Update your backend's `CLIENT_URL` environment variable to include your Vercel domain:
 
 ```bash
-CLIENT_URL=https://nephro-consult-cea9.vercel.app,http://localhost:3000
+CLIENT_URL=https://nephro-consult.vercel.app,http://localhost:3000
 ```
 
 ### 5. **Deploy Backend Server**

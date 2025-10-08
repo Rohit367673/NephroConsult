@@ -75,7 +75,7 @@ app.use(
         
       // Add common Vercel/Netlify domains if not explicitly set
       const defaultAllowed = [
-        'https://nephro-consult-cea9.vercel.app',
+        'https://nephro-consult.vercel.app',
         'http://localhost:3000',
         'http://localhost:5173',
         'http://127.0.0.1:3000',
