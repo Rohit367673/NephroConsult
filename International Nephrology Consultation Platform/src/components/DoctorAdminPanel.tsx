@@ -128,31 +128,54 @@ export default function DoctorAdminPanel() {
             medicalHistory: apt.intake?.description || 'No medical history provided',
             currentMedications: 'Not specified',
             allergies: 'Not specified',
-            uploadedFiles: (apt.intake?.documents || []).map((doc: string, index: number) => {
-              console.log(`📄 Processing document ${index + 1} for appointment ${apt._id}:`, doc?.substring(0, 100) + '...');
+            uploadedFiles: (() => {
+              console.log(`📄 Raw intake.documents for appointment ${apt._id}:`, apt.intake?.documents);
+              console.log(`📄 Documents array length:`, apt.intake?.documents?.length || 0);
+              console.log(`📄 Documents array type:`, typeof apt.intake?.documents);
               
-              if (doc && doc.includes('|')) {
-                const [filename, base64Data] = doc.split('|');
-                console.log(`📄 Parsed document: ${filename}, base64 length: ${base64Data?.length || 0}`);
-                return {
-                  name: filename,
-                  type: filename.includes('.pdf') ? 'application/pdf' : 
-                        filename.includes('.jpg') || filename.includes('.jpeg') ? 'image/jpeg' :
-                        filename.includes('.png') ? 'image/png' : 'unknown',
-                  url: doc,
-                  base64: doc
-                };
+              if (!apt.intake?.documents || !Array.isArray(apt.intake.documents)) {
+                console.log(`📄 No documents found or invalid format for appointment ${apt._id}`);
+                return [];
               }
               
-              // Handle legacy format or malformed documents
-              console.log(`📄 Legacy/unknown format document ${index + 1}:`, typeof doc, doc?.length || 0);
-              return {
-                name: doc || `Document ${index + 1}`,
-                type: 'unknown',
-                url: doc,
-                base64: doc
-              };
-            })
+              return apt.intake.documents.map((doc: string, index: number) => {
+                console.log(`📄 Processing document ${index + 1} for appointment ${apt._id}:`);
+                console.log(`📄 Document content preview:`, doc?.substring(0, 150) + '...');
+                console.log(`📄 Document full length:`, doc?.length || 0);
+                console.log(`📄 Document type:`, typeof doc);
+                console.log(`📄 Contains pipe separator:`, doc?.includes('|'));
+                
+                if (doc && doc.includes('|') && doc.split('|').length >= 2) {
+                  const [filename, base64Data] = doc.split('|');
+                  console.log(`📄 ✅ Parsed document successfully:`);
+                  console.log(`📄   - Filename: ${filename}`);
+                  console.log(`📄   - Base64 data length: ${base64Data?.length || 0}`);
+                  console.log(`📄   - Base64 starts with: ${base64Data?.substring(0, 50)}...`);
+                  
+                  return {
+                    name: filename || `Document ${index + 1}`,
+                    type: filename?.includes('.pdf') ? 'application/pdf' : 
+                          filename?.includes('.jpg') || filename?.includes('.jpeg') ? 'image/jpeg' :
+                          filename?.includes('.png') ? 'image/png' : 
+                          filename?.includes('.doc') || filename?.includes('.docx') ? 'application/msword' : 'unknown',
+                    url: doc,
+                    base64: doc
+                  };
+                } else {
+                  console.log(`📄 ❌ Document ${index + 1} invalid format or malformed:`);
+                  console.log(`📄   - Content: ${doc}`);
+                  console.log(`📄   - Length: ${doc?.length || 0}`);
+                  console.log(`📄   - Type: ${typeof doc}`);
+                  
+                  return {
+                    name: `Document ${index + 1} (Invalid Format)`,
+                    type: 'unknown',
+                    url: doc || '',
+                    base64: doc || ''
+                  };
+                }
+              });
+            })()
           },
           date: apt.date,
           time: apt.timeSlot || apt.time,
@@ -654,14 +677,37 @@ export default function DoctorAdminPanel() {
                               variant="outline" 
                               size="sm"
                               onClick={() => {
+                                console.log('📄 View button clicked for file:', file);
                                 if (file.base64 && file.base64.includes('|')) {
-                                  const [, base64Data] = file.base64.split('|');
-                                  const link = document.createElement('a');
-                                  link.href = base64Data;
-                                  link.target = '_blank';
-                                  link.click();
+                                  try {
+                                    const [filename, base64Data] = file.base64.split('|');
+                                    console.log('📄 Attempting to view file:', filename);
+                                    console.log('📄 Base64 data length:', base64Data?.length);
+                                    
+                                    // Create blob URL for viewing
+                                    const byteCharacters = atob(base64Data.split(',')[1] || base64Data);
+                                    const byteNumbers = new Array(byteCharacters.length);
+                                    for (let i = 0; i < byteCharacters.length; i++) {
+                                      byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                    }
+                                    const byteArray = new Uint8Array(byteNumbers);
+                                    const blob = new Blob([byteArray], { type: file.type });
+                                    const url = URL.createObjectURL(blob);
+                                    
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.target = '_blank';
+                                    link.click();
+                                    
+                                    // Clean up
+                                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                                  } catch (error) {
+                                    console.error('📄 Error viewing document:', error);
+                                    alert('Error viewing document. Please check console for details.');
+                                  }
                                 } else {
-                                  console.error('Invalid document format:', file);
+                                  console.error('📄 Invalid document format for viewing:', file);
+                                  alert('Invalid document format. Cannot view document.');
                                 }
                               }}
                             >
@@ -672,14 +718,37 @@ export default function DoctorAdminPanel() {
                               variant="outline" 
                               size="sm"
                               onClick={() => {
+                                console.log('📄 Download button clicked for file:', file);
                                 if (file.base64 && file.base64.includes('|')) {
-                                  const [filename, base64Data] = file.base64.split('|');
-                                  const link = document.createElement('a');
-                                  link.href = base64Data;
-                                  link.download = filename;
-                                  link.click();
+                                  try {
+                                    const [filename, base64Data] = file.base64.split('|');
+                                    console.log('📄 Attempting to download file:', filename);
+                                    console.log('📄 Base64 data length:', base64Data?.length);
+                                    
+                                    // Create blob URL for download
+                                    const byteCharacters = atob(base64Data.split(',')[1] || base64Data);
+                                    const byteNumbers = new Array(byteCharacters.length);
+                                    for (let i = 0; i < byteCharacters.length; i++) {
+                                      byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                    }
+                                    const byteArray = new Uint8Array(byteNumbers);
+                                    const blob = new Blob([byteArray], { type: file.type });
+                                    const url = URL.createObjectURL(blob);
+                                    
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = filename || 'document';
+                                    link.click();
+                                    
+                                    // Clean up
+                                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                                  } catch (error) {
+                                    console.error('📄 Error downloading document:', error);
+                                    alert('Error downloading document. Please check console for details.');
+                                  }
                                 } else {
-                                  console.error('Invalid document format for download:', file);
+                                  console.error('📄 Invalid document format for download:', file);
+                                  alert('Invalid document format. Cannot download document.');
                                 }
                               }}
                             >
