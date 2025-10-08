@@ -78,6 +78,11 @@ export default function DoctorAdminPanel() {
 
   // Fetch real appointments from API
   useEffect(() => {
+    // Log current user info for debugging
+    console.log('🔍 DoctorAdmin: Component mounted');
+    console.log('🔍 DoctorAdmin: Current window.location:', window.location.href);
+    console.log('🔍 DoctorAdmin: Document cookies:', document.cookie);
+    
     fetchAppointments();
   }, []);
 
@@ -93,6 +98,10 @@ export default function DoctorAdminPanel() {
       // Use environment variable for API URL or fallback to relative path for localhost
       const apiBaseUrl = import.meta.env.VITE_API_URL || '';
       const doctorEndpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments/doctor` : '/api/appointments/doctor';
+      
+      console.log('🔍 DoctorAdmin: API Base URL:', apiBaseUrl);
+      console.log('🔍 DoctorAdmin: Final endpoint:', doctorEndpoint);
+      console.log('🔍 DoctorAdmin: Making request to:', doctorEndpoint);
       
       const response = await fetch(doctorEndpoint, {
         credentials: 'include'
@@ -168,6 +177,13 @@ export default function DoctorAdminPanel() {
         
         setAppointments(transformedAppointments);
         console.log('📋 Transformed appointments:', transformedAppointments);
+        console.log('📋 Appointments count:', transformedAppointments.length);
+        
+        if (transformedAppointments.length === 0) {
+          console.log('⚠️ No appointments found. Raw API response:', data);
+          console.log('⚠️ Checking data.appointments:', data.appointments);
+          console.log('⚠️ Type of data.appointments:', typeof data.appointments);
+        }
       } else {
         const errorText = await response.text();
         console.error('Failed to fetch doctor appointments:', response.status, errorText);
