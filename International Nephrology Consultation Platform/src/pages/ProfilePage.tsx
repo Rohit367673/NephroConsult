@@ -147,10 +147,10 @@ function Navigation() {
                 onClick={() => {}} // Already on profile page
               >
                 <div className="w-8 h-8 rounded-full overflow-hidden relative">
-                  {user.avatar ? (
+                  {(user as any).photoURL || user.avatar ? (
                     <>
                       <img 
-                        src={user.avatar} 
+                        src={(user as any).photoURL || user.avatar} 
                         alt={user.name}
                         className="w-full h-full object-cover absolute inset-0"
                         crossOrigin="anonymous"
@@ -410,7 +410,11 @@ export default function ProfilePage() {
   const fetchAppointments = async () => {
     try {
       setAppointmentsLoading(true);
-      const response = await fetch('/api/appointments/mine', {
+      // Use environment variable for API URL or fallback to relative path for localhost
+      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+      const appointmentsEndpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments/mine` : '/api/appointments/mine';
+      
+      const response = await fetch(appointmentsEndpoint, {
         credentials: 'include'
       });
       
@@ -439,7 +443,11 @@ export default function ProfilePage() {
   const fetchDoctorAppointments = async () => {
     try {
       setAppointmentsLoading(true);
-      const response = await fetch('/api/appointments/doctor', {
+      // Use environment variable for API URL or fallback to relative path for localhost
+      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+      const doctorEndpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments/doctor` : '/api/appointments/doctor';
+      
+      const response = await fetch(doctorEndpoint, {
         credentials: 'include'
       });
       
@@ -661,16 +669,16 @@ For support: suyambu54321@gmail.com
                     className="relative mb-6"
                   >
                     <div className="w-32 h-32 rounded-full mx-auto overflow-hidden bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center relative">
-                      {user?.avatar && user.avatar.trim() !== '' ? (
+                      {((user as any)?.photoURL || user?.avatar) && ((user as any)?.photoURL?.trim() !== '' || user?.avatar?.trim() !== '') ? (
                         <>
                           <img 
-                            src={user.avatar} 
-                            alt={user.name || 'Profile'} 
+                            src={(user as any)?.photoURL || user?.avatar} 
+                            alt={user?.name || 'Profile'} 
                             className="w-full h-full object-cover absolute inset-0"
                             crossOrigin="anonymous"
                             referrerPolicy="no-referrer"
                             onLoad={(e) => {
-                              console.log('Profile image loaded successfully:', user.avatar);
+                              console.log('Profile image loaded successfully:', user?.avatar);
                               // Hide fallback when image loads
                               const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                               if (fallback) fallback.style.display = 'none';
