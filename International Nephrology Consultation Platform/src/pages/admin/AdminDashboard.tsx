@@ -35,12 +35,17 @@ export default function AdminDashboard() {
     
     try {
       console.log('🔄 Restoring backend session for:', user.email);
-      const response = await fetch('/api/auth/restore-session', {
+      // Use environment variable for API URL or fallback to production backend
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://nephroconsult.onrender.com';
+      const response = await fetch(`${apiBaseUrl}/api/auth/restore-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         credentials: 'include',
+        mode: 'cors',
+        cache: 'no-cache',
         body: JSON.stringify({ user })
       });
 

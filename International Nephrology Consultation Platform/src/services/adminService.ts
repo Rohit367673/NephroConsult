@@ -1,4 +1,5 @@
 // Admin service for managing consultations, prescriptions, and notifications
+import { safariCompatibleFetch, isSafari } from '../utils/safariCompat';
 
 export interface Consultation {
   id: string;
@@ -41,8 +42,10 @@ class AdminService {
       console.log('🔗 Admin Service API URL:', apiBaseUrl);
       console.log('🔗 Full endpoint:', endpoint);
       
-      const response = await fetch(endpoint, {
-        credentials: 'include'
+      console.log('🍎 Browser detection:', { isSafari: isSafari() });
+      
+      const response = await safariCompatibleFetch(endpoint, {
+        method: 'GET'
       });
       
       if (!response.ok) {
@@ -134,12 +137,16 @@ class AdminService {
 
   async createPrescription(consultationId: string, prescription: Prescription, doctorName: string): Promise<void> {
     try {
-      const response = await fetch(`/api/appointments/${consultationId}/prescription`, {
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://nephroconsult.onrender.com';
+      const response = await fetch(`${apiBaseUrl}/api/appointments/${consultationId}/prescription`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         credentials: 'include',
+        mode: 'cors',
+        cache: 'no-cache',
         body: JSON.stringify({
           prescription: {
             notes: prescription.instructions,
@@ -173,12 +180,16 @@ class AdminService {
 
   async updateConsultationStatus(consultationId: string, status: 'completed' | 'cancelled'): Promise<void> {
     try {
-      const response = await fetch(`/api/appointments/${consultationId}/status`, {
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://nephroconsult.onrender.com';
+      const response = await fetch(`${apiBaseUrl}/api/appointments/${consultationId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         credentials: 'include',
+        mode: 'cors',
+        cache: 'no-cache',
         body: JSON.stringify({ status })
       });
 
