@@ -449,36 +449,78 @@ export default function AdminDashboard() {
                     {selectedConsultation.documents && selectedConsultation.documents.length > 0 ? (
                       <div className="space-y-2">
                         {selectedConsultation.documents.map((doc: any, index: any) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                            <div className="flex items-center space-x-3">
+                          <div key={index} className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            {/* Document Header */}
+                            <div className="flex items-center space-x-3 mb-3">
                               <FileText className="w-5 h-5 text-blue-600" />
-                              <div>
+                              <div className="flex-1">
                                 <p className="text-sm font-medium text-blue-900">
-                                  {typeof doc === 'string' ? doc : doc.name || `Document ${index + 1}`}
+                                  {typeof doc === 'string' && doc.includes('|') 
+                                    ? doc.split('|')[0] 
+                                    : typeof doc === 'string' 
+                                      ? doc 
+                                      : doc.name || `Document ${index + 1}`}
                                 </p>
                                 {doc.size && (
                                   <p className="text-xs text-blue-600">Size: {doc.size}</p>
                                 )}
                               </div>
                             </div>
-                            <div className="flex space-x-2">
+                            
+                            {/* Action Buttons */}
+                            <div className="flex space-x-3 justify-center">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                className="flex-1 max-w-[100px] border-blue-300 text-blue-700 hover:bg-blue-100"
                                 onClick={() => {
-                                  // Handle document viewing
-                                  if (typeof doc === 'string' && doc.startsWith('data:')) {
-                                    // Base64 document - open in new tab
-                                    const newWindow = window.open();
-                                    if (newWindow) {
-                                      newWindow.document.write(`<iframe src="${doc}" style="width:100%;height:100%;border:none;"></iframe>`);
+                                  console.log('📄 View button clicked for document:', doc);
+                                  
+                                  // Handle document viewing - documents are in format "filename|base64data"
+                                  if (typeof doc === 'string' && doc.includes('|')) {
+                                    try {
+                                      const [filename, base64Data] = doc.split('|');
+                                      console.log('📄 Viewing file:', filename);
+                                      console.log('📄 Base64 data length:', base64Data?.length);
+                                      
+                                      // Handle different base64 formats
+                                      let cleanBase64 = base64Data;
+                                      if (base64Data.includes(',')) {
+                                        cleanBase64 = base64Data.split(',')[1];
+                                      }
+                                      
+                                      // Create blob URL for viewing
+                                      const byteCharacters = atob(cleanBase64);
+                                      const byteNumbers = new Array(byteCharacters.length);
+                                      for (let i = 0; i < byteCharacters.length; i++) {
+                                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                      }
+                                      const byteArray = new Uint8Array(byteNumbers);
+                                      
+                                      // Determine MIME type from filename
+                                      const extension = filename.split('.').pop()?.toLowerCase();
+                                      let mimeType = 'application/octet-stream';
+                                      if (extension === 'pdf') mimeType = 'application/pdf';
+                                      else if (['jpg', 'jpeg'].includes(extension || '')) mimeType = 'image/jpeg';
+                                      else if (extension === 'png') mimeType = 'image/png';
+                                      else if (extension === 'gif') mimeType = 'image/gif';
+                                      
+                                      const blob = new Blob([byteArray], { type: mimeType });
+                                      const url = URL.createObjectURL(blob);
+                                      
+                                      // Open in new tab
+                                      window.open(url, '_blank');
+                                      
+                                      // Clean up URL after a delay
+                                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+                                      
+                                    } catch (error) {
+                                      console.error('📄 Error viewing document:', error);
+                                      toast.error('Failed to open document');
                                     }
                                   } else {
-                                    console.log('Document:', doc);
-                                    toast.info('Opening document viewer...');
-                                    // In a real app, this would download/view the document
-                                    window.open(doc, '_blank');
+                                    console.log('📄 Unknown document format:', doc);
+                                    toast.info('Document format not supported for viewing');
                                   }
                                 }}
                               >
@@ -488,16 +530,61 @@ export default function AdminDashboard() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                className="flex-1 max-w-[100px] border-blue-300 text-blue-700 hover:bg-blue-100"
                                 onClick={() => {
-                                  console.log('Downloading document:', doc);
-                                  toast.info('Document download started...');
-                                  // In a real app, this would trigger file download
-                                  if (typeof doc === 'string' && doc.startsWith('data:')) {
-                                    const link = document.createElement('a');
-                                    link.href = doc;
-                                    link.download = `document_${index + 1}`;
-                                    link.click();
+                                  console.log('📄 Download button clicked for document:', doc);
+                                  
+                                  // Handle document downloading - documents are in format "filename|base64data"
+                                  if (typeof doc === 'string' && doc.includes('|')) {
+                                    try {
+                                      const [filename, base64Data] = doc.split('|');
+                                      console.log('📄 Downloading file:', filename);
+                                      
+                                      // Handle different base64 formats
+                                      let cleanBase64 = base64Data;
+                                      if (base64Data.includes(',')) {
+                                        cleanBase64 = base64Data.split(',')[1];
+                                      }
+                                      
+                                      // Create blob for downloading
+                                      const byteCharacters = atob(cleanBase64);
+                                      const byteNumbers = new Array(byteCharacters.length);
+                                      for (let i = 0; i < byteCharacters.length; i++) {
+                                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                      }
+                                      const byteArray = new Uint8Array(byteNumbers);
+                                      
+                                      // Determine MIME type from filename
+                                      const extension = filename.split('.').pop()?.toLowerCase();
+                                      let mimeType = 'application/octet-stream';
+                                      if (extension === 'pdf') mimeType = 'application/pdf';
+                                      else if (['jpg', 'jpeg'].includes(extension || '')) mimeType = 'image/jpeg';
+                                      else if (extension === 'png') mimeType = 'image/png';
+                                      else if (extension === 'gif') mimeType = 'image/gif';
+                                      
+                                      const blob = new Blob([byteArray], { type: mimeType });
+                                      const url = URL.createObjectURL(blob);
+                                      
+                                      // Create download link
+                                      const link = document.createElement('a');
+                                      link.href = url;
+                                      link.download = filename;
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                      
+                                      // Clean up URL
+                                      URL.revokeObjectURL(url);
+                                      
+                                      toast.success(`Downloaded: ${filename}`);
+                                      
+                                    } catch (error) {
+                                      console.error('📄 Error downloading document:', error);
+                                      toast.error('Failed to download document');
+                                    }
+                                  } else {
+                                    console.log('📄 Unknown document format for download:', doc);
+                                    toast.info('Document format not supported for download');
                                   }
                                 }}
                               >

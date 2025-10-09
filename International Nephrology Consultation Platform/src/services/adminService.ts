@@ -56,6 +56,18 @@ class AdminService {
       // Transform appointment data to consultation format  
       const consultations: Consultation[] = (data.appointments || []).map((apt: any) => {
         console.log('🔍 Raw appointment data for transformation:', apt);
+        console.log('📄 Document fields check:');
+        console.log('📄   apt.files:', apt.files);
+        console.log('📄   apt.intake?.documents:', apt.intake?.documents);
+        console.log('📄   apt.documents:', apt.documents);
+        console.log('📄   apt.intake:', apt.intake);
+        
+        // Process documents with better debugging - check for non-empty arrays
+        const documents = (apt.files && apt.files.length > 0) ? apt.files : 
+                         (apt.intake?.documents && apt.intake.documents.length > 0) ? apt.intake.documents :
+                         (apt.documents && apt.documents.length > 0) ? apt.documents : [];
+        console.log('📄 Final documents array:', documents);
+        console.log('📄 Documents array length:', documents.length);
         
         return {
           id: apt._id,
@@ -71,7 +83,7 @@ class AdminService {
                   apt.status === 'completed' ? 'completed' : 
                   apt.status === 'pending' ? 'upcoming' : 'upcoming',
           // Better document handling
-          documents: apt.files || apt.intake?.documents || apt.documents || [],
+          documents: documents,
           query: apt.intake?.description || apt.intake?.reason || apt.query || 'No query provided',
           meetingLink: apt.meetLink,
           // Better country handling
