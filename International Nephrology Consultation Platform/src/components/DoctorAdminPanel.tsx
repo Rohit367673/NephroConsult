@@ -95,10 +95,27 @@ export default function DoctorAdminPanel() {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      // Use environment variable for API URL or fallback to relative path for localhost
+      
+      // First, try to refresh the session with admin role
       const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-      // Temporarily use debug endpoint to bypass auth issues
-      const doctorEndpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments/doctor-debug` : '/api/appointments/doctor-debug';
+      try {
+        const refreshResponse = await fetch(
+          apiBaseUrl ? `${apiBaseUrl}/api/auth/refresh-session` : '/api/auth/refresh-session',
+          {
+            method: 'POST',
+            credentials: 'include'
+          }
+        );
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          console.log('🔄 Session refreshed:', refreshData);
+        }
+      } catch (refreshError) {
+        console.log('⚠️ Session refresh failed (continuing anyway):', refreshError);
+      }
+      
+      // Use environment variable for API URL or fallback to relative path for localhost
+      const doctorEndpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments/doctor` : '/api/appointments/doctor';
       
       console.log('🔍 DoctorAdmin: API Base URL:', apiBaseUrl);
       console.log('🔍 DoctorAdmin: Final endpoint:', doctorEndpoint);
