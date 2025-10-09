@@ -34,8 +34,14 @@ export interface Medicine {
 class AdminService {
   async getConsultations(): Promise<Consultation[]> {
     try {
-      // Use the real doctor endpoint
-      const response = await fetch('/api/appointments/doctor', {
+      // Use environment variable for API URL or fallback to production backend
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://nephroconsult.onrender.com';
+      const endpoint = `${apiBaseUrl}/api/appointments/doctor`;
+      
+      console.log('🔗 Admin Service API URL:', apiBaseUrl);
+      console.log('🔗 Full endpoint:', endpoint);
+      
+      const response = await fetch(endpoint, {
         credentials: 'include'
       });
       
