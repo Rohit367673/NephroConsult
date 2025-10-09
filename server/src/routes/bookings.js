@@ -283,6 +283,11 @@ router.patch('/appointments/:id/status', requireRole('doctor', 'admin'), async (
 // Create appointment
 router.post('/appointments', requireAuth, async (req, res) => {
   try {
+    console.log('📋 Appointment creation request received');
+    console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('📋 Intake data:', req.body.intake);
+    console.log('📋 Documents in request:', req.body.intake?.documents?.length || 0);
+    
     const schema = z.object({
       date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       timeSlot: z.string().min(3),
@@ -359,6 +364,10 @@ router.post('/appointments', requireAuth, async (req, res) => {
       meetLink: generateMeetLink(date, timeSlot),
       intake: intake || undefined,
     });
+
+    console.log('📋 Created appointment with ID:', appointment._id);
+    console.log('📋 Appointment intake saved:', appointment.intake);
+    console.log('📋 Documents saved:', appointment.intake?.documents?.length || 0);
 
     // Schedule 10-min reminder email
     try { await scheduleAppointmentReminder(appointment); } catch {}

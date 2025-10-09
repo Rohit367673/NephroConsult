@@ -126,6 +126,24 @@ export default function DoctorAdminPanel() {
       });
       
       console.log('📋 Doctor API Response Status:', response.status);
+      
+      // Also call debug endpoint to compare data
+      try {
+        const debugResponse = await fetch(
+          apiBaseUrl ? `${apiBaseUrl}/api/appointments/doctor-debug` : '/api/appointments/doctor-debug',
+          { credentials: 'include' }
+        );
+        if (debugResponse.ok) {
+          const debugData = await debugResponse.json();
+          console.log('🐛 DEBUG: Raw appointment data from debug endpoint:', debugData);
+          if (debugData.appointments && debugData.appointments[0]) {
+            console.log('🐛 DEBUG: First appointment intake:', debugData.appointments[0].intake);
+            console.log('🐛 DEBUG: First appointment documents:', debugData.appointments[0].intake?.documents);
+          }
+        }
+      } catch (debugError) {
+        console.log('🐛 DEBUG: Debug endpoint failed:', debugError);
+      }
       console.log('📋 Doctor API Response Headers:', Object.fromEntries(response.headers.entries()));
       
       if (response.ok) {
