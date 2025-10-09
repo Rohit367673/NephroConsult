@@ -1,0 +1,15 @@
+# Robots.txt for NephroConsult
+# Allow all search engines to crawl the site
+
+User-agent: *
+Allow: /
+Sitemap: https://nephro-consult.vercel.app/sitemap.xml
+
+# Block admin and api routes
+Disallow: /admin/
+Disallow: /api/
+Disallow: /doctor/dashboard
+Disallow: /patient/dashboard
+
+# Crawl delay (in seconds) to be respectful
+Crawl-delay: 1

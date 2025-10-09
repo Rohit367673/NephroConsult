@@ -1,0 +1,27 @@
+{
+  "name": "NephroConsult - International Kidney Care",
+  "short_name": "NephroConsult",
+  "description": "Expert nephrology consultations from Dr. Rohit Kumar. Book online appointments for kidney disease treatment, dialysis guidance, and comprehensive renal care.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0ea5e9",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["medical", "health"],
+  "lang": "en-US",
+  "scope": "/"
+}
