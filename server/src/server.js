@@ -188,7 +188,7 @@ app.get('/', (req, res) => {
     message: 'NephroConsult API Server',
     status: 'running',
     time: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.1' // Updated version to trigger deployment
   });
 });
 
