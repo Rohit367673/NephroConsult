@@ -40,8 +40,8 @@ router.post('/appointments/create-test', async (req, res) => {
         region: 'IN'
       },
       intake: {
-        description: 'Test consultation for debugging admin panel',
-        documents: []
+        description: 'Test consultation for debugging admin panel', 
+        documents: ['test-document.pdf|data:application/pdf;base64,JVBERi0xLjMKJcTl8uXrp/Og0MTGCg==']
       }
     });
     

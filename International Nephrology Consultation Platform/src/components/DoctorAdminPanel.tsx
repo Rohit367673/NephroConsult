@@ -168,13 +168,26 @@ export default function DoctorAdminPanel() {
               console.log(`📄 Raw intake.documents for appointment ${apt._id}:`, apt.intake?.documents);
               console.log(`📄 Documents array length:`, apt.intake?.documents?.length || 0);
               console.log(`📄 Documents array type:`, typeof apt.intake?.documents);
+              console.log(`📄 Full appointment data:`, apt);
               
-              if (!apt.intake?.documents || !Array.isArray(apt.intake.documents)) {
-                console.log(`📄 No documents found or invalid format for appointment ${apt._id}`);
+              // Check if documents exist in any field
+              const docsFromIntake = apt.intake?.documents || [];
+              const docsFromFiles = apt.files || [];
+              
+              console.log(`📄 Documents from intake:`, docsFromIntake);
+              console.log(`📄 Documents from files field:`, docsFromFiles);
+              
+              // Combine all document sources
+              const allDocuments = [...docsFromIntake, ...docsFromFiles].filter(Boolean);
+              
+              if (!allDocuments || allDocuments.length === 0) {
+                console.log(`📄 No documents found in any field for appointment ${apt._id}`);
                 return [];
               }
               
-              return apt.intake.documents.map((doc: string, index: number) => {
+              console.log(`📄 Processing ${allDocuments.length} documents`);
+              
+              return allDocuments.map((doc: string, index: number) => {
                 console.log(`📄 Processing document ${index + 1} for appointment ${apt._id}:`);
                 console.log(`📄 Document content preview:`, doc?.substring(0, 150) + '...');
                 console.log(`📄 Document full length:`, doc?.length || 0);
