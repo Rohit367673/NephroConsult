@@ -179,6 +179,31 @@ router.delete('/appointments/cleanup', async (req, res) => {
   }
 });
 
+// Temporary debug endpoint without authentication (REMOVE AFTER FIXING)
+router.get('/appointments/doctor-debug', async (req, res) => {
+  try {
+    console.log('📋 DEBUG: Doctor appointments endpoint called (NO AUTH)');
+    
+    // Fetch all appointments
+    const appointments = await Appointment.find({})
+      .sort({ date: 1, timeSlot: 1 })
+      .limit(100)
+      .lean();
+    
+    console.log(`📋 DEBUG: Found ${appointments.length} appointments in database`);
+    console.log('📋 DEBUG: Sample appointment:', appointments[0]);
+    
+    return res.json({ 
+      appointments,
+      total: appointments.length,
+      debug: 'NO_AUTH_ENDPOINT'
+    });
+  } catch (e) {
+    console.error('DEBUG: Error fetching appointments:', e);
+    return res.status(500).json({ error: 'Failed to fetch appointments' });
+  }
+});
+
 // Doctor-specific appointments endpoint  
 router.get('/appointments/doctor', requireRole('doctor', 'admin'), async (req, res) => {
   try {

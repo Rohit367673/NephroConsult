@@ -97,7 +97,8 @@ export default function DoctorAdminPanel() {
       setLoading(true);
       // Use environment variable for API URL or fallback to relative path for localhost
       const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-      const doctorEndpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments/doctor` : '/api/appointments/doctor';
+      // Temporarily use debug endpoint to bypass auth issues
+      const doctorEndpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments/doctor-debug` : '/api/appointments/doctor-debug';
       
       console.log('🔍 DoctorAdmin: API Base URL:', apiBaseUrl);
       console.log('🔍 DoctorAdmin: Final endpoint:', doctorEndpoint);
