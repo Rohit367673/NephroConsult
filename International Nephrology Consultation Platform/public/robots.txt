@@ -3,7 +3,7 @@
 
 User-agent: *
 Allow: /
-Sitemap: https://nephro-consult.vercel.app/sitemap.xml
+Sitemap: https://www.nephroconultation.com/sitemap.xml
 
 # Block admin and api routes
 Disallow: /admin/

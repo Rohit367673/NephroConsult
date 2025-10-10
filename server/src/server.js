@@ -73,9 +73,11 @@ app.use(
         .map((s) => s.trim())
         .filter(Boolean);
         
-      // Add common Vercel/Netlify domains if not explicitly set
+      // Add production and development domains
       const defaultAllowed = [
-        'https://nephro-consult.vercel.app',
+        'https://www.nephroconultation.com',
+        'https://nephroconultation.com',
+        'https://nephro-consult.vercel.app', // Keep backup Vercel domain
         'http://localhost:3000',
         'http://localhost:5173',
         'http://127.0.0.1:3000',
