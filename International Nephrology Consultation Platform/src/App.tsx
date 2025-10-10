@@ -1455,6 +1455,8 @@ function ContactPage() {
     urgency: 'normal'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1511,7 +1513,10 @@ function ContactPage() {
       animate={{ opacity: 1 }}
       className="min-h-screen bg-white"
     >
-      <Navigation />
+      <Navigation 
+        onLoginOpen={() => setIsLoginOpen(true)}
+        onSignupOpen={() => setIsSignupOpen(true)}
+      />
       
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-[#006f6f]/5 to-[#006f6f]/10 py-20">

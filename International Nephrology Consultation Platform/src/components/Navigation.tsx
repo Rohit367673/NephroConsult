@@ -4,7 +4,12 @@ import { Button } from './ui/button';
 import { Menu, X, Stethoscope } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-export function Navigation() {
+interface NavigationProps {
+  onLoginOpen?: () => void;
+  onSignupOpen?: () => void;
+}
+
+export function Navigation({ onLoginOpen, onSignupOpen }: NavigationProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
@@ -148,13 +153,13 @@ export function Navigation() {
               <div className="flex items-center space-x-4">
                 <Button
                   variant="outline"
-                  onClick={() => navigate('/login')}
+                  onClick={onLoginOpen}
                   className="text-gray-700 border-gray-300"
                 >
                   Login
                 </Button>
                 <Button
-                  onClick={() => navigate('/signup')}
+                  onClick={onSignupOpen}
                   className="bg-[#006f6f] hover:bg-[#005555] text-white px-6 py-2 rounded-lg"
                 >
                   Get Started
@@ -238,13 +243,19 @@ export function Navigation() {
                 <div className="pt-4 border-t border-gray-200 space-y-2">
                   <Button
                     variant="outline" 
-                    onClick={() => navigate('/login')}
+                    onClick={() => {
+                      onLoginOpen?.();
+                      setIsOpen(false);
+                    }}
                     className="w-full text-gray-700 border-gray-300"
                   >
                     Login
                   </Button>
                   <Button
-                    onClick={() => navigate('/signup')}
+                    onClick={() => {
+                      onSignupOpen?.();
+                      setIsOpen(false);
+                    }}
                     className="bg-[#006f6f] hover:bg-[#005555] text-white w-full"
                   >
                     Get Started
