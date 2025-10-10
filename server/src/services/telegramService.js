@@ -131,7 +131,13 @@ Your appointment starts in <b>30 minutes</b>
   async checkUpcomingAppointments() {
     try {
       // Import here to avoid circular dependency
-      const { Appointment } = await import('../models/Appointment.js');
+      const AppointmentModel = await import('../models/Appointment.js');
+      const Appointment = AppointmentModel.default;
+      
+      if (!Appointment) {
+        console.error('[TELEGRAM] Appointment model not available');
+        return;
+      }
       
       // Get current time and 30 minutes from now
       const now = new Date();
@@ -148,12 +154,19 @@ Your appointment starts in <b>30 minutes</b>
         reminderSent: { $ne: true }
       });
 
+      console.log(`[TELEGRAM] Found ${upcomingAppointments.length} upcoming appointments`);
+      
       for (const appointment of upcomingAppointments) {
-        await this.sendAppointmentReminder(appointment);
-        
-        // Mark reminder as sent to avoid duplicate notifications
-        appointment.reminderSent = true;
-        await appointment.save();
+        try {
+          await this.sendAppointmentReminder(appointment);
+          
+          // Mark reminder as sent to avoid duplicate notifications
+          appointment.reminderSent = true;
+          await appointment.save();
+          console.log(`[TELEGRAM] Reminder sent for appointment ${appointment._id}`);
+        } catch (reminderError) {
+          console.error(`[TELEGRAM] Error sending reminder for appointment ${appointment._id}:`, reminderError.message);
+        }
       }
 
     } catch (error) {
