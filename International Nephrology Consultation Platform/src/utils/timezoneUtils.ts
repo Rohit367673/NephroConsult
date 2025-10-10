@@ -47,12 +47,12 @@ export const REGION_PRICING = {
   'Asia/Hong_Kong': { initial: 120, followup: 85, currency: 'HKD', symbol: 'HK$' },
   'Asia/Tokyo': { initial: 125, followup: 90, currency: 'JPY', symbol: '¥' },
   'Asia/Shanghai': { initial: 100, followup: 70, currency: 'CNY', symbol: '¥' },
-  'Asia/Kolkata': { initial: 2500, followup: 1800, currency: 'INR', symbol: '₹' },
-  'Asia/Calcutta': { initial: 2500, followup: 1800, currency: 'INR', symbol: '₹' }, // Old name for Kolkata
-  'Asia/Mumbai': { initial: 2500, followup: 1800, currency: 'INR', symbol: '₹' },
-  'Asia/Delhi': { initial: 2500, followup: 1800, currency: 'INR', symbol: '₹' },
-  'Asia/Chennai': { initial: 2500, followup: 1800, currency: 'INR', symbol: '₹' },
-  'Asia/Bangalore': { initial: 2500, followup: 1800, currency: 'INR', symbol: '₹' },
+  'Asia/Kolkata': { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' },
+  'Asia/Calcutta': { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' }, // Old name for Kolkata
+  'Asia/Mumbai': { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' },
+  'Asia/Delhi': { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' },
+  'Asia/Chennai': { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' },
+  'Asia/Bangalore': { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' },
   
   // Australia & NZ
   'Australia/Sydney': { initial: 180, followup: 125, currency: 'AUD', symbol: 'AU$' },
@@ -91,7 +91,7 @@ export const getPricingForTimezone = (timezone: string) => {
       timezone.includes('Chennai') || timezone.includes('Bangalore') ||
       timezone === 'Asia/Colombo')) { // Sri Lanka also uses similar pricing
     console.log('Detected Indian region, returning INR pricing');
-    return { initial: 2500, followup: 1800, currency: 'INR', symbol: '₹' };
+    return { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' };
   }
   
   // Try to match by region/city
@@ -228,38 +228,38 @@ export const getCountryFromTimezone = (timezone: string): string => {
   }
   
   const countryMap: Record<string, string> = {
-    'America/New_York': 'United States',
-    'America/Chicago': 'United States',
-    'America/Denver': 'United States',
-    'America/Los_Angeles': 'United States',
-    'America/Toronto': 'Canada',
-    'Europe/London': 'United Kingdom',
-    'Europe/Paris': 'France',
-    'Europe/Berlin': 'Germany',
-    'Europe/Madrid': 'Spain',
-    'Europe/Rome': 'Italy',
-    'Asia/Dubai': 'United Arab Emirates',
-    'Asia/Riyadh': 'Saudi Arabia',
-    'Asia/Jerusalem': 'Israel',
-    'Asia/Singapore': 'Singapore',
-    'Asia/Hong_Kong': 'Hong Kong',
-    'Asia/Tokyo': 'Japan',
-    'Asia/Shanghai': 'China',
-    'Asia/Kolkata': 'India',
-    'Asia/Calcutta': 'India',
-    'Asia/Mumbai': 'India',
-    'Asia/Delhi': 'India',
-    'Asia/Chennai': 'India',
-    'Asia/Bangalore': 'India',
-    'Australia/Sydney': 'Australia',
-    'Australia/Melbourne': 'Australia',
-    'Pacific/Auckland': 'New Zealand',
-    'Africa/Johannesburg': 'South Africa',
-    'Africa/Cairo': 'Egypt',
-    'Africa/Lagos': 'Nigeria',
-    'America/Sao_Paulo': 'Brazil',
-    'America/Buenos_Aires': 'Argentina',
-    'America/Mexico_City': 'Mexico'
+    'America/New_York': 'US',
+    'America/Chicago': 'US',
+    'America/Denver': 'US',
+    'America/Los_Angeles': 'US',
+    'America/Toronto': 'CA',
+    'Europe/London': 'GB',
+    'Europe/Paris': 'FR',
+    'Europe/Berlin': 'DE',
+    'Europe/Madrid': 'ES',
+    'Europe/Rome': 'IT',
+    'Asia/Dubai': 'AE',
+    'Asia/Riyadh': 'SA',
+    'Asia/Jerusalem': 'IL',
+    'Asia/Singapore': 'SG',
+    'Asia/Hong_Kong': 'HK',
+    'Asia/Tokyo': 'JP',
+    'Asia/Shanghai': 'CN',
+    'Asia/Kolkata': 'IN',
+    'Asia/Calcutta': 'IN',
+    'Asia/Mumbai': 'IN',
+    'Asia/Delhi': 'IN',
+    'Asia/Chennai': 'IN',
+    'Asia/Bangalore': 'IN',
+    'Australia/Sydney': 'AU',
+    'Australia/Melbourne': 'AU',
+    'Pacific/Auckland': 'NZ',
+    'Africa/Johannesburg': 'ZA',
+    'Africa/Cairo': 'EG',
+    'Africa/Lagos': 'NG',
+    'America/Sao_Paulo': 'BR',
+    'America/Buenos_Aires': 'AR',
+    'America/Mexico_City': 'MX'
   };
   
   // Special check for India if not found in map
@@ -268,10 +268,10 @@ export const getCountryFromTimezone = (timezone: string): string => {
        timezone.includes('Calcutta') || timezone.includes('Mumbai') || 
        timezone.includes('Delhi') || timezone.includes('Chennai') || 
        timezone.includes('Bangalore'))) {
-    return 'India';
+    return 'IN';
   }
   
-  return countryMap[timezone] || 'International';
+  return countryMap[timezone] || 'US'; // Default to US for international
 };
 
 // Format appointment time with both local and IST time
