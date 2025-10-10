@@ -891,12 +891,12 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 sm:gap-6 md:gap-8">
             {[
               {
-                image: "https://images.unsplash.com/photo-1559757175-053139280de2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxraWRuZXklMjBoZWFsdGglMjBjYXJlfGVufDF8fHx8MTc1OTI5NDYwMHww&ixlib=rb-4.1.0&q=80&w=1080",
+                image: "/src/asset/Yg8YS5lw1695273494.jpg",
                 title: "Prevention & Wellness",
                 description: "Learn lifestyle modifications, dietary guidelines, and preventive measures to maintain healthy kidney function and prevent disease progression."
               },
               {
-                image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoZWFsdGhjYXJlJTIwdGVjaG5vbG9neXxlbnwxfHx8fDE3NTkyMjU2MTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+                image: "/src/asset/WhatsApp Image 2025-10-09 at 20.08.46.jpeg",
                 title: "Advanced Diagnostics",
                 description: "State-of-the-art lab analysis, imaging interpretation, and AI-assisted diagnostic tools for accurate kidney health assessment."
               },

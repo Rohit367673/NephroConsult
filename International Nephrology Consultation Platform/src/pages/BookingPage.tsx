@@ -50,13 +50,70 @@ interface RazorpayResponse {
 }
 
 // Helper functions (outside component to prevent re-creation)
-const getConsultationPrice = (type: string, currency: string) => {
-  const prices: any = {
-    'initial': { USD: 30, INR: 2500, EUR: 28, GBP: 25 },
-    'followup': { USD: 22, INR: 1800, EUR: 20, GBP: 18 },
-    'urgent': { USD: 45, INR: 3750, EUR: 42, GBP: 38 }
+const getCountryPriceMultiplier = (country: string): number => {
+  const lowIncomeCountries = ['IN', 'PK', 'BD', 'NP', 'LK', 'MM', 'KH', 'LA', 'AF', 'BT'];
+  const middleIncomeCountries = ['BR', 'TH', 'TR', 'MX', 'AR', 'CL', 'CO', 'PE', 'VE', 'UY', 'EC', 'BO', 'PY', 'MY', 'ID', 'PH', 'VN', 'EG', 'MA', 'DZ', 'TN', 'JO', 'LB', 'IQ', 'IR', 'AZ', 'GE', 'AM', 'BY', 'UA', 'MD', 'RS', 'BA', 'MK', 'AL', 'ME', 'XK', 'BG', 'RO', 'HR', 'HU', 'SK', 'CZ', 'PL', 'LT', 'LV', 'EE', 'SI'];
+  
+  if (lowIncomeCountries.includes(country)) {
+    return 1.0; // Base price
+  } else if (middleIncomeCountries.includes(country)) {
+    return 1.8; // 80% increase
+  } else {
+    return 3.3; // 230% increase for high-income countries
+  }
+};
+
+const getBasePricesINR = () => {
+  return {
+    'Initial Consultation': 1000,
+    'Follow-up Consultation': 700,
+    'Urgent Consultation': 2000
   };
-  return prices[type]?.[currency] || prices['initial'][currency] || 30;
+};
+
+const getConsultationPrice = (type: string, country: string, currency: string) => {
+  const basePrices = getBasePricesINR();
+  const multiplier = getCountryPriceMultiplier(country);
+  
+  // Map consultation types
+  const typeMapping: { [key: string]: string } = {
+    'initial': 'Initial Consultation',
+    'followup': 'Follow-up Consultation', 
+    'urgent': 'Urgent Consultation'
+  };
+  
+  const consultationType = typeMapping[type] || 'Initial Consultation';
+  const basePrice = basePrices[consultationType as keyof typeof basePrices];
+  const adjustedPriceINR = Math.round(basePrice * multiplier);
+  
+  // Convert to different currencies
+  const exchangeRates = {
+    'INR': 1,
+    'USD': 0.012, // 1 INR = 0.012 USD (1 USD = 83 INR)
+    'EUR': 0.011, // 1 INR = 0.011 EUR
+    'GBP': 0.0095 // 1 INR = 0.0095 GBP
+  };
+  
+  const rate = exchangeRates[currency as keyof typeof exchangeRates] || exchangeRates['USD'];
+  
+  if (currency === 'INR') {
+    return adjustedPriceINR;
+  } else {
+    return Math.round(adjustedPriceINR * rate);
+  }
+};
+
+// Get formatted price with currency symbol
+const getFormattedPrice = (amount: number, currency: string) => {
+  const symbols = {
+    'INR': '₹',
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£'
+  };
+  
+  const symbol = symbols[currency as keyof typeof symbols] || '$';
+  return `${symbol}${amount.toLocaleString()}`;
 };
 
 // Animation variants (outside component to prevent re-creation)
@@ -646,7 +703,8 @@ export default function BookingPage() {
     { 
       id: 'initial', 
       name: 'Initial Consultation', 
-      price: pricing.initial, 
+      price: getConsultationPrice('initial', bookingData.country || userCountry, pricing.currency),
+      formattedPrice: getFormattedPrice(getConsultationPrice('initial', bookingData.country || userCountry, pricing.currency), pricing.currency),
       duration: '45 min',
       description: 'Comprehensive kidney health assessment with detailed medical history review',
       icon: User,
@@ -655,7 +713,8 @@ export default function BookingPage() {
     { 
       id: 'followup', 
       name: 'Follow-up Consultation', 
-      price: pricing.followup, 
+      price: getConsultationPrice('followup', bookingData.country || userCountry, pricing.currency),
+      formattedPrice: getFormattedPrice(getConsultationPrice('followup', bookingData.country || userCountry, pricing.currency), pricing.currency),
       duration: '30 min',
       description: 'Progress review and treatment adjustment for existing patients',
       icon: FileText,
@@ -664,13 +723,14 @@ export default function BookingPage() {
     { 
       id: 'urgent', 
       name: 'Urgent Consultation', 
-      price: Math.round(pricing.initial * 1.5), 
+      price: getConsultationPrice('urgent', bookingData.country || userCountry, pricing.currency),
+      formattedPrice: getFormattedPrice(getConsultationPrice('urgent', bookingData.country || userCountry, pricing.currency), pricing.currency),
       duration: '45 min',
       description: 'Priority consultation for urgent kidney health concerns (10 AM - 10 PM IST)',
       icon: Clock,
       features: ['Same-day availability', 'Priority scheduling (10 AM - 10 PM IST)', 'Urgent symptom evaluation', 'Immediate treatment plan']
     }
-  ], [pricing.initial, pricing.followup]);
+  ], [bookingData.country, userCountry, pricing.currency]);
 
   const handleNext = useCallback(() => {
     if (step < 4) {
@@ -718,7 +778,7 @@ export default function BookingPage() {
       setIsProcessingPayment(true);
 
       // Calculate amount based on consultation type
-      const amount = getConsultationPrice(bookingData.consultationType, pricing.currency);
+      const amount = getConsultationPrice(bookingData.consultationType, bookingData.country || userCountry, pricing.currency);
 
       // Prepare booking details for Razorpay
       const bookingDetails: BookingDetails = {
@@ -760,7 +820,7 @@ export default function BookingPage() {
         date: bookingData.date,
         time: bookingData.time,
         patientInfo: bookingData.patientInfo,
-        amount: getConsultationPrice(bookingData.consultationType, pricing.currency),
+        amount: getConsultationPrice(bookingData.consultationType, bookingData.country || userCountry, pricing.currency),
         currency: pricing.currency
       };
 
@@ -928,7 +988,7 @@ export default function BookingPage() {
           medicalHistory: bookingData.patientInfo.medicalHistory,
           currentMedications: bookingData.patientInfo.currentMedications,
         },
-        amount: getConsultationPrice(bookingData.consultationType, pricing.currency),
+        amount: getConsultationPrice(bookingData.consultationType, bookingData.country || userCountry, pricing.currency),
         currency: pricing.currency,
       };
 
@@ -1459,7 +1519,7 @@ export default function BookingPage() {
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-semibold">Total Amount:</span>
                         <span className="text-2xl font-bold text-[#006f6f]">
-                          {pricing.symbol}{getConsultationPrice(bookingData.consultationType, pricing.currency)} {pricing.currency}
+                          {getFormattedPrice(getConsultationPrice(bookingData.consultationType, bookingData.country || userCountry, pricing.currency), pricing.currency)}
                         </span>
                       </div>
                       {bookingData.paymentMethod === 'razorpay' && (

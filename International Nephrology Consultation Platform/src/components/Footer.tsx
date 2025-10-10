@@ -44,7 +44,7 @@ export default function Footer() {
                 placeholder="Enter your email address"
                 className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
               />
-              <Button className="bg-[#006f6f] hover:bg-[#005555] whitespace-nowrap">
+              <Button className="bg-[#0d9488] hover:bg-[#0f766e] whitespace-nowrap">
                 Subscribe
               </Button>
             </div>
@@ -63,12 +63,12 @@ export default function Footer() {
             {/* Company Info */}
             <motion.div variants={itemVariants} className="lg:col-span-1">
               <div className="flex items-center space-x-3 mb-6">
-                <div className="w-12 h-12 bg-[#006f6f] rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-xl">N</span>
+                <div className="w-12 h-12 rounded-lg overflow-hidden">
+                  <img src="/logo.svg" alt="NephroConsult Logo" className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold">NephroConsult</h3>
-                  <p className="text-sm text-[#006f6f]">International Kidney Care</p>
+                  <p className="text-sm text-[#0d9488]">International Kidney Care</p>
                 </div>
               </div>
               <p className="text-gray-400 mb-6 leading-relaxed">
@@ -79,7 +79,7 @@ export default function Footer() {
               {/* Trust Indicators */}
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
-                  <Shield className="w-5 h-5 text-[#006f6f]" />
+                  <Shield className="w-5 h-5 text-[#0d9488]" />
                   <span className="text-sm text-gray-300">HIPAA Compliant</span>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -87,7 +87,7 @@ export default function Footer() {
                   <span className="text-sm text-gray-300">4.9/5 Patient Rating</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Globe className="w-5 h-5 text-[#006f6f]" />
+                  <Globe className="w-5 h-5 text-[#0d9488]" />
                   <span className="text-sm text-gray-300">Available Globally</span>
                 </div>
               </div>
