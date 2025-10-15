@@ -47,9 +47,22 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'", "https://checkout.razorpay.com"],
-      connectSrc: ["'self'", "https://api.razorpay.com"],
-      frameSrc: ["'self'", "https://api.razorpay.com"],
+      scriptSrc: ["'self'", "https://sdk.cashfree.com", "https://payments.cashfree.com", "https://checkout.cashfree.com"],
+      connectSrc: [
+        "'self'",
+        "https://api.cashfree.com",
+        "https://sandbox.cashfree.com",
+        "https://payments.cashfree.com",
+        "https://checkout.cashfree.com"
+      ],
+      frameSrc: [
+        "'self'",
+        "https://api.cashfree.com",
+        "https://sdk.cashfree.com",
+        "https://payments.cashfree.com",
+        "https://checkout.cashfree.com",
+        "https://sandbox.cashfree.com"
+      ],
     },
   } : false,
   hsts: isProd ? {
@@ -75,8 +88,8 @@ app.use(
         
       // Add production and development domains
       const defaultAllowed = [
-        'https://www.nephroconultation.com',
-        'https://nephroconultation.com',
+        'https://www.nephroconsultation.com',
+        'https://nephroconsultation.com',
         'https://nephro-consult.vercel.app', // Keep backup Vercel domain
         'http://localhost:3000',
         'http://localhost:5173',

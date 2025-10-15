@@ -10,43 +10,42 @@ export function validatePaymentEnvironment() {
   };
 
   // Check if payment credentials are provided
-  if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) {
+  if (!env.CASHFREE_APP_ID || !env.CASHFREE_SECRET_KEY) {
     validation.isValid = false;
-    validation.issues.push('Missing Razorpay credentials');
+    validation.issues.push('Missing Cashfree credentials');
     return validation;
   }
 
   // Determine environment
-  const isTest = env.RAZORPAY_KEY_ID.includes('test');
-  const isLive = env.RAZORPAY_KEY_ID.includes('live');
+  const environment = env.CASHFREE_ENVIRONMENT || 'sandbox';
   
-  if (isTest) {
-    validation.environment = 'test';
-  } else if (isLive) {
-    validation.environment = 'live';
+  if (environment === 'sandbox') {
+    validation.environment = 'sandbox';
+  } else if (environment === 'production') {
+    validation.environment = 'production';
   } else {
     validation.environment = 'unknown';
-    validation.warnings.push('Cannot determine payment environment from key format');
+    validation.warnings.push('Cannot determine payment environment from configuration');
   }
 
-  // Validate key format
-  if (!env.RAZORPAY_KEY_ID.startsWith('rzp_')) {
+  // Validate app ID format
+  if (!env.CASHFREE_APP_ID || env.CASHFREE_APP_ID.length < 10) {
     validation.isValid = false;
-    validation.issues.push('Invalid Razorpay key format - should start with rzp_');
+    validation.issues.push('Invalid Cashfree App ID format');
   }
 
-  // Check key length (typical Razorpay keys are around 18-20 characters)
-  if (env.RAZORPAY_KEY_ID.length < 15 || env.RAZORPAY_KEY_ID.length > 25) {
-    validation.warnings.push('Unusual Razorpay key length detected');
+  // Check secret key length
+  if (!env.CASHFREE_SECRET_KEY || env.CASHFREE_SECRET_KEY.length < 20) {
+    validation.warnings.push('Unusual Cashfree secret key length detected');
   }
 
   // Production-specific validations
-  if (env.NODE_ENV === 'production' && isTest) {
-    validation.warnings.push('Using TEST credentials in PRODUCTION environment');
+  if (env.NODE_ENV === 'production' && environment === 'sandbox') {
+    validation.warnings.push('Using SANDBOX credentials in PRODUCTION environment');
   }
 
-  if (env.NODE_ENV === 'development' && isLive) {
-    validation.warnings.push('Using LIVE credentials in DEVELOPMENT environment');
+  if (env.NODE_ENV === 'development' && environment === 'production') {
+    validation.warnings.push('Using PRODUCTION credentials in DEVELOPMENT environment');
   }
 
   return validation;
@@ -59,7 +58,7 @@ export function getPaymentEnvironmentInfo() {
     environment: validation.environment,
     isLive: validation.environment === 'live',
     isTest: validation.environment === 'test',
-    keyId: env.RAZORPAY_KEY_ID,
+    appId: env.CASHFREE_APP_ID,
     isValid: validation.isValid,
     issues: validation.issues,
     warnings: validation.warnings,
@@ -75,7 +74,7 @@ export function logPaymentEnvironment() {
   console.log('='.repeat(50));
   console.log(`Environment: ${info.environment.toUpperCase()}`);
   console.log(`Node Environment: ${info.nodeEnv}`);
-  console.log(`Key ID: ${info.keyId?.substring(0, 15)}...`);
+  console.log(`App ID: ${info.appId?.substring(0, 15)}...`);
   console.log(`Valid Configuration: ${info.isValid ? '✅' : '❌'}`);
   
   if (info.issues.length > 0) {

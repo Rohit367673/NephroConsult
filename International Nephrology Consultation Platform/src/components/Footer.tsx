@@ -26,30 +26,6 @@ export default function Footer() {
   return (
     <footer className="bg-gradient-to-br from-gray-900 to-gray-800 text-white">
       <div className="container-medical">
-        {/* Newsletter Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="border-b border-gray-700 py-12"
-        >
-          <div className="text-center max-w-2xl mx-auto">
-            <h3 className="text-2xl font-bold mb-4">Stay Updated on Kidney Health</h3>
-            <p className="text-gray-400 mb-6">
-              Get the latest insights, tips, and health advice directly from Dr. Ilango S. Prakasam
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-              <Input
-                type="email"
-                placeholder="Enter your email address"
-                className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-              />
-              <Button className="bg-[#0d9488] hover:bg-[#0f766e] whitespace-nowrap">
-                Subscribe
-              </Button>
-            </div>
-          </div>
-        </motion.div>
 
         {/* Main Footer Content */}
         <motion.div

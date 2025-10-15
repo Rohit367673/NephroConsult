@@ -704,7 +704,11 @@ export default function HomePage() {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.2, duration: 0.8 }}
                 whileHover={{ y: -10, scale: 1.02 }}
-                className="group relative"
+                className="group relative cursor-pointer"
+                onClick={() => { if (!user) { setIsLoginOpen(true); } else { navigate('/booking'); } }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!user) { setIsLoginOpen(true); } else { navigate('/booking'); } } }}
               >
                 {/* Glass morphism card */}
                 <div className={`relative h-full p-5 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl bg-gradient-to-br ${feature.gradient} backdrop-blur-sm border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-500`}>

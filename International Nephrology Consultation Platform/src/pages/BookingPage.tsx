@@ -13,7 +13,7 @@ import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getUserTimezone, getCountryFromTimezone, getPricingForTimezone, getAvailableTimeSlotsForUser } from '../utils/timezoneUtils';
-import { loadRazorpayScript, initiateRazorpayPayment, verifyRazorpayPayment } from '../utils/razorpayUtils';
+import { loadCashfreeScript, initiateCashfreePayment, verifyCashfreePayment } from '../utils/cashfreeUtils';
 import { 
   validatePatientInfo, 
   validatePhoneNumber, 
@@ -43,10 +43,10 @@ interface BookingDetails {
   currency: string;
 }
 
-interface RazorpayResponse {
-  razorpay_payment_id: string;
-  razorpay_order_id: string;
-  razorpay_signature: string;
+interface CashfreeResponse {
+  payment_id: string;
+  order_id: string;
+  payment_status: string;
 }
 
 // Helper functions (outside component to prevent re-creation)
@@ -735,9 +735,9 @@ export default function BookingPage() {
   const handleNext = useCallback(() => {
     if (step < 4) {
       setStep(step + 1);
-      // Auto-select Razorpay when reaching payment step
+      // Auto-select Cashfree when reaching payment step
       if (step + 1 === 4 && !bookingData.paymentMethod) {
-        setBookingData(prev => ({ ...prev, paymentMethod: 'razorpay' }));
+        setBookingData(prev => ({ ...prev, paymentMethod: 'cashfree' }));
       }
     }
   }, [step, bookingData.paymentMethod]);
@@ -765,22 +765,22 @@ export default function BookingPage() {
   };
 
   const handleBooking = async () => {
-    if (!bookingData.paymentMethod || bookingData.paymentMethod !== 'razorpay') {
-      toast.error('Please select Razorpay as payment method');
+    if (!bookingData.paymentMethod || bookingData.paymentMethod !== 'cashfree') {
+      toast.error('Please select Cashfree as payment method');
       return;
     }
 
-    await processRazorpayPayment();
+    await processCashfreePayment();
   };
 
-  const processRazorpayPayment = async () => {
+  const processCashfreePayment = async () => {
     try {
       setIsProcessingPayment(true);
 
       // Calculate amount based on consultation type
       const amount = getConsultationPrice(bookingData.consultationType, bookingData.country || userCountry, pricing.currency);
 
-      // Prepare booking details for Razorpay
+      // Prepare booking details for Cashfree
       const bookingDetails: BookingDetails = {
         consultationType: bookingData.consultationType,
         date: bookingData.date,
@@ -797,8 +797,8 @@ export default function BookingPage() {
         return;
       }
 
-      // Initiate Razorpay payment
-      await initiateRazorpayPayment(
+      // Initiate Cashfree payment
+      await initiateCashfreePayment(
         bookingDetails,
         handlePaymentSuccess,
         handlePaymentError
@@ -810,7 +810,7 @@ export default function BookingPage() {
     }
   };
 
-  const handlePaymentSuccess = async (response: RazorpayResponse) => {
+  const handlePaymentSuccess = async (response: CashfreeResponse) => {
     try {
       toast.loading('Verifying payment...', { id: 'payment-verification' });
 
@@ -824,7 +824,7 @@ export default function BookingPage() {
         currency: pricing.currency
       };
 
-      const isVerified = await verifyRazorpayPayment(response, bookingDetails);
+      const isVerified = await verifyCashfreePayment(response, bookingDetails);
 
       if (isVerified) {
         setPaymentCompleted(true);
@@ -994,8 +994,8 @@ export default function BookingPage() {
 
       console.log('Initiating payment with details:', bookingDetails);
 
-      // Initiate Razorpay payment
-      await initiateRazorpayPayment(
+      // Initiate Cashfree payment
+      await initiateCashfreePayment(
         bookingDetails,
         handlePaymentSuccess,
         handlePaymentError
@@ -1522,9 +1522,9 @@ export default function BookingPage() {
                           {getFormattedPrice(getConsultationPrice(bookingData.consultationType, bookingData.country || userCountry, pricing.currency), pricing.currency)}
                         </span>
                       </div>
-                      {bookingData.paymentMethod === 'razorpay' && (
+                      {bookingData.paymentMethod === 'cashfree' && (
                         <div className="mt-2 text-sm text-gray-600">
-                          <p>✓ Secure payment via Razorpay</p>
+                          <p>✓ Secure payment via Cashfree</p>
                           <p>✓ Multiple payment options available</p>
                         </div>
                       )}
@@ -1540,17 +1540,17 @@ export default function BookingPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <Button
-                      variant={bookingData.paymentMethod === 'razorpay' ? "default" : "outline"}
+                      variant={bookingData.paymentMethod === 'cashfree' ? "default" : "outline"}
                       className={`w-full justify-start p-4 h-auto ${
-                        bookingData.paymentMethod === 'razorpay' 
+                        bookingData.paymentMethod === 'cashfree' 
                           ? 'bg-[#006f6f] hover:bg-[#005555]' 
                           : ''
                       }`}
-                      onClick={() => setBookingData(prev => ({ ...prev, paymentMethod: 'razorpay' }))}
+                      onClick={() => setBookingData(prev => ({ ...prev, paymentMethod: 'cashfree' }))}
                     >
                       <CreditCard className="w-5 h-5 mr-3" />
                       <div className="text-left">
-                        <div className="font-medium">Razorpay</div>
+                        <div className="font-medium">Cashfree</div>
                         <div className="text-sm opacity-70">UPI, Cards, NetBanking & Wallets</div>
                       </div>
                     </Button>

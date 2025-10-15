@@ -374,6 +374,7 @@ export default function ProfilePage() {
     upcomingConsultations: 0,
     completedToday: 0
   });
+  const [doctorFilter, setDoctorFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   
   // Update profileData when user changes
   useEffect(() => {
@@ -490,7 +491,7 @@ export default function ProfilePage() {
     }
   };
 
-  // Smart appointment filtering logic - Dashboard shows max 2 appointments
+  // Smart appointment filtering logic - Dashboard shows all active (non-completed, non-cancelled) appointments
   const getDisplayAppointments = () => {
     console.log('Filtering appointments:', appointments);
     console.log('Available statuses:', appointments.map(apt => apt.status));
@@ -498,26 +499,29 @@ export default function ProfilePage() {
     console.log('Meet link check:', appointments[0]?.meetLink);
     console.log('Price check:', appointments[0]?.price);
     
-    // Map API status values to display values
-    const upcoming = appointments.filter(apt => apt.status === 'confirmed' || apt.status === 'Upcoming');
-    const completed = appointments.filter(apt => apt.status === 'completed' || apt.status === 'Completed').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    // Dashboard shows: 1 upcoming + 1 most recent completed (max 2 total)
-    const dashboardAppointments = [];
-    
-    // Add 1 upcoming appointment if available
-    if (upcoming.length > 0) {
-      dashboardAppointments.push(upcoming[0]);
-    }
-    
-    // Add 1 most recent completed appointment if available
-    if (completed.length > 0) {
-      dashboardAppointments.push(completed[0]);
-    }
-    
-    return dashboardAppointments;
+    // Active = everything that's not completed or cancelled
+    const active = appointments
+      .filter(apt => {
+        const st = String(apt.status || '').toLowerCase();
+        return st !== 'completed' && st !== 'cancelled';
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return active;
   };
 
   const displayAppointments = getDisplayAppointments();
+
+  // Helpers to classify appointments by status
+  const activeAppointments = appointments
+    .filter((apt) => {
+      const status = String(apt.status || '').toLowerCase();
+      return status !== 'completed' && status !== 'cancelled';
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const historyAppointments = appointments
+    .filter((apt) => String(apt.status || '').toLowerCase() === 'completed')
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Mock documents data
   const documents = [
@@ -998,15 +1002,15 @@ For support: suyambu54321@gmail.com
                             <div className="flex gap-2 mt-4">
                               <Button 
                                 size="sm" 
-                                variant={activeTab === 'upcoming' ? 'default' : 'outline'}
-                                onClick={() => setActiveTab('upcoming')}
+                                variant={doctorFilter === 'upcoming' ? 'default' : 'outline'}
+                                onClick={() => setDoctorFilter('upcoming')}
                               >
                                 Upcoming ({doctorStats.upcomingConsultations})
                               </Button>
                               <Button 
                                 size="sm" 
-                                variant={activeTab === 'completed' ? 'default' : 'outline'}
-                                onClick={() => setActiveTab('completed')}
+                                variant={doctorFilter === 'completed' ? 'default' : 'outline'}
+                                onClick={() => setDoctorFilter('completed')}
                               >
                                 Completed ({doctorStats.completedToday})
                               </Button>
@@ -1027,8 +1031,8 @@ For support: suyambu54321@gmail.com
                                 <p className="text-center text-gray-500">No appointments found</p>
                               ) : doctorAppointments
                                 .filter(apt => {
-                                  if (activeTab === 'upcoming') return apt.status === 'confirmed';
-                                  if (activeTab === 'completed') return apt.status === 'completed';
+                                  if (doctorFilter === 'upcoming') return apt.status === 'confirmed';
+                                  if (doctorFilter === 'completed') return apt.status === 'completed';
                                   return true; // show all by default
                                 })
                                 .map((appointment) => (
@@ -1091,15 +1095,6 @@ For support: suyambu54321@gmail.com
                                   <Plus className="w-4 h-4 mr-2" />
                                   Book New Consultation
                                 </Button>
-                                <Button 
-                                  variant="outline"
-                                  onClick={() => {
-                                    toast.info('Calendar feature coming soon!');
-                                  }}
-                                >
-                                  <Calendar className="w-4 h-4 mr-2" />
-                                  View Calendar
-                                </Button>
                               </div>
                             </CardContent>
                           </Card>
@@ -1111,7 +1106,9 @@ For support: suyambu54321@gmail.com
                             </CardHeader>
                             <CardContent>
                               <div className="space-y-4">
-                                {displayAppointments.map((appointment) => (
+                                {activeAppointments.length === 0 ? (
+                                  <p className="text-center text-gray-500">No active consultations. Book a new one to get started.</p>
+                                ) : activeAppointments.map((appointment) => (
                                   <motion.div
                                     key={appointment._id || appointment.id}
                                     initial={{ opacity: 0, x: -20 }}
@@ -1267,62 +1264,53 @@ For support: suyambu54321@gmail.com
                   <Card>
                     <CardHeader>
                       <CardTitle>Complete Appointment History</CardTitle>
-                      <p className="text-sm text-gray-600">View all your past and upcoming consultations</p>
+                      <p className="text-sm text-gray-600">View all your completed consultations</p>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {appointments.map((appointment) => (
-                          <motion.div
-                            key={appointment._id || appointment.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: appointment.id * 0.1 }}
-                            className="border rounded-lg p-6 hover:shadow-md transition-shadow"
-                          >
-                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                              <div className="flex items-start space-x-4">
-                                <div className={`p-3 rounded-full ${
-                                  appointment.status === 'Upcoming' ? 'bg-blue-100' : 'bg-green-100'
-                                }`}>
-                                  <Calendar className={`w-5 h-5 ${
-                                    appointment.status === 'Upcoming' ? 'text-blue-600' : 'text-green-600'
-                                  }`} />
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <h4 className="font-semibold text-gray-900">{appointment.type}</h4>
-                                    <Badge variant={appointment.status === 'Upcoming' ? 'default' : 'secondary'}>
-                                      {appointment.status}
-                                    </Badge>
-                                    <button 
-                                      className="ml-2 px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded flex items-center"
-                                      onClick={() => {
-                                        console.log('🎥 History Join Meeting clicked!');
-                                        if (appointment.meetLink) {
-                                          window.open(appointment.meetLink, '_blank');
-                                        } else {
-                                          alert('Meeting link not available');
-                                        }
-                                      }}
-                                    >
-                                      <Video className="w-3 h-3 mr-1" />
-                                      Join Meeting
-                                    </button>
+                        {historyAppointments.length === 0 ? (
+                          <p className="text-center text-gray-500">No completed consultations yet.</p>
+                        ) : (
+                          historyAppointments.map((appointment) => (
+                            <motion.div
+                              key={appointment._id || appointment.id}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: appointment.id * 0.1 }}
+                              className="border rounded-lg p-6 hover:shadow-md transition-shadow"
+                            >
+                              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                                <div className="flex items-start space-x-4">
+                                  <div className={`p-3 rounded-full ${
+                                    appointment.status === 'Upcoming' ? 'bg-blue-100' : 'bg-green-100'
+                                  }`}>
+                                    <Calendar className={`w-5 h-5 ${
+                                      appointment.status === 'Upcoming' ? 'text-blue-600' : 'text-green-600'
+                                    }`} />
                                   </div>
-                                  <div className="space-y-1 text-sm text-gray-600">
-                                    <p className="flex items-center">
-                                      <Clock className="w-4 h-4 mr-2" />
-                                      {new Date(appointment.date).toLocaleDateString()} at {appointment.timeSlot || appointment.time}
-                                      <span className="ml-2 text-xs text-gray-500">(IST: {appointment.timeSlot || appointment.istTime})</span>
-                                    </p>
-                                    <p className="flex items-center">
-                                      <User className="w-4 h-4 mr-2" />
-                                      {appointment.doctor?.name || 'Dr. Ilango S. Prakasam'}
-                                    </p>
-                                    <p className="flex items-center">
-                                      <CreditCard className="w-4 h-4 mr-2" />
-                                      {getCorrectCurrency(appointment)} - {appointment.paymentStatus || 'Paid'}
-                                    </p>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <h4 className="font-semibold text-gray-900">{appointment.type}</h4>
+                                      <Badge variant={appointment.status === 'Upcoming' ? 'default' : 'secondary'}>
+                                        {appointment.status}
+                                      </Badge>
+                                      {/* No Join Meeting in history for completed appointments */}
+                                    </div>
+                                    <div className="space-y-1 text-sm text-gray-600">
+                                      <p className="flex items-center">
+                                        <Clock className="w-4 h-4 mr-2" />
+                                        {new Date(appointment.date).toLocaleDateString()} at {appointment.timeSlot || appointment.time}
+                                        <span className="ml-2 text-xs text-gray-500">(IST: {appointment.timeSlot || appointment.istTime})</span>
+                                      </p>
+                                      <p className="flex items-center">
+                                        <User className="w-4 h-4 mr-2" />
+                                        {appointment.doctor?.name || 'Dr. Ilango S. Prakasam'}
+                                      </p>
+                                      <p className="flex items-center">
+                                        <CreditCard className="w-4 h-4 mr-2" />
+                                        {getCorrectCurrency(appointment)} - {appointment.paymentStatus || 'Paid'}
+                                      </p>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -1357,21 +1345,7 @@ For support: suyambu54321@gmail.com
                                     {expandedPrescriptions.has(appointment.id) ? 'Hide Prescription' : 'View Prescription'}
                                   </Button>
                                 )}
-                                
-                                <button 
-                                  className="mr-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md flex items-center"
-                                  onClick={() => {
-                                    console.log('HISTORY JOIN MEETING CLICKED!');
-                                    if (appointment.meetLink) {
-                                      window.open(appointment.meetLink, '_blank');
-                                    } else {
-                                      alert('Meeting link not available');
-                                    }
-                                  }}
-                                >
-                                  <Video className="w-4 h-4 mr-2" />
-                                  Join Meeting
-                                </button>
+
                                 
                                 <Button 
                                   size="sm" 
@@ -1382,10 +1356,9 @@ For support: suyambu54321@gmail.com
                                   Download Receipt
                                 </Button>
                               </div>
-                            </div>
 
-                            {/* Prescription Details */}
-                            {appointment.prescription && expandedPrescriptions.has(appointment.id) && (
+                              {/* Prescription Details */}
+                              {appointment.prescription && expandedPrescriptions.has(appointment.id) && (
                               <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                                 <h5 className="font-medium text-blue-900 mb-2">Digital Prescription (ID: {appointment.prescription.id})</h5>
                                 <div className="space-y-2">
@@ -1418,9 +1391,10 @@ For support: suyambu54321@gmail.com
                                   </div>
                                 </div>
                               </div>
-                            )}
-                          </motion.div>
-                        ))}
+                              )}
+                            </motion.div>
+                        ))
+                        )}
                       </div>
                     </CardContent>
                   </Card>

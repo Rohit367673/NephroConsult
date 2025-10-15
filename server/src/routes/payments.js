@@ -1,12 +1,20 @@
 import express from 'express';
 import { requireAuth } from '../middlewares/auth.js';
-import { sendPaymentEmail } from '../utils/email.js';
-import { razorpayService } from '../services/razorpayService.js';
+import { sendPaymentEmail, sendBookingEmail } from '../utils/email.js';
+import { cashfreeService } from '../services/cashfreeService.js';
 import { z } from 'zod';
+import crypto from 'crypto';
+import { env, flags } from '../config.js';
+import Appointment from '../models/Appointment.js';
+import User from '../models/User.js';
+import { priceFor, mapConsultationTypeId } from '../utils/pricing.js';
+import { generateMeetLink } from '../utils/meet.js';
+import { scheduleAppointmentReminder } from '../jobs.js';
+import { telegramService } from '../services/telegramService.js';
 
 const router = express.Router();
 
-// Create Razorpay order
+// Create Cashfree order
 router.post('/create-order', requireAuth, async (req, res) => {
   try {
     console.log('💳 Payment order request received');
@@ -17,14 +25,14 @@ router.post('/create-order', requireAuth, async (req, res) => {
     console.log('💳 Request body:', req.body);
     
     // Check if service is available
-    const status = razorpayService.getStatus();
-    console.log('💳 Razorpay service status:', status);
+    const status = cashfreeService.getStatus();
+    console.log('💳 Cashfree service status:', status);
     
     if (!status.initialized) {
-      console.error('❌ Razorpay service not initialized');
+      console.error('❌ Cashfree service not initialized');
       return res.status(503).json({
         error: 'Payment service unavailable',
-        message: 'Razorpay service not properly initialized',
+        message: 'Cashfree service not properly initialized',
         debug: status
       });
     }
@@ -32,7 +40,7 @@ router.post('/create-order', requireAuth, async (req, res) => {
     console.log('💳 Creating order with service...');
     
     // Create order using the service
-    const result = await razorpayService.createOrder(req.body, req.session.user.id);
+    const result = await cashfreeService.createOrder(req.body, req.session.user.id);
     
     console.log('✅ Order created successfully:', result);
     return res.json(result);
@@ -49,22 +57,22 @@ router.post('/create-order', requireAuth, async (req, res) => {
   }
 });
 
-// Verify Razorpay payment
+// Verify Cashfree payment
 router.post('/verify-payment', requireAuth, async (req, res) => {
   try {
     console.log('💳 Payment verification request from user:', req.session?.user?.email);
     
     // Check if service is available
-    const status = razorpayService.getStatus();
+    const status = cashfreeService.getStatus();
     if (!status.initialized) {
       return res.status(503).json({
         error: 'Payment service unavailable',
-        message: 'Razorpay service not properly initialized'
+        message: 'Cashfree service not properly initialized'
       });
     }
 
     // Verify payment using the service
-    const result = await razorpayService.verifyPayment(req.body);
+    const result = await cashfreeService.verifyPayment(req.body);
     
     if (!result.success) {
       return res.status(400).json(result);
@@ -74,66 +82,149 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
 
     // Send payment confirmation email
     try {
-      const emailHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #006f6f; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
-            .success { background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 6px; }
-            .details { background: white; padding: 15px; margin: 15px 0; border-radius: 6px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Payment Successful!</h1>
-              <p>NephroConsult - International Kidney Care</p>
+      const details = req.body.booking_details;
+      if (details && details.patientEmail) {
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: #006f6f; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+              .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
+              .success { background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 6px; }
+              .details { background: white; padding: 15px; margin: 15px 0; border-radius: 6px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Payment Successful!</h1>
+                <p>NephroConsult - International Kidney Care</p>
+              </div>
+              <div class="content">
+                <div class="success">
+                  <h3>✅ Payment Confirmed</h3>
+                  <p>Your payment has been successfully processed. Your consultation is confirmed!</p>
+                </div>
+                <div class="details">
+                  <h4>Payment Details:</h4>
+                  <p><strong>Payment ID:</strong> ${payment.id}</p>
+                  <p><strong>Order ID:</strong> ${payment.order_id}</p>
+                  <p><strong>Amount:</strong> ${payment.amount} ${payment.currency}</p>
+                  <p><strong>Status:</strong> ${payment.status}</p>
+                </div>
+                <div class="details">
+                  <h4>Consultation Details:</h4>
+                  <p><strong>Type:</strong> ${details.consultationType}</p>
+                  <p><strong>Patient:</strong> ${details.patientName}</p>
+                  <p><strong>Date:</strong> ${details.date}</p>
+                  <p><strong>Time:</strong> ${details.time}</p>
+                  <p><strong>Doctor:</strong> Dr. Ilango Krishnamurthy (Sr. Nephrologist)</p>
+                </div>
+                <p>You will receive your consultation link closer to the appointment time.</p>
+              </div>
             </div>
-            <div class="content">
-              <div class="success">
-                <h3>✅ Payment Confirmed</h3>
-                <p>Your payment has been successfully processed. Your consultation is confirmed!</p>
-              </div>
-              <div class="details">
-                <h4>Payment Details:</h4>
-                <p><strong>Payment ID:</strong> ${payment.id}</p>
-                <p><strong>Order ID:</strong> ${payment.order_id}</p>
-                <p><strong>Amount:</strong> ${payment.amount} ${payment.currency}</p>
-                <p><strong>Status:</strong> ${payment.status}</p>
-              </div>
-              <div class="details">
-                <h4>Consultation Details:</h4>
-                <p><strong>Type:</strong> ${req.body.booking_details.consultationType}</p>
-                <p><strong>Patient:</strong> ${req.body.booking_details.patientName}</p>
-                <p><strong>Date:</strong> ${req.body.booking_details.date}</p>
-                <p><strong>Time:</strong> ${req.body.booking_details.time}</p>
-                <p><strong>Doctor:</strong> Dr. Ilango Krishnamurthy (Sr. Nephrologist)</p>
-              </div>
-              <p>You will receive your consultation link closer to the appointment time.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
+          </body>
+          </html>
+        `;
 
-      await sendPaymentEmail(
-        req.body.booking_details.patientEmail,
-        'Payment Successful - NephroConsult',
-        emailHtml
-      );
+        await sendPaymentEmail(
+          details.patientEmail,
+          'Payment Successful - NephroConsult',
+          emailHtml
+        );
+      }
     } catch (emailError) {
       console.error('Error sending payment confirmation email:', emailError);
       // Don't fail the payment verification if email fails
     }
 
+    // Best-effort: create appointment automatically if booking details are provided
+    let createdAppointment = null;
+    try {
+      const details = req.body.booking_details;
+      if (details) {
+        const sessionUser = req.session.user;
+        const userDoc = await User.findById(sessionUser.id);
+        const country = userDoc?.country || 'default';
+        const pricing = priceFor(country);
+        const typeId = String(details.consultationType || 'initial');
+        const typeName = mapConsultationTypeId(typeId);
+
+        // Use paid amount/currency if provided, else fallback to pricing
+        const amount = Number(details.amount) || pricing.consultation;
+        const currency = String(details.currency || pricing.currency);
+
+        createdAppointment = await Appointment.create({
+          patient: {
+            id: userDoc?._id,
+            name: userDoc?.name,
+            email: userDoc?.email,
+            phone: userDoc?.phone,
+            country,
+          },
+          doctor: {
+            name: 'Dr. Ilango S. Prakasam',
+            title: 'Sr. Nephrologist',
+            qualifications: 'MD, DNB (Nephrology), MRCP (UK)',
+            experience: '15+ Years Experience',
+            email: env.OWNER_EMAIL || 'suyambu54321@gmail.com'
+          },
+          date: details.date,
+          timeSlot: details.time,
+          type: typeName,
+          status: 'confirmed',
+          price: {
+            amount,
+            currency,
+            symbol: pricing.symbol,
+            region: country,
+            discountApplied: false,
+          },
+          meetLink: generateMeetLink(details.date, details.time)
+        });
+
+        // Schedule reminder and send Telegram notification (non-blocking)
+        try { await scheduleAppointmentReminder(createdAppointment); } catch {}
+        try {
+          await telegramService.notifyNewAppointment({
+            patientName: userDoc?.name,
+            patientEmail: userDoc?.email,
+            phone: userDoc?.phone,
+            date: createdAppointment.date,
+            timeSlot: createdAppointment.timeSlot,
+            amount: createdAppointment.price.amount,
+            consultationType: createdAppointment.type,
+            symptoms: undefined,
+            medicalHistory: undefined,
+          });
+        } catch {}
+
+        // Send booking confirmation email (best-effort)
+        try {
+          const html = `
+            <p>Dear ${userDoc?.name},</p>
+            <p>Your consultation has been confirmed.</p>
+            <p><strong>Date:</strong> ${createdAppointment.date}<br/>
+            <strong>Time:</strong> ${createdAppointment.timeSlot}<br/>
+            <strong>Type:</strong> ${createdAppointment.type}<br/>
+            <strong>Amount:</strong> ${createdAppointment.price.symbol}${createdAppointment.price.amount} ${createdAppointment.price.currency}</p>
+            <p><a href="${createdAppointment.meetLink}">Join Video Consultation</a></p>
+          `;
+          await sendBookingEmail(userDoc?.email, 'Booking Confirmed - NephroConsult', html);
+        } catch {}
+      }
+    } catch (createErr) {
+      console.error('⚠️ Appointment creation after payment failed (non-blocking):', createErr.message);
+    }
+
     res.json({
       success: true,
       message: 'Payment verified successfully',
-      payment: payment
+      payment: payment,
+      appointment: createdAppointment ? { id: createdAppointment._id } : undefined,
     });
 
   } catch (error) {
@@ -146,15 +237,15 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
   }
 });
 
-// Razorpay webhook handler
+// Cashfree webhook handler
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
     const webhookBody = req.body;
-    const webhookSignature = req.headers['x-razorpay-signature'];
+    const webhookSignature = req.headers['x-cashfree-signature'];
 
     // Verify webhook signature
     const expectedSignature = crypto
-      .createHmac('sha256', env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', env.CASHFREE_SECRET_KEY)
       .update(webhookBody)
       .digest('hex');
 
@@ -164,27 +255,27 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     }
 
     const event = JSON.parse(webhookBody);
-    console.log('Razorpay webhook received:', event.event);
+    console.log('Cashfree webhook received:', event.type);
 
     // Handle different webhook events
-    switch (event.event) {
-      case 'payment.captured':
-        console.log('Payment captured:', event.payload.payment.entity);
+    switch (event.type) {
+      case 'PAYMENT_SUCCESS_WEBHOOK':
+        console.log('Payment successful:', event.data);
         // Handle successful payment
         break;
       
-      case 'payment.failed':
-        console.log('Payment failed:', event.payload.payment.entity);
+      case 'PAYMENT_FAILED_WEBHOOK':
+        console.log('Payment failed:', event.data);
         // Handle failed payment
         break;
       
-      case 'order.paid':
-        console.log('Order paid:', event.payload.order.entity);
-        // Handle order completion
+      case 'PAYMENT_USER_DROPPED_WEBHOOK':
+        console.log('Payment user dropped:', event.data);
+        // Handle user dropped payment
         break;
       
       default:
-        console.log('Unhandled webhook event:', event.event);
+        console.log('Unhandled webhook event:', event.type);
     }
 
     res.json({ status: 'success' });
@@ -197,17 +288,15 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
 // Get payment configuration
 router.get('/config', (req, res) => {
-  const paymentInfo = getPaymentEnvironmentInfo();
+  const status = cashfreeService.getStatus();
   
   res.json({
-    paymentsEnabled: flags.paymentsEnabled,
-    razorpayKeyId: flags.paymentsEnabled ? env.RAZORPAY_KEY_ID : null,
-    environment: paymentInfo.environment,
-    isLive: paymentInfo.isLive,
-    isTest: paymentInfo.isTest,
-    isValid: paymentInfo.isValid,
-    nodeEnv: env.NODE_ENV,
-    warnings: paymentInfo.warnings
+    paymentsEnabled: status.initialized,
+    cashfreeAppId: status.initialized ? status.appId : null,
+    environment: status.environment,
+    isLive: status.environment === 'production',
+    isTest: status.environment === 'sandbox',
+    nodeEnv: process.env.NODE_ENV,
   });
 });
 
@@ -222,7 +311,7 @@ router.post('/test-create-order', async (req, res) => {
     if (!flags.paymentsEnabled) {
       return res.status(503).json({ 
         error: 'Payment service not configured',
-        message: 'Razorpay credentials not provided'
+        message: 'Cashfree credentials not provided'
       });
     }
 
@@ -247,41 +336,35 @@ router.post('/test-create-order', async (req, res) => {
 
     const { amount, currency, consultationType, patientName, patientEmail, patientPhone, date, time } = parsed.data;
 
-    // Create Razorpay order  
-    const isLive = !env.RAZORPAY_KEY_ID.includes('test');
-    const options = {
-      amount: amount * 100, // Amount in paise
+    // Create Cashfree order  
+    const isLive = env.CASHFREE_ENVIRONMENT === 'production';
+    const orderId = `order_${isLive ? 'L' : 'T'}_${Date.now().toString().slice(-10)}`;
+    
+    // Format data for the createOrder method
+    const orderData = {
+      amount: amount,
       currency: currency.toUpperCase(),
-      receipt: `${isLive ? 'L' : 'T'}_${Date.now().toString().slice(-10)}`,
-      notes: {
-        consultation_type: consultationType,
-        patient_name: patientName,
-        patient_email: patientEmail,
-        patient_phone: patientPhone,
-        appointment_date: date,
-        appointment_time: time,
-        environment: isLive ? 'live' : 'test',
-        test_endpoint: 'true', // This is specifically for test endpoint
-      },
+      consultationType: consultationType,
+      patientName: patientName,
+      patientEmail: patientEmail,
+      patientPhone: patientPhone,
+      date: date,
+      time: time,
     };
 
-    const order = await razorpay.orders.create(options);
+    const order = await cashfreeService.createOrder(orderData, 'test_user_123');
 
-    console.log('Test Razorpay order created:', order);
+    console.log('Test Cashfree order created:', order);
 
     res.json({
-      success: true,
-      order: {
-        id: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        receipt: order.receipt,
-      },
-      razorpay_key: env.RAZORPAY_KEY_ID,
+      success: order.success,
+      order: order.order,
+      cashfree_app_id: order.cashfree_app_id,
+      environment: order.environment,
     });
 
   } catch (error) {
-    console.error('Error creating test Razorpay order:', error);
+    console.error('Error creating test Cashfree order:', error);
     res.status(500).json({ 
       error: 'Failed to create test payment order',
       message: error.message
@@ -304,9 +387,8 @@ router.post('/test-verify-payment', async (req, res) => {
     }
 
     const verifySchema = z.object({
-      razorpay_order_id: z.string(),
-      razorpay_payment_id: z.string(),
-      razorpay_signature: z.string(),
+      order_id: z.string(),
+      payment_id: z.string().optional(),
       booking_details: z.object({
         consultationType: z.string(),
         patientName: z.string(),
@@ -326,53 +408,36 @@ router.post('/test-verify-payment', async (req, res) => {
       });
     }
 
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, booking_details } = parsed.data;
-
-    // Verify payment signature
-    const sign = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSign = crypto
-      .createHmac("sha256", env.RAZORPAY_KEY_SECRET)
-      .update(sign.toString())
-      .digest("hex");
-
-    const isAuthentic = expectedSign === razorpay_signature;
-
-    if (!isAuthentic) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Payment verification failed',
-        message: 'Invalid payment signature'
-      });
-    }
+    const { order_id, payment_id, booking_details } = parsed.data;
 
     // For test mode, simulate successful payment data
     const mockPayment = {
-      id: razorpay_payment_id,
-      amount: booking_details.amount * 100,
-      currency: booking_details.currency,
-      status: 'captured',
-      method: 'card',
-      created_at: Math.floor(Date.now() / 1000)
+      id: payment_id,
+      orderAmount: booking_details.amount,
+      orderCurrency: booking_details.currency,
+      paymentStatus: 'SUCCESS',
+      paymentMethod: 'card',
+      paymentTime: new Date().toISOString()
     };
 
     console.log('Test payment verified successfully:', {
-      payment_id: razorpay_payment_id,
-      order_id: razorpay_order_id,
-      amount: mockPayment.amount / 100,
-      status: mockPayment.status
+      payment_id: payment_id,
+      order_id: order_id,
+      amount: mockPayment.orderAmount,
+      status: mockPayment.paymentStatus
     });
 
     res.json({
       success: true,
       message: 'Test payment verified successfully',
       payment: {
-        id: razorpay_payment_id,
-        order_id: razorpay_order_id,
-        amount: mockPayment.amount / 100,
-        currency: mockPayment.currency,
-        status: mockPayment.status,
-        method: mockPayment.method,
-        created_at: new Date(mockPayment.created_at * 1000).toISOString(),
+        id: payment_id,
+        order_id: order_id,
+        amount: mockPayment.orderAmount,
+        currency: mockPayment.orderCurrency,
+        status: mockPayment.paymentStatus,
+        method: mockPayment.paymentMethod,
+        created_at: mockPayment.paymentTime,
       },
     });
 
@@ -386,24 +451,10 @@ router.post('/test-verify-payment', async (req, res) => {
   }
 });
 
-// Get payment configuration and status
-router.get('/config', (req, res) => {
-  const status = razorpayService.getStatus();
-  
-  res.json({
-    paymentsEnabled: status.initialized,
-    razorpayKeyId: status.initialized ? status.keyId : null,
-    environment: status.environment,
-    isLive: status.environment === 'live',
-    isTest: status.environment === 'test',
-    nodeEnv: process.env.NODE_ENV,
-  });
-});
-
 // Health check endpoint
 router.get('/health', async (req, res) => {
   try {
-    const healthCheck = await razorpayService.healthCheck();
+    const healthCheck = await cashfreeService.healthCheck();
     
     if (healthCheck.healthy) {
       res.json({
@@ -434,13 +485,13 @@ router.post('/create-order-debug', async (req, res) => {
     console.log('💳 DEBUG: Request body:', req.body);
     
     // Check if service is available
-    const status = razorpayService.getStatus();
-    console.log('💳 DEBUG: Razorpay service status:', status);
+    const status = cashfreeService.getStatus();
+    console.log('💳 DEBUG: Cashfree service status:', status);
     
     if (!status.initialized) {
       return res.status(503).json({
         error: 'Payment service unavailable',
-        message: 'Razorpay service not properly configured'
+        message: 'Cashfree service not properly configured'
       });
     }
 
@@ -467,7 +518,7 @@ router.post('/create-order-debug', async (req, res) => {
     const { amount, currency, consultationType, patientName, patientEmail, patientPhone, date, time } = parsed.data;
 
     // Create order
-    const result = await razorpayService.createOrder({
+    const result = await cashfreeService.createOrder({
       amount,
       currency,
       consultationType,
@@ -482,11 +533,11 @@ router.post('/create-order-debug', async (req, res) => {
       throw new Error(result.error);
     }
 
-    console.log('💳 DEBUG: Order created successfully:', result.data.orderId);
+    console.log('💳 DEBUG: Order created successfully:', result.order.id);
 
     res.json({
       success: true,
-      order: result.data,
+      order: result.order,
       message: 'Debug: Order created without authentication'
     });
 

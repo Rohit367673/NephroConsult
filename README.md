@@ -6,7 +6,7 @@ A comprehensive telemedicine platform connecting patients worldwide with **Dr. I
 ## 🌟 Features
 
 - **🎥 HD Video Consultations** - Secure video calls with nephrology expert
-- **💰 Multi-Currency Payments** - Razorpay integration with regional pricing
+- **💰 Multi-Currency Payments** - Cashfree integration with regional pricing
 - **📧 Professional Email System** - Automated confirmations and reminders
 - **🌍 Global Access** - Multi-timezone support with automatic conversion
 - **🔐 Secure Authentication** - Firebase authentication with session management
@@ -20,13 +20,13 @@ A comprehensive telemedicine platform connecting patients worldwide with **Dr. I
 - Tailwind CSS for styling
 - Framer Motion for animations
 - Firebase Authentication
-- Razorpay Payment Integration
+- Cashfree Payment Integration
 
 ### Backend (Node.js + Express)
 - Express.js REST API
 - MongoDB with Mongoose
 - Nodemailer for emails
-- Razorpay payment processing
+- Cashfree payment processing
 - JWT session management
 
 ## 🚀 Quick Start
@@ -35,7 +35,7 @@ A comprehensive telemedicine platform connecting patients worldwide with **Dr. I
 - Node.js 18+ 
 - MongoDB Atlas account
 - Firebase project
-- Razorpay account
+- Cashfree account
 - Gmail account (for SMTP)
 
 ### 1. Clone Repository
@@ -74,8 +74,9 @@ SESSION_SECRET=your-super-secure-session-secret
 OWNER_EMAIL=admin@yourdomain.com
 
 # Payments
-RAZORPAY_KEY_ID=rzp_live_XXXXXXXXXXXXXXX
-RAZORPAY_KEY_SECRET=your-razorpay-secret
+CASHFREE_APP_ID=your-cashfree-app-id
+CASHFREE_SECRET_KEY=your-cashfree-secret-key
+CASHFREE_ENVIRONMENT=sandbox
 
 # Email
 SMTP_HOST=smtp.gmail.com
@@ -91,7 +92,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY----
 ### Client Environment Variables (.env)
 ```bash
 # Payments
-REACT_APP_RAZORPAY_KEY_ID=rzp_live_XXXXXXXXXXXXXXX
+VITE_CASHFREE_APP_ID=your-cashfree-app-id
 
 # API
 VITE_API_URL=https://your-api-domain.com
@@ -122,10 +123,11 @@ npm run start:prod
 - Set up database user and network access
 - Copy connection string to MONGO_URI
 
-### 4. Payment Setup (Razorpay)
+### 4. Payment Setup (Cashfree)
 - Complete KYC verification
-- Get live API keys
+- Get live API keys (App ID and Secret Key)
 - Set up webhook: `https://your-domain.com/api/payments/webhook`
+- Configure CASHFREE_ENVIRONMENT (sandbox or production)
 
 ## 💰 Regional Pricing
 
@@ -174,15 +176,16 @@ npm run start:prod
 ### Server Tests
 ```bash
 cd server
-npm run test:razorpay        # Test payment integration
+npm run test:cashfree        # Test payment integration
 npm run check:production     # Validate production readiness
 npm run validate:env         # Check environment variables
 ```
 
 ### Payment Testing
-- Use Razorpay test cards for payment flow
+- Use Cashfree sandbox mode for testing
+- Test with Cashfree test cards and payment methods
 - Verify webhook notifications
-- Test multi-currency payments
+- Test multi-currency payments (INR, USD, EUR, GBP)
 
 ## 📱 Doctor Information
 
@@ -223,14 +226,14 @@ npm run validate:env         # Check environment variables
 ## 🆘 Support & Troubleshooting
 
 ### Common Issues
-1. **Payment Failures** - Check Razorpay credentials and webhook setup
+1. **Payment Failures** - Check Cashfree credentials (App ID, Secret Key) and webhook setup
 2. **Email Issues** - Verify SMTP configuration and app passwords
 3. **Authentication Problems** - Check Firebase configuration
 4. **Database Errors** - Verify MongoDB Atlas connection string
 
 ### Contact Information
 - **Technical Support**: Check deployment documentation
-- **Payment Issues**: Razorpay dashboard and logs
+- **Payment Issues**: Cashfree dashboard and logs
 - **General Questions**: Review API documentation
 
 ## 📄 License

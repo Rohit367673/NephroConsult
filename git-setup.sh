@@ -31,14 +31,14 @@ else
 
 ✨ Features:
 - Complete telemedicine platform for nephrology consultations
-- Multi-currency payment system with Razorpay integration
+- Multi-currency payment system with Cashfree integration
 - Professional email system with automated notifications
 - Global accessibility with timezone conversion
 - Secure authentication with Firebase
 - Production-ready with comprehensive security
 
 🏥 Doctor: Dr. Ilango Krishnamurthy (Sr. Nephrologist)
-💰 Payments: Multi-currency support (INR, USD, EUR, GBP, AUD)
+💰 Payments: Multi-currency support via Cashfree (INR, USD, EUR, GBP, AUD)
 🌍 Global: Timezone-aware booking system
 📧 Email: Professional consultation confirmations
 🔐 Security: Production-grade security headers and validation

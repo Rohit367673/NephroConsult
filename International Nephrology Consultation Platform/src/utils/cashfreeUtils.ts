@@ -1,41 +1,30 @@
-// Razorpay Payment Integration Utilities
+// Cashfree Payment Integration Utilities
 
 declare global {
   interface Window {
-    Razorpay: any;
+    Cashfree: any;
   }
 }
 
-export interface RazorpayOptions {
-  key: string;
-  amount: number;
-  currency: string;
-  name: string;
-  description: string;
-  order_id: string;
-  handler: (response: RazorpayResponse) => void;
-  prefill: {
-    name: string;
-    email: string;
-    contact: string;
-  };
-  notes: {
-    consultation_type: string;
-    date: string;
-    time: string;
-  };
-  theme: {
-    color: string;
-  };
-  modal: {
-    ondismiss: () => void;
-  };
+export interface CashfreeOptions {
+  appId: string;
+  orderId: string;
+  orderAmount: number;
+  orderCurrency: string;
+  orderNote: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerId: string;
+  returnUrl: string;
+  notifyUrl: string;
+  paymentSessionId: string;
 }
 
-export interface RazorpayResponse {
-  razorpay_payment_id: string;
-  razorpay_order_id: string;
-  razorpay_signature: string;
+export interface CashfreeResponse {
+  payment_id: string;
+  order_id: string;
+  payment_status: string;
 }
 
 export interface BookingDetails {
@@ -55,16 +44,16 @@ export interface BookingDetails {
   currency: string;
 }
 
-// Load Razorpay script dynamically
-export const loadRazorpayScript = (): Promise<boolean> => {
+// Load Cashfree script dynamically
+export const loadCashfreeScript = (): Promise<boolean> => {
   return new Promise((resolve) => {
-    if (window.Razorpay) {
+    if (window.Cashfree) {
       resolve(true);
       return;
     }
 
     const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
     script.onload = () => {
       resolve(true);
     };
@@ -75,10 +64,10 @@ export const loadRazorpayScript = (): Promise<boolean> => {
   });
 };
 
-// Create Razorpay order (calls backend API)
-export const createRazorpayOrder = async (bookingDetails: BookingDetails): Promise<{ orderId: string; razorpayKey: string }> => {
+// Create Cashfree order (calls backend API)
+export const createCashfreeOrder = async (bookingDetails: BookingDetails): Promise<{ orderId: string; paymentSessionId: string; cashfreeAppId: string; environment: string }> => {
   try {
-    console.log('Creating Razorpay order for:', bookingDetails);
+    console.log('Creating Cashfree order for:', bookingDetails);
     
     // Use environment variable for API URL or fallback to relative path for localhost
     const apiBaseUrl = import.meta.env.VITE_API_URL || '';
@@ -152,76 +141,60 @@ export const createRazorpayOrder = async (bookingDetails: BookingDetails): Promi
     console.log('Order created successfully:', data.order.id);
     return {
       orderId: data.order.id,
-      razorpayKey: data.razorpay_key,
+      paymentSessionId: data.order.paymentSessionId,
+      cashfreeAppId: data.cashfree_app_id,
+      environment: data.environment,
     };
   } catch (error) {
-    console.error('Error creating Razorpay order:', error);
+    console.error('Error creating Cashfree order:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to create payment order');
   }
 };
 
-// Initialize Razorpay payment
-export const initiateRazorpayPayment = async (
+// Initialize Cashfree payment
+export const initiateCashfreePayment = async (
   bookingDetails: BookingDetails,
-  onSuccess: (response: RazorpayResponse) => void,
+  onSuccess: (response: CashfreeResponse) => void,
   onError: (error: any) => void
 ): Promise<void> => {
   try {
-    // Load Razorpay script
-    const scriptLoaded = await loadRazorpayScript();
-    if (!scriptLoaded) {
-      throw new Error('Failed to load Razorpay script');
+    const { orderId, paymentSessionId, cashfreeAppId, environment } = await createCashfreeOrder(bookingDetails);
+
+    console.log('Payment order created:', { orderId, paymentSessionId, cashfreeAppId, environment });
+
+    // Persist payment details for use on return URL page
+    try {
+      const persisted = {
+        orderId,
+        paymentSessionId,
+        cashfreeAppId,
+        bookingDetails,
+      };
+      sessionStorage.setItem('cashfree_payment_details', JSON.stringify(persisted));
+      localStorage.setItem('cashfree_booking_details', JSON.stringify(bookingDetails));
+      localStorage.setItem('cashfree_last_order_id', orderId);
+    } catch {}
+
+    const loaded = await loadCashfreeScript();
+    if (!loaded || !window.Cashfree) {
+      throw new Error('Failed to load Cashfree SDK');
     }
 
-    // Create order
-    const { orderId, razorpayKey } = await createRazorpayOrder(bookingDetails);
+    const mode = environment === 'production' ? 'production' : 'sandbox';
+    const cashfree = new window.Cashfree({ mode });
 
-    // Razorpay configuration
-    const options: RazorpayOptions = {
-      key: razorpayKey,
-      amount: bookingDetails.amount * 100, // Amount in paise (multiply by 100)
-      currency: bookingDetails.currency,
-      name: 'NephroConsult',
-      description: `${bookingDetails.consultationType} - ${bookingDetails.date} at ${bookingDetails.time}`,
-      order_id: orderId,
-      handler: (response: RazorpayResponse) => {
-        console.log('Payment successful:', response);
-        onSuccess(response);
-      },
-      prefill: {
-        name: bookingDetails.patientInfo.name,
-        email: bookingDetails.patientInfo.email,
-        contact: bookingDetails.patientInfo.phone,
-      },
-      notes: {
-        consultation_type: bookingDetails.consultationType,
-        date: bookingDetails.date,
-        time: bookingDetails.time,
-      },
-      theme: {
-        color: '#006f6f',
-      },
-      modal: {
-        ondismiss: () => {
-          console.log('Payment modal dismissed');
-          onError(new Error('Payment cancelled by user'));
-        },
-      },
-    };
+    await cashfree.checkout({ paymentSessionId });
 
-    // Open Razorpay checkout
-    const razorpay = new window.Razorpay(options);
-    razorpay.open();
   } catch (error) {
-    console.error('Error initiating Razorpay payment:', error);
+    console.error('Error initiating Cashfree payment:', error);
     onError(error);
   }
 };
 
 // Verify payment (calls backend API)
-export const verifyRazorpayPayment = async (
-  paymentResponse: RazorpayResponse,
-  bookingDetails: BookingDetails
+export const verifyCashfreePayment = async (
+  paymentResponse: Partial<CashfreeResponse> & { order_id: string },
+  bookingDetails?: BookingDetails
 ): Promise<boolean> => {
   try {
     console.log('Verifying payment:', paymentResponse);
@@ -237,10 +210,9 @@ export const verifyRazorpayPayment = async (
       },
       credentials: 'include',
       body: JSON.stringify({
-        razorpay_order_id: paymentResponse.razorpay_order_id,
-        razorpay_payment_id: paymentResponse.razorpay_payment_id,
-        razorpay_signature: paymentResponse.razorpay_signature,
-        booking_details: {
+        order_id: paymentResponse.order_id,
+        payment_id: paymentResponse.payment_id,
+        booking_details: bookingDetails ? {
           consultationType: bookingDetails.consultationType,
           patientName: bookingDetails.patientInfo.name,
           patientEmail: bookingDetails.patientInfo.email,
@@ -248,7 +220,7 @@ export const verifyRazorpayPayment = async (
           time: bookingDetails.time,
           amount: bookingDetails.amount,
           currency: bookingDetails.currency,
-        },
+        } : undefined,
       }),
     });
 

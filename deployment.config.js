@@ -64,11 +64,10 @@ export const deploymentConfig = {
 
   // Payment Configuration
   payments: {
-    razorpay: {
-      keyId: process.env.RAZORPAY_KEY_ID,
-      keySecret: process.env.RAZORPAY_KEY_SECRET,
-      webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
-      environment: process.env.RAZORPAY_KEY_ID?.includes('test') ? 'test' : 'live'
+    cashfree: {
+      appId: process.env.CASHFREE_APP_ID,
+      secretKey: process.env.CASHFREE_SECRET_KEY,
+      environment: process.env.CASHFREE_ENVIRONMENT || 'sandbox'
     }
   },
 
@@ -116,8 +115,8 @@ export function validateDeploymentConfig() {
   const requiredVars = [
     'MONGO_URI',
     'SESSION_SECRET',
-    'RAZORPAY_KEY_ID',
-    'RAZORPAY_KEY_SECRET'
+    'CASHFREE_APP_ID',
+    'CASHFREE_SECRET_KEY'
   ];
 
   requiredVars.forEach(varName => {

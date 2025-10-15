@@ -24,6 +24,7 @@ import { SimpleChatbot } from './components/SimpleChatbot';
 import Footer from './components/Footer';
 import ProfilePage from './pages/ProfilePage';
 import { PaymentPage } from './pages/PaymentPage';
+import PaymentSuccess from './pages/PaymentSuccess';
 import BookingPage from './pages/BookingPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
@@ -1012,10 +1013,17 @@ function HomePage() {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.2, duration: 0.8 }}
                 whileHover={{ y: -10, scale: 1.02 }}
-                className="group relative"
+                className="group relative cursor-pointer"
+                onClick={() => {
+                  if (!user) {
+                    setIsLoginOpen(true);
+                  } else {
+                    navigate('/booking');
+                  }
+                }}
               >
                 {/* Glass morphism card */}
-                <div className={`relative h-full p-5 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl bg-gradient-to-br ${feature.gradient} backdrop-blur-sm border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-500`}>
+                <div className={`relative h-full p-5 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl bg-gradient-to-br ${feature.gradient} backdrop-blur-sm border border-white/20 shadow-lg hover:shadow-2xl hover:border-[#006f6f]/30 transition-all duration-500`}>
                   {/* Glow effect */}
                   <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#006f6f]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   
@@ -1056,6 +1064,21 @@ function HomePage() {
                         </motion.li>
                       ))}
                     </ul>
+                    
+                    {/* Book Now button - appears on hover */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      whileHover={{ opacity: 1, y: 0 }}
+                      className="mt-4 sm:mt-5 md:mt-6 opacity-0 group-hover:opacity-100 transition-all duration-300"
+                    >
+                      <Button
+                        size="sm"
+                        className="bg-[#006f6f] hover:bg-[#005555] text-white px-4 py-2 text-xs sm:text-sm"
+                      >
+                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                        Book Now
+                      </Button>
+                    </motion.div>
                   </div>
                 </div>
               </motion.div>
@@ -2042,6 +2065,9 @@ export default function App() {
             
             {/* Booking Routes */}
             <Route path="/booking" element={<BookingPage />} />
+            
+            {/* Payment Routes */}
+            <Route path="/payment/success" element={<PaymentSuccess />} />
             
             {/* Profile Routes */}
             <Route
