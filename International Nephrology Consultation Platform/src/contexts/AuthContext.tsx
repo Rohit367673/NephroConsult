@@ -1,5 +1,8 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import apiService from '../services/apiService';
+import { auth } from '../config/firebase';
+import { getRedirectResult, onAuthStateChanged } from 'firebase/auth';
+import { authService } from '../services/authService';
 
 // Types
 export interface User {
@@ -79,6 +82,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const loadUser = async () => {
       try {
+        // Check for Firebase redirect result first
+        if (auth) {
+          try {
+            const redirectResult = await getRedirectResult(auth);
+            if (redirectResult && redirectResult.user) {
+              console.log('Firebase redirect result found:', redirectResult.user);
+              const firebaseUser = {
+                id: redirectResult.user.uid,
+                name: redirectResult.user.displayName || redirectResult.user.email?.split('@')[0] || 'User',
+                email: redirectResult.user.email || '',
+                role: 'patient' as const,
+                avatar: redirectResult.user.photoURL || '',
+                country: getUserCountry()
+              };
+              setUser(firebaseUser);
+              setCookie('nephro_user', encodeURIComponent(JSON.stringify(firebaseUser)), 7);
+              console.log('Firebase user set from redirect:', firebaseUser);
+              setLoading(false);
+              return;
+            }
+          } catch (error) {
+            console.error('Error handling redirect result:', error);
+          }
+        }
+
         // First, try to load from cookie immediately for faster UX
         const savedUser = getCookie('nephro_user');
         console.log('AuthContext: Checking for saved user cookie:', !!savedUser);

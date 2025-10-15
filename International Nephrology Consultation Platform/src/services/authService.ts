@@ -43,7 +43,55 @@ class AuthService {
       };
     } catch (error: any) {
       console.error('Google sign in error:', error);
+      
+      // If popup is blocked or fails due to COOP policy, try redirect method
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user' || 
+          error.message?.includes('Cross-Origin-Opener-Policy') || 
+          error.message?.includes('window.closed')) {
+        console.log('Popup failed, trying redirect method...');
+        return this.signInWithGoogleRedirect();
+      }
+      
       throw new Error(error.message || 'Failed to sign in with Google');
+    }
+  }
+
+  // Google Sign In with Redirect (fallback method)
+  async signInWithGoogleRedirect(): Promise<AuthUser> {
+    if (!hasFirebaseCredentials || !auth || !googleProvider) {
+      throw new Error('Google authentication is not available. Firebase credentials are missing.');
+    }
+    
+    try {
+      // Check if there's a redirect result first
+      const result = await getRedirectResult(auth);
+      if (result) {
+        const user = result.user;
+        
+        // Send user data to backend (optional)
+        try {
+          await this.syncUserWithBackend(user);
+        } catch (backendError) {
+          console.warn('Backend sync failed, continuing with client-only auth:', backendError);
+        }
+        
+        return {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        };
+      } else {
+        // Start redirect flow
+        await signInWithRedirect(auth, googleProvider);
+        throw new Error('redirect_in_progress');
+      }
+    } catch (error: any) {
+      if (error.message === 'redirect_in_progress') {
+        throw error;
+      }
+      console.error('Google redirect sign in error:', error);
+      throw new Error(error.message || 'Failed to sign in with Google using redirect');
     }
   }
 
