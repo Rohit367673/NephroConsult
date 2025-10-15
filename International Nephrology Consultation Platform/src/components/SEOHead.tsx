@@ -13,10 +13,10 @@ interface SEOHeadProps {
 }
 
 const SEOHead: React.FC<SEOHeadProps> = ({
-  title = 'NephroConsult - International Kidney Care & Nephrology Consultation Platform',
-  description = 'Get expert nephrology consultations from Dr. Rohit Kumar, MBBS, MD, DM Nephrology. Book online appointments for kidney disease treatment, dialysis guidance, and comprehensive renal care services worldwide.',
-  keywords = 'nephrology consultation, kidney specialist, online kidney doctor, dialysis treatment, chronic kidney disease, CKD treatment, renal care, Dr Rohit Kumar, international kidney consultation, nephrology expert, kidney disease management, online nephrology appointment',
-  canonical = 'https://www.nephroconultation.com',
+  title = 'NephroConsult - Expert Kidney Specialist | Online Nephrology Consultation',
+  description = 'Get expert nephrology consultations from Dr. Rohit Kumar (MBBS, MD, DM Nephrology). Specialized treatment for chronic kidney disease, dialysis planning, kidney transplant counseling, acute renal failure, and comprehensive kidney care. Book secure online consultations with experienced nephrologist.',
+  keywords = 'nephrology consultation online, kidney specialist doctor, chronic kidney disease treatment, CKD management, dialysis planning, kidney transplant counseling, acute kidney injury, renal failure treatment, kidney disease symptoms, nephrology expert India, online kidney doctor consultation, kidney health checkup, proteinuria treatment, hypertension kidney, diabetic nephropathy, polycystic kidney disease, glomerulonephritis treatment, nephrotic syndrome, kidney stones treatment, electrolyte imbalance, kidney biopsy consultation, hemodialysis guidance, peritoneal dialysis, kidney function tests, creatinine levels, blood urea nitrogen, GFR calculation, kidney disease stages, renal diet consultation, Dr Rohit Kumar nephrologist, international kidney care, telemedicine nephrology, virtual kidney consultation, kidney second opinion, renal replacement therapy, kidney failure management, uremia treatment, fluid retention kidney',
+  canonical = 'https://www.nephroconsultation.com',
   ogImage = '/og-image.png',
   ogType = 'website',
   author = 'Dr. Rohit Kumar',
@@ -28,7 +28,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     "name": "NephroConsult",
     "description": description,
     "url": canonical,
-    "logo": "https://www.nephroconultation.com/logo.png",
+    "logo": "https://www.nephroconsultation.com/logo.svg",
     "image": ogImage,
     "priceRange": "$$",
     "telephone": "+91-XXXXXXXXXX",
@@ -90,18 +90,63 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     "availableService": [
       {
         "@type": "MedicalProcedure",
-        "name": "Kidney Disease Consultation",
-        "procedureType": "Consultation"
+        "name": "Chronic Kidney Disease Management",
+        "procedureType": "Treatment Planning",
+        "description": "Comprehensive CKD staging, treatment planning, and progression monitoring"
       },
       {
-        "@type": "MedicalProcedure",
-        "name": "Dialysis Guidance",
-        "procedureType": "Treatment Planning"
+        "@type": "MedicalProcedure", 
+        "name": "Dialysis Planning and Guidance",
+        "procedureType": "Treatment Planning",
+        "description": "Hemodialysis and peritoneal dialysis preparation, access planning, and ongoing management"
       },
       {
         "@type": "MedicalProcedure",
         "name": "Kidney Transplant Counseling",
-        "procedureType": "Consultation"
+        "procedureType": "Consultation",
+        "description": "Pre-transplant evaluation, donor matching guidance, and post-transplant care planning"
+      },
+      {
+        "@type": "MedicalProcedure",
+        "name": "Acute Kidney Injury Treatment",
+        "procedureType": "Emergency Care",
+        "description": "Rapid assessment and treatment of sudden kidney function decline"
+      },
+      {
+        "@type": "MedicalProcedure",
+        "name": "Diabetic Nephropathy Management",
+        "procedureType": "Specialized Care",
+        "description": "Treatment of diabetes-related kidney complications and progression prevention"
+      },
+      {
+        "@type": "MedicalProcedure",
+        "name": "Hypertensive Nephrosclerosis Treatment",
+        "procedureType": "Specialized Care", 
+        "description": "Management of high blood pressure-related kidney damage"
+      },
+      {
+        "@type": "MedicalProcedure",
+        "name": "Glomerulonephritis Treatment",
+        "procedureType": "Specialized Care",
+        "description": "Treatment of kidney inflammation and immune-mediated kidney diseases"
+      },
+      {
+        "@type": "MedicalProcedure",
+        "name": "Kidney Stone Management",
+        "procedureType": "Treatment Planning",
+        "description": "Prevention, treatment, and dietary counseling for kidney stones"
+      },
+      {
+        "@type": "MedicalProcedure",
+        "name": "Electrolyte Disorder Management", 
+        "procedureType": "Treatment Planning",
+        "description": "Treatment of sodium, potassium, calcium, and phosphorus imbalances"
+      },
+      {
+        "@type": "MedicalProcedure",
+        "name": "Kidney Function Assessment",
+        "procedureType": "Diagnostic",
+        "description": "GFR calculation, creatinine analysis, and comprehensive kidney function evaluation"
       }
     ],
     "openingHoursSpecification": [
