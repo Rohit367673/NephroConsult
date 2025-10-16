@@ -895,12 +895,12 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 sm:gap-6 md:gap-8">
             {[
               {
-                image: "/images/Yg8YS5lw1695273494.jpg",
+                image: "/images/prevention-wellness.jpg",
                 title: "Prevention & Wellness",
                 description: "Learn lifestyle modifications, dietary guidelines, and preventive measures to maintain healthy kidney function and prevent disease progression."
               },
               {
-                image: "/images/WhatsApp Image 2025-10-09 at 20.08.46.jpeg",
+                image: "/images/advanced-diagnostics.jpeg",
                 title: "Advanced Diagnostics",
                 description: "State-of-the-art lab analysis, imaging interpretation, and AI-assisted diagnostic tools for accurate kidney health assessment."
               },
