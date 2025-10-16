@@ -271,5 +271,8 @@ export const getConsultationPrice = (consultationType: string, currency: string)
     },
   };
 
+  if (consultationType === 'followup' && currency === 'INR') {
+    return 5;
+  }
   return pricing[consultationType]?.[currency] || pricing['initial'][currency] || 2500;
 };

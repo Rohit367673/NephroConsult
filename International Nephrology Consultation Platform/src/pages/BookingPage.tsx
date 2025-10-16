@@ -83,6 +83,9 @@ const getConsultationPrice = (type: string, country: string, currency: string) =
   };
   
   const consultationType = typeMapping[type] || 'Initial Consultation';
+  if (type === 'followup' && currency === 'INR') {
+    return 5;
+  }
   const basePrice = basePrices[consultationType as keyof typeof basePrices];
   const adjustedPriceINR = Math.round(basePrice * multiplier);
   
