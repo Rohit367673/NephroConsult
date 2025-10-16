@@ -72,7 +72,29 @@
 
     <body>
       <div id="root"></div>
-      <script type="module" src="/src/main.tsx"></script>
+      <script type="module" src="/src/main.tsx?v=1.0.2"></script>
+      
+      <!-- Cache busting script -->
+      <script>
+        // Clear browser cache for module scripts if needed
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            for (let name of names) {
+              caches.delete(name);
+            }
+          });
+        }
+        
+        // Force reload if we detect cached module issues
+        if (performance.navigation.type === 1) { 
+          const timestamp = Date.now();
+          const scripts = document.querySelectorAll('script[type="module"]');
+          scripts.forEach(script => {
+            if (script.src && !script.src.includes('?v=')) {
+              script.src = script.src + '?v=' + timestamp;
+            }
+          });
+        }
+      </script>
     </body>
   </html>
-  
