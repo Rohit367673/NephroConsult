@@ -4,6 +4,9 @@
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+      <meta http-equiv="Pragma" content="no-cache" />
+      <meta http-equiv="Expires" content="0" />
       
       <!-- Primary Meta Tags -->
       <title>NephroConsult - Expert Kidney Specialist | Online Nephrology Consultation</title>
@@ -74,27 +77,44 @@
       <div id="root"></div>
       <script type="module" src="/src/main.tsx?v=1-0-3"></script>
       
-      <!-- Cache busting script -->
+      <!-- Aggressive cache busting script -->
       <script>
-        // Clear browser cache for module scripts if needed
-        if ('caches' in window) {
-          caches.keys().then(function(names) {
-            for (let name of names) {
-              caches.delete(name);
+        // Comprehensive cache clearing
+        (function() {
+          // Clear all caches
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              names.forEach(name => caches.delete(name));
+            });
+          }
+          
+          // Clear localStorage and sessionStorage
+          try {
+            localStorage.clear();
+            sessionStorage.clear();
+          } catch(e) {}
+          
+          // Force reload if module loading fails
+          window.addEventListener('error', function(e) {
+            if (e.message && e.message.includes('Expected a JavaScript-or-Wasm module script')) {
+              console.log('Detected stale cache, forcing reload...');
+              setTimeout(() => window.location.reload(true), 100);
             }
           });
-        }
-        
-        // Force reload if we detect cached module issues
-        if (performance.navigation.type === 1) { 
-          const timestamp = Date.now();
-          const scripts = document.querySelectorAll('script[type="module"]');
-          scripts.forEach(script => {
-            if (script.src && !script.src.includes('?v=')) {
-              script.src = script.src + '?v=' + timestamp;
-            }
-          });
-        }
+          
+          // Check if we're loading stale modules
+          const currentTime = Date.now();
+          const cacheKey = 'app_version';
+          const lastVersion = localStorage.getItem(cacheKey);
+          const currentVersion = '1.0.4';
+          
+          if (lastVersion && lastVersion !== currentVersion) {
+            console.log('Version changed, clearing cache...');
+            window.location.reload(true);
+          } else {
+            localStorage.setItem(cacheKey, currentVersion);
+          }
+        })();
       </script>
     </body>
   </html>
