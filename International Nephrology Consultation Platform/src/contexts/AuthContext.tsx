@@ -164,10 +164,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 const response = await apiService.makeRequest<{user: User}>('/auth/me', {});
                 if (response.success && response.data?.user) {
                   console.log('Session verified with backend:', response.data.user);
-                  // Update user data from backend if different
-                  if (JSON.stringify(userData) !== JSON.stringify(response.data.user)) {
-                    setUser(response.data.user);
-                    setCookie('nephro_user', encodeURIComponent(JSON.stringify(response.data.user)), 7);
+                  const backendUser = response.data.user;
+                  if (
+                    backendUser?.email &&
+                    userData?.email &&
+                    backendUser.email !== userData.email
+                  ) {
+                    console.warn('Session email mismatch. Keeping cookie user and ignoring backend session user.');
+                  } else if (JSON.stringify(userData) !== JSON.stringify(backendUser)) {
+                    setUser(backendUser);
+                    setCookie('nephro_user', encodeURIComponent(JSON.stringify(backendUser)), 7);
                   }
                 } else {
                   console.log('Session verification failed. Response:', response);

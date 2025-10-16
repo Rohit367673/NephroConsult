@@ -37,6 +37,25 @@ router.post('/create-order', requireAuth, async (req, res) => {
       });
     }
 
+    // Snapshot booking data into session for use after redirect (fallback)
+    try {
+      req.session.pendingBookingDetails = {
+        consultationType: req.body?.consultationType,
+        patientName: req.body?.patientName,
+        patientEmail: req.body?.patientEmail,
+        patientPhone: req.body?.patientPhone,
+        date: req.body?.date,
+        time: req.body?.time,
+        amount: req.body?.amount,
+        currency: req.body?.currency,
+        persistedAt: new Date().toISOString(),
+      };
+      await new Promise((r) => req.session.save(r));
+      console.log('🗂️ Saved pending booking details in session for verification fallback');
+    } catch (sessErr) {
+      console.warn('⚠️ Could not persist pendingBookingDetails in session:', sessErr?.message);
+    }
+
     console.log('💳 Creating order with service...');
     
     // Create order using the service
@@ -79,6 +98,30 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
     }
 
     const { payment } = result;
+
+    // Fetch order details to derive metadata/tags when client booking_details are missing
+    const orderIdFromReq = req.body?.order_id;
+    let orderInfo = null;
+    try {
+      if (orderIdFromReq && cashfreeService?.ordersApi) {
+        orderInfo = await cashfreeService.ordersApi.getOrder(
+          env.CASHFREE_APP_ID,
+          env.CASHFREE_SECRET_KEY,
+          orderIdFromReq,
+          '2023-08-01',
+          false,
+          undefined,
+          undefined
+        );
+        console.log('🧾 Cashfree order fetched for verification:', {
+          orderId: orderIdFromReq,
+          status: orderInfo?.cfOrder?.orderStatus || orderInfo?.orderStatus,
+          hasTags: !!(orderInfo?.cfOrder?.orderTags || orderInfo?.orderTags),
+        });
+      }
+    } catch (orderErr) {
+      console.warn('⚠️ Failed to fetch order details for appointment derivation:', orderErr?.message);
+    }
 
     // Send payment confirmation email
     try {
@@ -141,15 +184,34 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
       // Don't fail the payment verification if email fails
     }
 
-    // Best-effort: create appointment automatically if booking details are provided
+    // Best-effort: create appointment automatically (use booking_details or fallback to session snapshot or order tags)
     let createdAppointment = null;
     try {
-      const details = req.body.booking_details;
-      if (details) {
-        const sessionUser = req.session.user;
-        const userDoc = await User.findById(sessionUser.id);
-        const country = userDoc?.country || 'default';
-        const pricing = priceFor(country);
+      const tags = orderInfo?.cfOrder?.orderTags || orderInfo?.orderTags || {};
+      const sessionSnapshot = req.session?.pendingBookingDetails;
+      const details = req.body.booking_details || sessionSnapshot || (
+        orderInfo ? {
+          consultationType: tags.consultation_type || tags.consultationType || 'initial',
+          patientName: tags.patient_name || tags.patientName,
+          patientEmail: tags.patient_email || tags.patientEmail,
+          patientPhone: tags.patient_phone || tags.patientPhone,
+          date: tags.appointment_date || tags.appointmentDate,
+          time: tags.appointment_time || tags.appointmentTime,
+          amount: orderInfo?.cfOrder?.orderAmount || orderInfo?.orderAmount,
+          currency: orderInfo?.cfOrder?.orderCurrency || orderInfo?.orderCurrency,
+        } : undefined
+      );
+
+      if (!details) {
+        console.warn('⚠️ Payment verification: No booking details from client or order tags; skipping auto appointment creation');
+      } else {
+        const sessionUser = req.session.user || {};
+        const userDoc = await User.findById(sessionUser.id).lean().catch(() => null);
+
+        const resolvedCountry = userDoc?.country
+          || details.patientCountry
+          || (details.currency === 'INR' ? 'IN' : details.currency === 'USD' ? 'US' : 'default');
+        const pricing = priceFor(resolvedCountry);
         const typeId = String(details.consultationType || 'initial');
         const typeName = mapConsultationTypeId(typeId);
 
@@ -157,13 +219,38 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
         const amount = Number(details.amount) || pricing.consultation;
         const currency = String(details.currency || pricing.currency);
 
+        const patientName = userDoc?.name || sessionUser.name || details.patientName;
+        const patientEmail = userDoc?.email || sessionUser.email || details.patientEmail;
+        const patientPhone = userDoc?.phone || details.patientPhone || sessionUser.phone;
+
+        const patientId = userDoc?._id || sessionUser.id;
+
+        if (!patientId) {
+          console.warn('⚠️ Payment verification: Unable to resolve patient ID for appointment creation');
+        }
+
+        console.log('🗓️ Creating appointment after payment verification with:', {
+          patientId,
+          patientName,
+          patientEmail,
+          resolvedCountry,
+          typeName,
+          amount,
+          currency,
+          date: details.date,
+          time: details.time,
+          derivedFrom: req.body.booking_details ? 'client_payload' : (sessionSnapshot ? 'session_snapshot' : 'cashfree_order_tags'),
+          hasIntake: !!details.intake,
+          intakeDocuments: details.intake?.documents?.length || 0,
+        });
+
         createdAppointment = await Appointment.create({
           patient: {
-            id: userDoc?._id,
-            name: userDoc?.name,
-            email: userDoc?.email,
-            phone: userDoc?.phone,
-            country,
+            id: patientId,
+            name: patientName,
+            email: patientEmail,
+            phone: patientPhone,
+            country: resolvedCountry,
           },
           doctor: {
             name: 'Dr. Ilango S. Prakasam',
@@ -180,42 +267,64 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
             amount,
             currency,
             symbol: pricing.symbol,
-            region: country,
+            region: resolvedCountry,
             discountApplied: false,
           },
-          meetLink: generateMeetLink(details.date, details.time)
+          meetLink: generateMeetLink(details.date, details.time),
+          intake: details.intake ? {
+            address: details.intake.address,
+            description: details.intake.description,
+            documents: Array.isArray(details.intake.documents) ? details.intake.documents : undefined,
+          } : undefined,
+        });
+
+        console.log('✅ Appointment created from payment verification:', {
+          appointmentId: createdAppointment._id,
+          patientId: createdAppointment.patient?.id,
+          orderId: payment.order_id,
         });
 
         // Schedule reminder and send Telegram notification (non-blocking)
-        try { await scheduleAppointmentReminder(createdAppointment); } catch {}
+        try { await scheduleAppointmentReminder(createdAppointment); } catch (jobErr) {
+          console.warn('⚠️ Reminder scheduling failed:', jobErr.message);
+        }
         try {
           await telegramService.notifyNewAppointment({
-            patientName: userDoc?.name,
-            patientEmail: userDoc?.email,
-            phone: userDoc?.phone,
+            patientName,
+            patientEmail,
+            phone: patientPhone,
             date: createdAppointment.date,
             timeSlot: createdAppointment.timeSlot,
             amount: createdAppointment.price.amount,
             consultationType: createdAppointment.type,
-            symptoms: undefined,
-            medicalHistory: undefined,
+            symptoms: details.intake?.description,
+            medicalHistory: details.intake?.address,
           });
-        } catch {}
+        } catch (telegramErr) {
+          console.warn('⚠️ Telegram notification failed:', telegramErr.message);
+        }
 
         // Send booking confirmation email (best-effort)
         try {
-          const html = `
-            <p>Dear ${userDoc?.name},</p>
-            <p>Your consultation has been confirmed.</p>
-            <p><strong>Date:</strong> ${createdAppointment.date}<br/>
-            <strong>Time:</strong> ${createdAppointment.timeSlot}<br/>
-            <strong>Type:</strong> ${createdAppointment.type}<br/>
-            <strong>Amount:</strong> ${createdAppointment.price.symbol}${createdAppointment.price.amount} ${createdAppointment.price.currency}</p>
-            <p><a href="${createdAppointment.meetLink}">Join Video Consultation</a></p>
-          `;
-          await sendBookingEmail(userDoc?.email, 'Booking Confirmed - NephroConsult', html);
-        } catch {}
+          const recipient = patientEmail || userDoc?.email;
+          if (recipient) {
+            const html = `
+              <p>Dear ${patientName || 'Patient'},</p>
+              <p>Your consultation has been confirmed.</p>
+              <p><strong>Date:</strong> ${createdAppointment.date}<br/>
+              <strong>Time:</strong> ${createdAppointment.timeSlot}<br/>
+              <strong>Type:</strong> ${createdAppointment.type}<br/>
+              <strong>Amount:</strong> ${createdAppointment.price.symbol}${createdAppointment.price.amount} ${createdAppointment.price.currency}</p>
+              <p><a href="${createdAppointment.meetLink}">Join Video Consultation</a></p>
+            `;
+            await sendBookingEmail(recipient, 'Booking Confirmed - NephroConsult', html);
+          }
+        } catch (emailErr) {
+          console.warn('⚠️ Booking confirmation email failed:', emailErr.message);
+        }
       }
+      // Clear the snapshot after use (success path)
+      try { if (req.session?.pendingBookingDetails) { req.session.pendingBookingDetails = null; await new Promise((r)=>req.session.save(r)); } } catch {}
     } catch (createErr) {
       console.error('⚠️ Appointment creation after payment failed (non-blocking):', createErr.message);
     }

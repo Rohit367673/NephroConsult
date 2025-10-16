@@ -793,6 +793,19 @@ export default function BookingPage() {
         currency: pricing.currency
       };
 
+      // Store booking details with uploaded files for payment verification
+      const extendedBookingDetails = {
+        ...bookingDetails,
+        uploadedFiles: bookingData.uploadedFiles,
+        country: bookingData.country || userCountry
+      };
+      
+      console.log('📋 Storing booking details for payment verification:', extendedBookingDetails);
+      localStorage.setItem('cashfree_booking_details', JSON.stringify(extendedBookingDetails));
+      sessionStorage.setItem('cashfree_payment_details', JSON.stringify({
+        bookingDetails: extendedBookingDetails
+      }));
+
       // Validate required fields
       if (!bookingDetails.patientInfo.name || !bookingDetails.patientInfo.email || !bookingDetails.patientInfo.phone || !bookingDetails.patientInfo.age || !bookingDetails.patientInfo.gender || !bookingDetails.patientInfo.medicalHistory) {
         toast.error('Please fill in all required patient information');

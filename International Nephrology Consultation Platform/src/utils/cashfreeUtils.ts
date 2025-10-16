@@ -164,15 +164,44 @@ export const initiateCashfreePayment = async (
 
     // Persist payment details for use on return URL page
     try {
+      // Check if extended booking details already exist from BookingPage
+      const existingSessionStr = sessionStorage.getItem('cashfree_payment_details');
+      const existingLocalStr = localStorage.getItem('cashfree_booking_details');
+      
+      let finalBookingDetails = bookingDetails;
+      if (existingSessionStr) {
+        try {
+          const existing = JSON.parse(existingSessionStr);
+          if (existing.bookingDetails) {
+            finalBookingDetails = existing.bookingDetails;
+            console.log('📋 Using existing extended booking details from session');
+          }
+        } catch {}
+      } else if (existingLocalStr) {
+        try {
+          const existing = JSON.parse(existingLocalStr);
+          if (existing.uploadedFiles || existing.country) {
+            finalBookingDetails = existing;
+            console.log('📋 Using existing extended booking details from local storage');
+          }
+        } catch {}
+      }
+
       const persisted = {
         orderId,
         paymentSessionId,
         cashfreeAppId,
-        bookingDetails,
+        bookingDetails: finalBookingDetails,
       };
       sessionStorage.setItem('cashfree_payment_details', JSON.stringify(persisted));
-      localStorage.setItem('cashfree_booking_details', JSON.stringify(bookingDetails));
+      localStorage.setItem('cashfree_booking_details', JSON.stringify(finalBookingDetails));
       localStorage.setItem('cashfree_last_order_id', orderId);
+      
+      console.log('📋 Stored booking details for verification:', {
+        hasUploadedFiles: !!(finalBookingDetails as any)?.uploadedFiles,
+        hasCountry: !!(finalBookingDetails as any)?.country,
+        consultationType: finalBookingDetails.consultationType
+      });
     } catch {}
 
     const loaded = await loadCashfreeScript();
@@ -192,17 +221,104 @@ export const initiateCashfreePayment = async (
 };
 
 // Verify payment (calls backend API)
+const resolveStoredBookingDetails = (): BookingDetails | undefined => {
+  console.log('🔍 Resolving stored booking details...');
+  
+  try {
+    const sessionStr = sessionStorage.getItem('cashfree_payment_details');
+    console.log('🔍 Session storage content:', sessionStr ? 'Found' : 'Empty');
+    if (sessionStr) {
+      const parsed = JSON.parse(sessionStr);
+      if (parsed?.bookingDetails) {
+        console.log('✅ Found booking details in session storage:', {
+          consultationType: parsed.bookingDetails.consultationType,
+          hasUploadedFiles: !!(parsed.bookingDetails as any)?.uploadedFiles,
+          hasCountry: !!(parsed.bookingDetails as any)?.country
+        });
+        return parsed.bookingDetails as BookingDetails;
+      }
+    }
+  } catch (e) {
+    console.warn('⚠️ Error parsing session storage:', e);
+  }
+
+  try {
+    const localStr = localStorage.getItem('cashfree_booking_details');
+    console.log('🔍 Local storage content:', localStr ? 'Found' : 'Empty');
+    if (localStr) {
+      const parsed = JSON.parse(localStr) as BookingDetails;
+      console.log('✅ Found booking details in local storage:', {
+        consultationType: parsed.consultationType,
+        hasUploadedFiles: !!(parsed as any)?.uploadedFiles,
+        hasCountry: !!(parsed as any)?.country
+      });
+      return parsed;
+    }
+  } catch (e) {
+    console.warn('⚠️ Error parsing local storage:', e);
+  }
+
+  console.warn('❌ No booking details found in storage');
+  return undefined;
+};
+
+const derivePatientCountry = (details: BookingDetails | undefined): string | undefined => {
+  if (!details) return undefined;
+  const countryFromInfo = (details as any)?.country || (details.patientInfo as any)?.country;
+  if (countryFromInfo) return countryFromInfo;
+
+  switch (details.currency) {
+    case 'INR':
+      return 'IN';
+    case 'USD':
+      return 'US';
+    case 'EUR':
+      return 'EU';
+    case 'GBP':
+      return 'GB';
+    default:
+      return undefined;
+  }
+};
+
 export const verifyCashfreePayment = async (
   paymentResponse: Partial<CashfreeResponse> & { order_id: string },
   bookingDetails?: BookingDetails
 ): Promise<boolean> => {
   try {
     console.log('Verifying payment:', paymentResponse);
-    
+
     // Use environment variable for API URL or fallback to relative path for localhost
     const apiBaseUrl = import.meta.env.VITE_API_URL || '';
     const endpoint = apiBaseUrl ? `${apiBaseUrl}/api/payments/verify-payment` : '/api/payments/verify-payment';
-    
+
+    const resolvedBooking = bookingDetails || resolveStoredBookingDetails();
+    if (!resolvedBooking) {
+      console.warn('⚠️ verifyCashfreePayment: booking details missing, proceeding without additional context');
+    }
+
+    const bookingPayload = resolvedBooking
+      ? {
+          consultationType: resolvedBooking.consultationType,
+          patientName: resolvedBooking.patientInfo?.name,
+          patientEmail: resolvedBooking.patientInfo?.email,
+          patientPhone: resolvedBooking.patientInfo?.phone,
+          patientCountry: derivePatientCountry(resolvedBooking),
+          date: resolvedBooking.date,
+          time: resolvedBooking.time,
+          amount: resolvedBooking.amount,
+          currency: resolvedBooking.currency,
+          patientInfo: resolvedBooking.patientInfo,
+          intake: resolvedBooking.patientInfo
+            ? {
+                description: resolvedBooking.patientInfo.medicalHistory,
+                documents: (resolvedBooking as any)?.uploadedFiles || (resolvedBooking as any)?.documents,
+                address: resolvedBooking.patientInfo.currentMedications,
+              }
+            : undefined,
+        }
+      : undefined;
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -212,15 +328,7 @@ export const verifyCashfreePayment = async (
       body: JSON.stringify({
         order_id: paymentResponse.order_id,
         payment_id: paymentResponse.payment_id,
-        booking_details: bookingDetails ? {
-          consultationType: bookingDetails.consultationType,
-          patientName: bookingDetails.patientInfo.name,
-          patientEmail: bookingDetails.patientInfo.email,
-          date: bookingDetails.date,
-          time: bookingDetails.time,
-          amount: bookingDetails.amount,
-          currency: bookingDetails.currency,
-        } : undefined,
+        booking_details: bookingPayload,
       }),
     });
 
@@ -233,7 +341,7 @@ export const verifyCashfreePayment = async (
     const data = await response.json();
     
     if (data.success) {
-      console.log('Payment verified successfully:', data.payment);
+      console.log('Payment verified successfully:', data.payment, data.appointment);
       return true;
     } else {
       console.error('Payment verification failed:', data.error);
