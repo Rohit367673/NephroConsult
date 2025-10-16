@@ -318,7 +318,7 @@ export default function ProfilePage() {
   };
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState(user?.role === 'doctor' ? 'doctor-dashboard' : 'dashboard');
+  const [activeTab, setActiveTab] = useState(user?.role === 'doctor' || user?.role === 'admin' ? 'doctor-dashboard' : 'dashboard');
   const [expandedPrescriptions, setExpandedPrescriptions] = useState<Set<number>>(new Set());
 
   // Debug user data for reload issues
@@ -403,7 +403,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user?.role === 'patient') {
       fetchAppointments();
-    } else if (user?.role === 'doctor') {
+    } else if (user?.role === 'doctor' || user?.role === 'admin') {
       fetchDoctorAppointments();
     }
   }, [user?.role]);

@@ -32,8 +32,22 @@ export function verifyOrigin(req, res, next) {
       'nephro-consult-rohit367673s-projects.vercel.app'
     ];
     
-    // Combine configured origins with known production domains
-    const allAllowedOrigins = [...allowedOrigins, ...productionDomains.map(d => `https://${d}`)];
+    // Default allowed domains (mirror server CORS defaults)
+    const defaultAllowed = [
+      'https://www.nephroconsultation.com',
+      'https://nephroconsultation.com',
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173'
+    ];
+    
+    // Combine configured origins with known production domains and defaults
+    const allAllowedOrigins = [
+      ...allowedOrigins,
+      ...productionDomains.map(d => `https://${d}`),
+      ...defaultAllowed
+    ];
     
     const allowedHosts = allAllowedOrigins.map((u) => {
       try { return new URL(u).hostname; } catch { return null; }
