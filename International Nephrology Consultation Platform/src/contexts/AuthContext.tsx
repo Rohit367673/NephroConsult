@@ -36,6 +36,28 @@ export const AuthContext = createContext<AuthContextType>({
 });
 
 // Cookie utility functions
+const LOGOUT_FLAG_KEY = 'nephro_explicit_logout';
+
+const setLogoutFlag = () => {
+  try {
+    localStorage.setItem(LOGOUT_FLAG_KEY, Date.now().toString());
+  } catch {}
+};
+
+const clearLogoutFlag = () => {
+  try {
+    localStorage.removeItem(LOGOUT_FLAG_KEY);
+  } catch {}
+};
+
+const hasLogoutFlag = () => {
+  try {
+    return localStorage.getItem(LOGOUT_FLAG_KEY) !== null;
+  } catch {
+    return false;
+  }
+};
+
 const setCookie = (name: string, value: string, days: number = 7) => {
   const expires = new Date();
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
@@ -87,6 +109,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           try {
             const redirectResult = await getRedirectResult(auth);
             if (redirectResult && redirectResult.user) {
+              clearLogoutFlag();
               console.log('Firebase redirect result found:', redirectResult.user);
               const firebaseUser = {
                 id: redirectResult.user.uid,
@@ -105,6 +128,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
           } catch (error) {
             console.error('Error handling redirect result:', error);
           }
+        }
+
+        if (hasLogoutFlag()) {
+          deleteCookie('nephro_user');
+          console.log('AuthContext: explicit logout flag detected, skipping auto login');
+          setLoading(false);
+          return;
         }
 
         // First, try to load from cookie immediately for faster UX
@@ -195,6 +225,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(userData);
         // Save to cookie as backup
         setCookie('nephro_user', encodeURIComponent(JSON.stringify(userData)), 7);
+        clearLogoutFlag();
         console.log('User logged in successfully:', userData);
         return true;
       } else {
@@ -215,6 +246,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
     setUser(null);
     deleteCookie('nephro_user');
+    setLogoutFlag();
     console.log('User logged out and cookie removed');
   };
 
@@ -237,6 +269,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(newUser);
     // Save to cookie for persistent session
     setCookie('nephro_user', encodeURIComponent(JSON.stringify(newUser)), 7);
+    clearLogoutFlag();
     console.log('User registered and saved to cookie:', newUser);
     return true;
   };
