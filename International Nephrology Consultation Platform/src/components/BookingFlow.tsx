@@ -49,12 +49,20 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
       description: 'Text-based consultation with file sharing'
     },
     {
+      id: 'followup',
+      icon: Phone,
+      name: 'Follow-up Consultation',
+      duration: '30 minutes',
+      price: 120,
+      description: 'Follow-up voice consultation for existing patients'
+    },
+    {
       id: 'phone',
       icon: Phone,
       name: 'Phone Consultation',
       duration: '30 minutes',
       price: 120,
-      description: 'Voice consultation for follow-up appointments'
+      description: 'Voice consultation for new patients'
     }
   ];
 
@@ -232,7 +240,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
                 <Calendar
                   mode="single"
                   selected={bookingData.date || undefined}
-                  onSelect={(date) => setBookingData(prev => ({ ...prev, date }))}
+                  onSelect={(date) => setBookingData(prev => ({ ...prev, date: date || null }))}
                   disabled={(date) => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0); // Set to start of day for comparison
