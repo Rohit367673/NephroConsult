@@ -5,7 +5,6 @@ import User from '../models/User.js';
 import { auth as firebaseAuth } from '../config/firebase.js';
 import { generateOTP, storeOTP, verifyOTP } from '../utils/otp.js';
 import { getOTPEmailTemplate } from '../utils/emailTemplates.js';
-import { sendOTPEmail } from '../utils/email.js';
 import { requireAuth } from '../middlewares/auth.js';
 import { env } from '../config.js';
 
@@ -594,4 +593,60 @@ router.post('/create-test-user', async (req, res) => {
   }
 });
 
-export default router;
+// Test email configuration
+router.get('/test-email-config', async (req, res) => {
+  try {
+    console.log('🧪 Testing email configuration...');
+
+    const config = {
+      emailEnabled: flags.emailEnabled,
+      hasApiKey: !!env.SMTP_PASS,
+      hasFromAddress: !!env.SMTP_FROM,
+      apiKeyPrefix: env.SMTP_PASS ? env.SMTP_PASS.substring(0, 10) + '...' : 'not set',
+      fromAddress: env.SMTP_FROM || 'not set'
+    };
+
+    console.log('📧 Email config test:', config);
+
+    // Try to send a test email if configured
+    if (flags.emailEnabled) {
+      try {
+        const testEmailResult = await sendOTPEmail(
+          'test@example.com',
+          'Test Email Configuration',
+          '<h1>Test Email</h1><p>This is a test to verify email configuration.</p>'
+        );
+
+        console.log('✅ Email test result:', testEmailResult);
+
+        return res.json({
+          success: true,
+          config,
+          testResult: testEmailResult,
+          message: 'Email configuration is working'
+        });
+      } catch (emailError) {
+        console.error('❌ Email test failed:', emailError.message);
+        return res.json({
+          success: false,
+          config,
+          error: emailError.message,
+          message: 'Email configuration exists but test failed'
+        });
+      }
+    } else {
+      return res.json({
+        success: false,
+        config,
+        message: 'Email service not configured - missing API key or from address'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Email config test error:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Error testing email configuration'
+    });
+  }
+});

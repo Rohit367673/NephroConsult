@@ -29,7 +29,7 @@ export const env = {
 
 export const flags = {
   paymentsEnabled: !!(process.env.CASHFREE_APP_ID && process.env.CASHFREE_SECRET_KEY),
-  emailEnabled: !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
+  emailEnabled: !!(process.env.SMTP_PASS && process.env.SMTP_FROM), // Use Resend API key and from address
   calendarEnabled: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN && process.env.GOOGLE_CALENDAR_ID),
   firebaseEnabled: !!(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY),
 };
