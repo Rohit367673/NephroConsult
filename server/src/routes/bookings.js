@@ -59,6 +59,81 @@ router.post('/appointments/create-test', async (req, res) => {
   }
 });
 
+// Check reminder status and upcoming appointments (for debugging)
+router.get('/appointments/reminder-status', async (req, res) => {
+  try {
+    console.log('🔍 REMINDER STATUS: Checking upcoming appointments for reminders');
+
+    // Get current time and 30 minutes from now
+    const now = new Date();
+    const thirtyMinutesLater = new Date(now.getTime() + 30 * 60 * 1000);
+    const thirtyOneMinutesLater = new Date(now.getTime() + 31 * 60 * 1000);
+
+    console.log('🔍 REMINDER STATUS: Current time:', now.toISOString());
+    console.log('🔍 REMINDER STATUS: Checking for appointments between:', thirtyMinutesLater.toISOString(), 'and', thirtyOneMinutesLater.toISOString());
+
+    // Find appointments starting in 30-31 minutes that haven't been reminded
+    const upcomingAppointments = await Appointment.find({
+      date: {
+        $gte: thirtyMinutesLater.toISOString().split('T')[0], // Just the date part for comparison
+      },
+      status: { $ne: 'cancelled' },
+      reminderSent: { $ne: true }
+    }).sort({ date: 1, timeSlot: 1 });
+
+    console.log(`🔍 REMINDER STATUS: Found ${upcomingAppointments.length} upcoming appointments`);
+
+    // Also check recent appointments that should have been reminded
+    const recentAppointments = await Appointment.find({
+      date: {
+        $gte: new Date(now.getTime() - 60 * 60 * 1000).toISOString().split('T')[0], // Last hour
+        $lte: now.toISOString().split('T')[0]
+      },
+      status: { $ne: 'cancelled' }
+    }).limit(10);
+
+    return res.json({
+      currentTime: now.toISOString(),
+      checkWindow: {
+        start: thirtyMinutesLater.toISOString(),
+        end: thirtyOneMinutesLater.toISOString()
+      },
+      upcomingAppointments: upcomingAppointments.map(apt => ({
+        id: apt._id,
+        date: apt.date,
+        timeSlot: apt.timeSlot,
+        status: apt.status,
+        reminderSent: apt.reminderSent,
+        patientName: apt.patient?.name,
+        patientEmail: apt.patient?.email
+      })),
+      recentAppointments: recentAppointments.map(apt => ({
+        id: apt._id,
+        date: apt.date,
+        timeSlot: apt.timeSlot,
+        status: apt.status,
+        reminderSent: apt.reminderSent,
+        patientName: apt.patient?.name
+      })),
+      telegramConfig: {
+        botToken: !!env.TELEGRAM_BOT_TOKEN,
+        chatId: !!env.DOCTOR_TELEGRAM_CHAT_ID,
+        botInitialized: !!(telegramService && telegramService.bot)
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ REMINDER STATUS ERROR:', error.message);
+    return res.status(500).json({
+      error: error.message,
+      telegramConfig: {
+        botToken: !!env.TELEGRAM_BOT_TOKEN,
+        chatId: !!env.DOCTOR_TELEGRAM_CHAT_ID
+      }
+    });
+  }
+});
+
 // List current user's appointments
 router.get('/appointments/mine', requireAuth, async (req, res) => {
   try {
@@ -558,4 +633,52 @@ router.get('/appointments/:id', requireAuth, async (req, res) => {
   }
 });
 
-export default router;
+// Test Telegram configuration and send test notification
+router.post('/appointments/test-telegram', async (req, res) => {
+  try {
+    console.log('🧪 TELEGRAM TEST: Testing Telegram configuration');
+
+    // Check if Telegram service is available
+    if (!telegramService || !telegramService.bot) {
+      console.log('❌ Telegram service not initialized');
+      return res.json({
+        success: false,
+        error: 'Telegram service not initialized',
+        config: {
+          botToken: !!env.TELEGRAM_BOT_TOKEN,
+          chatId: !!env.DOCTOR_TELEGRAM_CHAT_ID
+        }
+      });
+    }
+
+    // Send test message
+    const testMessage = `
+🧪 <b>TELEGRAM TEST MESSAGE</b>
+
+✅ Bot is working!
+⏰ Current time: ${new Date().toLocaleString()}
+📊 Server status: Active
+
+<i>This is a test message to verify Telegram notifications are working.</i>
+    `.trim();
+
+    await telegramService.bot.sendMessage(env.DOCTOR_TELEGRAM_CHAT_ID, testMessage, { parse_mode: 'HTML' });
+
+    console.log('✅ Telegram test message sent successfully');
+    return res.json({
+      success: true,
+      message: 'Telegram test message sent successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Telegram test failed:', error.message);
+    return res.json({
+      success: false,
+      error: error.message,
+      config: {
+        botToken: !!env.TELEGRAM_BOT_TOKEN,
+        chatId: !!env.DOCTOR_TELEGRAM_CHAT_ID
+      }
+    });
+  }
+});
