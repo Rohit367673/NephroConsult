@@ -137,8 +137,14 @@ export function OTPSignupModal({ isOpen, onClose }: OTPSignupModalProps) {
       
       if (response.success) {
         toast.success('🎉 Account created successfully!');
-        handleClose();
-        // Optionally trigger login
+        
+        // If user data is returned, update the auth state
+        if (response.data?.user) {
+          // The user is now logged in, trigger any auth state updates
+          window.location.reload(); // Simple way to refresh and show logged-in state
+        } else {
+          handleClose();
+        }
       } else {
         toast.error(response.error || 'Invalid verification code');
       }

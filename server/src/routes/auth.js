@@ -181,24 +181,76 @@ router.post('/verify-otp', async (req, res) => {
   try {
     const schema = z.object({
       email: z.string().email('Invalid email address'),
-      otp: z.string().min(6, 'OTP must be 6 digits').max(6, 'OTP must be 6 digits')
+      otp: z.string().min(6, 'OTP must be 6 digits').max(6, 'OTP must be 6 digits'),
+      userData: z.object({
+        name: z.string().min(1, 'Name is required'),
+        email: z.string().email('Invalid email address'),
+        password: z.string().min(6, 'Password must be at least 6 characters')
+      }).optional()
     });
 
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: 'Invalid email or OTP format' });
+      return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
     }
 
-    const { email, otp } = parsed.data;
-    const result = verifyOTP(email, otp);
+    const { email, otp, userData } = parsed.data;
+    const normalizedEmail = email.toLowerCase();
 
-    if (!result.valid) {
-      return res.status(400).json({ error: result.error });
+    // Verify OTP first
+    const otpResult = verifyOTP(email, otp);
+    if (!otpResult.valid) {
+      return res.status(400).json({ error: otpResult.error });
     }
 
-    return res.json({ 
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+
+    // If userData is provided, create the account
+    if (userData) {
+      try {
+        const passwordHash = await bcrypt.hash(userData.password, 10);
+
+        const newUser = await User.create({
+          name: userData.name.trim(),
+          email: normalizedEmail,
+          passwordHash,
+          role: 'patient', // Default role for new registrations
+        });
+
+        // Create session for the new user
+        req.session.user = {
+          id: newUser._id.toString(),
+          role: newUser.role,
+          email: newUser.email,
+          name: newUser.name
+        };
+
+        console.log('✅ [REGISTER] New user account created and logged in:', newUser.email);
+
+        return res.json({
+          message: 'Account created successfully',
+          success: true,
+          user: {
+            id: String(newUser._id),
+            name: newUser.name,
+            email: newUser.email,
+            role: newUser.role
+          }
+        });
+      } catch (createError) {
+        console.error('❌ Account creation failed:', createError);
+        return res.status(500).json({ error: 'Failed to create account' });
+      }
+    }
+
+    // If no userData provided, just verify OTP without creating account
+    return res.json({
       message: 'OTP verified successfully',
-      success: true 
+      success: true
     });
   } catch (error) {
     console.error('Verify OTP error:', error);

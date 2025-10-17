@@ -7,6 +7,7 @@ interface ApiResponse<T> {
     otp?: string;
     fallback?: boolean;
     mock?: boolean;
+    user?: any; // For user data returned from registration/login
   };
   message?: string;
   error?: string;
