@@ -1216,35 +1216,48 @@ For support: suyambu54321@gmail.com
                                     {/* Prescription Details */}
                                     {appointment.prescription && expandedPrescriptions.has(appointment.id) && (
                                       <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                        <h5 className="font-medium text-blue-900 mb-2">Digital Prescription (ID: {appointment.prescription.id})</h5>
+                                        <h5 className="font-medium text-blue-900 mb-2">Digital Prescription</h5>
                                         <div className="space-y-2">
-                                          <div>
-                                            <p className="text-sm font-medium text-blue-800">Medicines:</p>
-                                            <div className="space-y-1">
-                                              {appointment.prescription.medicines.map((medicine: any, index: number) => (
-                                                <div key={index} className="flex items-center justify-between text-sm">
-                                                  <span>{medicine.name} - {medicine.dosage}</span>
-                                                  <Button 
-                                                    size="sm" 
-                                                    variant="ghost" 
-                                                    className="text-blue-600 hover:text-blue-800 p-1 h-auto"
-                                                    onClick={() => {
-                                                      const searchQuery = encodeURIComponent(`${medicine.name} ${medicine.dosage}`);
-                                                      const pharmacyUrl = `https://www.1mg.com/search/all?name=${searchQuery}`;
-                                                      window.open(pharmacyUrl, '_blank');
-                                                    }}
-                                                  >
-                                                    <ExternalLink className="w-3 h-3 mr-1" />
-                                                    Buy Online
-                                                  </Button>
-                                                </div>
-                                              ))}
+                                          {appointment.prescription.medicines && appointment.prescription.medicines.length > 0 && (
+                                            <div>
+                                              <p className="text-sm font-medium text-blue-800">Medicines:</p>
+                                              <div className="space-y-1">
+                                                {appointment.prescription.medicines.map((medicine: any, index: number) => (
+                                                  <div key={index} className="flex items-center justify-between text-sm">
+                                                    <span>{medicine.name} - {medicine.dosage}</span>
+                                                    <Button 
+                                                      size="sm" 
+                                                      variant="ghost" 
+                                                      className="text-blue-600 hover:text-blue-800 p-1 h-auto"
+                                                      onClick={() => {
+                                                        const searchQuery = encodeURIComponent(`${medicine.name} ${medicine.dosage}`);
+                                                        const fallbackUrl = `https://www.1mg.com/search/all?name=${searchQuery}`;
+                                                        const url = medicine.link && String(medicine.link).trim() !== '' ? medicine.link : fallbackUrl;
+                                                        window.open(url, '_blank');
+                                                      }}
+                                                    >
+                                                      <ExternalLink className="w-3 h-3 mr-1" />
+                                                      Buy Online
+                                                    </Button>
+                                                  </div>
+                                                ))}
+                                              </div>
                                             </div>
-                                          </div>
-                                          <div>
-                                            <p className="text-sm font-medium text-blue-800">Doctor's Advice:</p>
-                                            <p className="text-sm text-blue-700">{appointment.prescription.advice}</p>
-                                          </div>
+                                          )}
+                                          {appointment.prescription.notes && (
+                                            <div>
+                                              <p className="text-sm font-medium text-blue-800">Doctor's Advice:</p>
+                                              <p className="text-sm text-blue-700">{appointment.prescription.notes}</p>
+                                            </div>
+                                          )}
+                                          {appointment.prescription.nextConsultationDate && (
+                                            <div>
+                                              <p className="text-sm font-medium text-blue-800">Next Appointment:</p>
+                                              <p className="text-sm text-blue-700">
+                                                {new Date(appointment.prescription.nextConsultationDate).toLocaleDateString()}
+                                              </p>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     )}
@@ -1360,35 +1373,48 @@ For support: suyambu54321@gmail.com
                               {/* Prescription Details */}
                               {appointment.prescription && expandedPrescriptions.has(appointment.id) && (
                               <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                <h5 className="font-medium text-blue-900 mb-2">Digital Prescription (ID: {appointment.prescription.id})</h5>
+                                <h5 className="font-medium text-blue-900 mb-2">Digital Prescription</h5>
                                 <div className="space-y-2">
-                                  <div>
-                                    <p className="text-sm font-medium text-blue-800">Medicines:</p>
-                                    <div className="space-y-1">
-                                      {appointment.prescription.medicines.map((medicine: any, index: number) => (
-                                        <div key={index} className="flex items-center justify-between text-sm">
-                                          <span>{medicine.name} - {medicine.dosage}</span>
-                                          <Button 
-                                            size="sm" 
-                                            variant="ghost" 
-                                            className="text-blue-600 hover:text-blue-800 p-1 h-auto"
-                                            onClick={() => {
-                                              const searchQuery = encodeURIComponent(`${medicine.name} ${medicine.dosage}`);
-                                              const pharmacyUrl = `https://www.1mg.com/search/all?name=${searchQuery}`;
-                                              window.open(pharmacyUrl, '_blank');
-                                            }}
-                                          >
-                                            <ExternalLink className="w-3 h-3 mr-1" />
-                                            Buy Online
-                                          </Button>
-                                        </div>
-                                      ))}
+                                  {appointment.prescription.medicines && appointment.prescription.medicines.length > 0 && (
+                                    <div>
+                                      <p className="text-sm font-medium text-blue-800">Medicines:</p>
+                                      <div className="space-y-1">
+                                        {appointment.prescription.medicines.map((medicine: any, index: number) => (
+                                          <div key={index} className="flex items-center justify-between text-sm">
+                                            <span>{medicine.name} - {medicine.dosage}</span>
+                                            <Button 
+                                              size="sm" 
+                                              variant="ghost" 
+                                              className="text-blue-600 hover:text-blue-800 p-1 h-auto"
+                                              onClick={() => {
+                                                const searchQuery = encodeURIComponent(`${medicine.name} ${medicine.dosage}`);
+                                                const fallbackUrl = `https://www.1mg.com/search/all?name=${searchQuery}`;
+                                                const url = medicine.link && String(medicine.link).trim() !== '' ? medicine.link : fallbackUrl;
+                                                window.open(url, '_blank');
+                                              }}
+                                            >
+                                              <ExternalLink className="w-3 h-3 mr-1" />
+                                              Buy Online
+                                            </Button>
+                                          </div>
+                                        ))}
+                                      </div>
                                     </div>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-blue-800">Doctor's Advice:</p>
-                                    <p className="text-sm text-blue-700">{appointment.prescription.advice}</p>
-                                  </div>
+                                  )}
+                                  {appointment.prescription.notes && (
+                                    <div>
+                                      <p className="text-sm font-medium text-blue-800">Doctor's Advice:</p>
+                                      <p className="text-sm text-blue-700">{appointment.prescription.notes}</p>
+                                    </div>
+                                  )}
+                                  {appointment.prescription.nextConsultationDate && (
+                                    <div>
+                                      <p className="text-sm font-medium text-blue-800">Next Appointment:</p>
+                                      <p className="text-sm text-blue-700">
+                                        {new Date(appointment.prescription.nextConsultationDate).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               )}

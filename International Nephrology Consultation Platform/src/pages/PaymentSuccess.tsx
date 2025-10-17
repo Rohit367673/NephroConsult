@@ -30,20 +30,114 @@ const PaymentSuccess: React.FC = () => {
           return;
         }
 
-        // Try sessionStorage first
-        const sessionStr = sessionStorage.getItem('cashfree_payment_details');
-        let bookingDetails: any | undefined;
-        if (sessionStr) {
-          const parsed = JSON.parse(sessionStr);
-          bookingDetails = parsed.bookingDetails;
-        } else {
-          // Fallback to localStorage
-          const localStr = localStorage.getItem('cashfree_booking_details');
-          if (localStr) {
-            bookingDetails = JSON.parse(localStr);
-          }
-        }
+        // Enhanced retrieval from multiple persistent sources
+        const retrieveBookingDataFromMultipleSources = async (): Promise<any> => {
+          try {
+            // Try IndexedDB first (most persistent)
+            if ('indexedDB' in window) {
+              const db = await new Promise<IDBDatabase>((resolve, reject) => {
+                const request = indexedDB.open('NephroConsultDB', 1);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+              });
 
+              const data = await new Promise<any>((resolve, reject) => {
+                const transaction = db.transaction(['bookingData'], 'readonly');
+                const store = transaction.objectStore('bookingData');
+                const request = store.get('current_booking');
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+              });
+
+              if (data) {
+                console.log('✅ Retrieved from IndexedDB');
+                return data;
+              }
+            }
+          } catch (error) {
+            console.warn('❌ Failed to retrieve from IndexedDB:', error);
+          }
+
+          // Try cookies (persistent across redirects)
+          try {
+            const cookieValue = document.cookie
+              .split('; ')
+              .find(row => row.startsWith('booking_data='))
+              ?.split('=')[1];
+
+            if (cookieValue) {
+              const decoded = decodeURIComponent(cookieValue);
+              console.log('✅ Retrieved from cookies');
+              return JSON.parse(decoded);
+            }
+          } catch (error) {
+            console.warn('❌ Failed to retrieve from cookies:', error);
+          }
+
+          // Try localStorage (backup)
+          try {
+            const localData = localStorage.getItem('cashfree_booking_details');
+            if (localData) {
+              console.log('✅ Retrieved from localStorage');
+              return JSON.parse(localData);
+            }
+          } catch (error) {
+            console.warn('❌ Failed to retrieve from localStorage:', error);
+          }
+
+          // Try sessionStorage (backup)
+          try {
+            const sessionData = sessionStorage.getItem('cashfree_payment_details');
+            if (sessionData) {
+              const parsed = JSON.parse(sessionData);
+              if (parsed?.bookingDetails) {
+                console.log('✅ Retrieved from sessionStorage');
+                return parsed.bookingDetails;
+              }
+            }
+          } catch (error) {
+            console.warn('❌ Failed to retrieve from sessionStorage:', error);
+          }
+
+          // Try window object (backup)
+          try {
+            if ((window as any).cashfreeBookingData) {
+              console.log('✅ Retrieved from window object');
+              return (window as any).cashfreeBookingData;
+            }
+          } catch (error) {
+            console.warn('❌ Failed to retrieve from window object:', error);
+          }
+
+          console.error('❌ No booking data found in any storage location');
+          return null;
+        };
+
+        const bookingDetails = await retrieveBookingDataFromMultipleSources();
+
+        // Additional debugging - check raw storage content
+        const rawSessionStorage = sessionStorage.getItem('cashfree_payment_details');
+        const rawLocalStorage = localStorage.getItem('cashfree_booking_details');
+        
+        console.log('🔍 PaymentSuccess: Raw storage content:', {
+          sessionStorageExists: !!rawSessionStorage,
+          localStorageExists: !!rawLocalStorage,
+          sessionStorageLength: rawSessionStorage?.length || 0,
+          localStorageLength: rawLocalStorage?.length || 0
+        });
+        
+        console.log('🔍 PaymentSuccess: bookingDetails retrieved:', {
+          hasBookingDetails: !!bookingDetails,
+          bookingDetailsType: typeof bookingDetails,
+          bookingDetailsKeys: bookingDetails ? Object.keys(bookingDetails) : [],
+          hasPatientInfo: !!bookingDetails?.patientInfo,
+          hasDocuments: !!(bookingDetails as any)?.documents,
+          documentsCount: (bookingDetails as any)?.documents?.length || 0,
+          medicalHistoryLength: bookingDetails?.patientInfo?.medicalHistory?.length || 0,
+          patientPhone: bookingDetails?.patientInfo?.phone
+        });
+        
         console.log('Verifying payment for order:', orderId);
 
         const MAX_RETRIES = 8;
@@ -73,7 +167,7 @@ const PaymentSuccess: React.FC = () => {
               const sessionAgain = sessionStorage.getItem('cashfree_payment_details');
               if (sessionAgain) {
                 const parsed = JSON.parse(sessionAgain);
-                bookingDetails = parsed.bookingDetails;
+                bookingDetails = parsed?.bookingDetails;
               } else {
                 const localStr = localStorage.getItem('cashfree_booking_details');
                 if (localStr) bookingDetails = JSON.parse(localStr);
@@ -100,7 +194,8 @@ const PaymentSuccess: React.FC = () => {
                   patientCountry: countryCode,
                   intake: bookingDetails.patientInfo ? {
                     description: bookingDetails.patientInfo.medicalHistory,
-                    documents: undefined,
+                    address: bookingDetails.patientInfo.currentMedications,
+                    documents: Array.isArray((bookingDetails as any)?.documents) ? (bookingDetails as any).documents : undefined,
                   } : undefined,
                 })
               });
@@ -200,6 +295,7 @@ const PaymentSuccess: React.FC = () => {
 };
 
 export default PaymentSuccess;
+
 
 
 

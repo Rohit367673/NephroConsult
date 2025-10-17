@@ -301,12 +301,24 @@ router.post('/appointments', requireAuth, async (req, res) => {
           address: z.string().max(500).optional(),
           description: z.string().max(5000).optional(),
           documents: z.array(z.string()).max(10).optional(),
+          patientPhone: z.string().optional(),
+          patientInfo: z.object({
+            phone: z.string().optional(),
+            medicalHistory: z.string().optional(),
+            currentMedications: z.string().optional(),
+          }).optional(),
         })
         .optional(),
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
     const { date, timeSlot, typeId, paymentMethod = 'card', intake, patientPhone, patientCountry } = parsed.data;
+    
+    // Also check for phone in patientInfo if not in root level
+    const extractedPhone = patientPhone || intake?.patientPhone || intake?.patientInfo?.phone;
+    
+    console.log('📋 Patient phone from request:', patientPhone);
+    console.log('📋 Extracted phone:', extractedPhone);
 
     // Collision prevention
     const existing = await Appointment.findOne({ date, timeSlot, status: { $ne: 'cancelled' } });
@@ -314,7 +326,7 @@ router.post('/appointments', requireAuth, async (req, res) => {
 
     // Update user with phone/country if provided
     const updateData = {};
-    if (patientPhone) updateData.phone = patientPhone;
+    if (extractedPhone && extractedPhone.trim()) updateData.phone = extractedPhone.trim();
     if (patientCountry) updateData.country = patientCountry;
     
     let userDoc = await User.findById(req.session.user.id);
@@ -340,7 +352,7 @@ router.post('/appointments', requireAuth, async (req, res) => {
         id: userDoc?._id,
         name: userDoc?.name,
         email: userDoc?.email,
-        phone: userDoc?.phone,
+        phone: extractedPhone || userDoc?.phone,
         country,
       },
       doctor: { 
@@ -364,7 +376,11 @@ router.post('/appointments', requireAuth, async (req, res) => {
         discountApplied: isFirst,
       },
       meetLink: generateMeetLink(date, timeSlot),
-      intake: intake || undefined,
+      intake: intake ? {
+        address: intake.address || intake.patientInfo?.currentMedications || '',
+        description: intake.description || intake.patientInfo?.medicalHistory || '',
+        documents: intake.documents || [],
+      } : undefined,
     });
 
     console.log('📋 Created appointment with ID:', appointment._id);

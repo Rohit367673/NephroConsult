@@ -202,6 +202,19 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
         } : undefined
       );
 
+      console.log('🔍 Payment verification - received data:', {
+        hasBookingDetails: !!req.body.booking_details,
+        hasSessionSnapshot: !!sessionSnapshot,
+        hasOrderTags: !!orderInfo,
+        detailsType: typeof details,
+        detailsKeys: details ? Object.keys(details) : [],
+        hasIntake: details?.intake ? true : false,
+        intakeKeys: details?.intake ? Object.keys(details.intake) : [],
+        intakeDocuments: details?.intake?.documents?.length || 0,
+        patientInfoKeys: details?.patientInfo ? Object.keys(details.patientInfo) : [],
+        medicalHistory: details?.patientInfo?.medicalHistory?.substring(0, 50) + '...' || 'No medical history',
+      });
+
       if (!details) {
         console.warn('⚠️ Payment verification: No booking details from client or order tags; skipping auto appointment creation');
       } else {
@@ -221,7 +234,7 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
 
         const patientName = userDoc?.name || sessionUser.name || details.patientName;
         const patientEmail = userDoc?.email || sessionUser.email || details.patientEmail;
-        const patientPhone = userDoc?.phone || details.patientPhone || sessionUser.phone;
+        const patientPhone = userDoc?.phone || details.patientPhone || details.patientInfo?.phone || sessionUser.phone;
 
         const patientId = userDoc?._id || sessionUser.id;
 
@@ -233,6 +246,7 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
           patientId,
           patientName,
           patientEmail,
+          patientPhone,
           resolvedCountry,
           typeName,
           amount,
@@ -242,7 +256,22 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
           derivedFrom: req.body.booking_details ? 'client_payload' : (sessionSnapshot ? 'session_snapshot' : 'cashfree_order_tags'),
           hasIntake: !!details.intake,
           intakeDocuments: details.intake?.documents?.length || 0,
+          intakeDescription: details.intake?.description || 'No description',
+          medicalHistory: details.patientInfo?.medicalHistory || 'No medical history provided',
+          currentMedications: details.patientInfo?.currentMedications || 'No medications provided',
+          directDocuments: details.documents?.length || 0,
         });
+
+        // Construct intake object from available data
+        let intakeData = null;
+        if (details.patientInfo?.medicalHistory || details.intake?.documents || details.documents || details.patientInfo?.currentMedications) {
+          intakeData = {
+            address: details.patientInfo?.currentMedications || details.intake?.address || '', // Use currentMedications as address field for now
+            description: details.patientInfo?.medicalHistory || details.intake?.description || 'No medical history provided',
+            documents: Array.isArray(details.intake?.documents) ? details.intake.documents :
+                      Array.isArray(details.documents) ? details.documents : undefined,
+          };
+        }
 
         createdAppointment = await Appointment.create({
           patient: {
@@ -271,18 +300,30 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
             discountApplied: false,
           },
           meetLink: generateMeetLink(details.date, details.time),
-          intake: details.intake ? {
-            address: details.intake.address,
-            description: details.intake.description,
-            documents: Array.isArray(details.intake.documents) ? details.intake.documents : undefined,
-          } : undefined,
+          intake: intakeData,
         });
 
-        console.log('✅ Appointment created from payment verification:', {
+        console.log('💾 Appointment saved with intake data:', {
           appointmentId: createdAppointment._id,
-          patientId: createdAppointment.patient?.id,
-          orderId: payment.order_id,
+          intakeData: createdAppointment.intake,
+          intakeDescription: createdAppointment.intake?.description?.substring(0, 100) + '...',
+          intakeDocumentsCount: createdAppointment.intake?.documents?.length || 0,
+          patientPhone: createdAppointment.patient?.phone,
         });
+
+        // Verify the appointment was saved correctly
+        const savedAppointment = await Appointment.findById(createdAppointment._id).lean();
+        if (savedAppointment) {
+          console.log('✅ Appointment verified in database:', {
+            id: savedAppointment._id,
+            hasIntake: !!savedAppointment.intake,
+            intakeDocuments: savedAppointment.intake?.documents?.length || 0,
+            intakeDescription: savedAppointment.intake?.description?.substring(0, 50) + '...',
+            patientPhone: savedAppointment.patient?.phone,
+          });
+        } else {
+          console.error('❌ Appointment not found in database after creation!');
+        }
 
         // Schedule reminder and send Telegram notification (non-blocking)
         try { await scheduleAppointmentReminder(createdAppointment); } catch (jobErr) {
@@ -297,8 +338,8 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
             timeSlot: createdAppointment.timeSlot,
             amount: createdAppointment.price.amount,
             consultationType: createdAppointment.type,
-            symptoms: details.intake?.description,
-            medicalHistory: details.intake?.address,
+            symptoms: intakeData?.description || 'No symptoms provided',
+            medicalHistory: intakeData?.address || 'No current medications',
           });
         } catch (telegramErr) {
           console.warn('⚠️ Telegram notification failed:', telegramErr.message);

@@ -115,18 +115,30 @@ export function PrescriptionWriter() {
     setLoading(true);
     
     try {
-      const prescriptionData = {
-        ...prescription,
-        medicines: medicines.filter(m => m.name), // Only include medicines with names
-        appointmentId,
-        sendEmail: sendToPatient
+      // Map to server schema: { prescription: { notes, medicines[{name,dosage,frequency,link}], nextConsultationDate } }
+      const serverPrescription = {
+        notes: prescription.notes?.trim() || '',
+        medicines: medicines
+          .filter(m => m.name && m.name.trim() !== '')
+          .map(m => ({
+            name: m.name,
+            dosage: m.dosage || '',
+            frequency: m.frequency || '',
+            link: m.link || ''
+          })),
+        nextConsultationDate: prescription.followUpDate ? new Date(prescription.followUpDate) : undefined,
       };
 
-      const res = await fetch('/api/prescriptions', {
+      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+      const endpoint = apiBaseUrl
+        ? `${apiBaseUrl}/api/appointments/${appointmentId}/prescription`
+        : `/api/appointments/${appointmentId}/prescription`;
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(prescriptionData)
+        body: JSON.stringify({ prescription: serverPrescription })
       });
 
       if (res.ok) {
@@ -141,6 +153,8 @@ export function PrescriptionWriter() {
           navigate('/doctor/appointments');
         }, 1500);
       } else {
+        const errText = await res.text().catch(() => '');
+        console.error('Failed to save prescription:', res.status, errText);
         throw new Error('Failed to save prescription');
       }
     } catch (error) {

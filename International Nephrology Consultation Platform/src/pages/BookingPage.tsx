@@ -41,6 +41,7 @@ interface BookingDetails {
   };
   amount: number;
   currency: string;
+  documents?: string[];
 }
 
 interface CashfreeResponse {
@@ -570,6 +571,147 @@ export default function BookingPage() {
     country: ''
   });
 
+  // Enhanced persistent storage using IndexedDB for payment data
+  const storeBookingDataPersistent = async (bookingDetails: any) => {
+    try {
+      // Store in IndexedDB (most persistent)
+      if ('indexedDB' in window) {
+        const request = indexedDB.open('NephroConsultDB', 1);
+
+        request.onerror = () => console.error('❌ IndexedDB error');
+
+        request.onsuccess = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          const transaction = db.transaction(['bookingData'], 'readwrite');
+          const store = transaction.objectStore('bookingData');
+
+          const dataToStore = {
+            ...bookingDetails,
+            timestamp: Date.now(),
+            id: 'current_booking'
+          };
+
+          store.put(dataToStore);
+          console.log('✅ Stored in IndexedDB');
+        };
+
+        request.onupgradeneeded = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          if (!db.objectStoreNames.contains('bookingData')) {
+            db.createObjectStore('bookingData', { keyPath: 'id' });
+          }
+        };
+      }
+
+      // Store in localStorage (backup)
+      localStorage.setItem('cashfree_booking_details', JSON.stringify(bookingDetails));
+      console.log('✅ Stored in localStorage');
+
+      // Store in sessionStorage (backup)
+      sessionStorage.setItem('cashfree_payment_details', JSON.stringify({
+        bookingDetails: bookingDetails
+      }));
+      console.log('✅ Stored in sessionStorage');
+
+      // Store in window object (backup)
+      (window as any).cashfreeBookingData = bookingDetails;
+      console.log('✅ Stored in window object');
+
+      // Store in cookies (most persistent across redirects)
+      document.cookie = `booking_data=${encodeURIComponent(JSON.stringify(bookingDetails))}; path=/; max-age=3600; SameSite=Strict`;
+      console.log('✅ Stored in cookies');
+
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to store booking data persistently:', error);
+      return false;
+    }
+  };
+
+  // Enhanced retrieval from multiple sources
+  const retrieveBookingDataPersistent = async (): Promise<BookingDetails | null> => {
+    try {
+      // Try IndexedDB first (most persistent)
+      if ('indexedDB' in window) {
+        const db = await new Promise<IDBDatabase>((resolve, reject) => {
+          const request = indexedDB.open('NephroConsultDB', 1);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve(request.result);
+        });
+
+        const data = await new Promise<any>((resolve, reject) => {
+          const transaction = db.transaction(['bookingData'], 'readonly');
+          const store = transaction.objectStore('bookingData');
+          const request = store.get('current_booking');
+
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve(request.result);
+        });
+
+        if (data) {
+          console.log('✅ Retrieved from IndexedDB');
+          return data;
+        }
+      }
+    } catch (error) {
+      console.warn('❌ Failed to retrieve from IndexedDB:', error);
+    }
+
+    // Try cookies (persistent across redirects)
+    try {
+      const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('booking_data='))
+        ?.split('=')[1];
+
+      if (cookieValue) {
+        const decoded = decodeURIComponent(cookieValue);
+        console.log('✅ Retrieved from cookies');
+        return JSON.parse(decoded);
+      }
+    } catch (error) {
+      console.warn('❌ Failed to retrieve from cookies:', error);
+    }
+
+    // Try localStorage (backup)
+    try {
+      const localData = localStorage.getItem('cashfree_booking_details');
+      if (localData) {
+        console.log('✅ Retrieved from localStorage');
+        return JSON.parse(localData);
+      }
+    } catch (error) {
+      console.warn('❌ Failed to retrieve from localStorage:', error);
+    }
+
+    // Try sessionStorage (backup)
+    try {
+      const sessionData = sessionStorage.getItem('cashfree_payment_details');
+      if (sessionData) {
+        const parsed = JSON.parse(sessionData);
+        if (parsed?.bookingDetails) {
+          console.log('✅ Retrieved from sessionStorage');
+          return parsed.bookingDetails;
+        }
+      }
+    } catch (error) {
+      console.warn('❌ Failed to retrieve from sessionStorage:', error);
+    }
+
+    // Try window object (backup)
+    try {
+      if ((window as any).cashfreeBookingData) {
+        console.log('✅ Retrieved from window object');
+        return (window as any).cashfreeBookingData;
+      }
+    } catch (error) {
+      console.warn('❌ Failed to retrieve from window object:', error);
+    }
+
+    console.error('❌ No booking data found in any storage location');
+    return null;
+  };
+
   // Redirect to home with login prompt if not authenticated
   useEffect(() => {
     if (!loading && !user) {
@@ -577,6 +719,85 @@ export default function BookingPage() {
       navigate('/', loginRedirectState);
     }
   }, [user, loading, navigate]);
+
+  // Store booking data when user reaches step 4 (review & payment) - BEFORE clicking payment button
+  useEffect(() => {
+    if (step === 4 && bookingData.consultationType && bookingData.date && bookingData.time && bookingData.patientInfo) {
+      console.log('📋 Step 4 reached - storing booking data for payment (BEFORE button click)...');
+
+      // Calculate amount based on consultation type
+      const amount = getConsultationPrice(bookingData.consultationType, bookingData.country || userCountry, pricing.currency);
+
+      // Prepare booking details for Cashfree
+      const bookingDetails: BookingDetails = {
+        consultationType: bookingData.consultationType,
+        date: bookingData.date,
+        time: bookingData.time,
+        patientInfo: bookingData.patientInfo,
+        amount: amount,
+        currency: pricing.currency
+      };
+
+      // Pre-convert uploaded files to base64 strings for storage (filename|base64)
+      let preProcessedDocuments: string[] = [];
+
+      // Process documents asynchronously
+      const processDocuments = async () => {
+        try {
+          if (Array.isArray((bookingData as any).uploadedFiles) && (bookingData as any).uploadedFiles.length > 0) {
+            console.log('📄 Processing uploaded files for storage:', (bookingData as any).uploadedFiles.length);
+            preProcessedDocuments = await Promise.all(
+              (bookingData as any).uploadedFiles.map((file: File) => new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const base64 = reader.result as string;
+                  console.log(`📄 Processed file: ${file.name}, size: ${base64.length} chars`);
+                  resolve(`${file.name}|${base64}`);
+                };
+                reader.onerror = () => {
+                  console.error(`❌ Failed to process file: ${file.name}`);
+                  resolve(`${file.name}|error`);
+                };
+                reader.readAsDataURL(file);
+              }))
+            );
+            console.log('✅ Processed documents:', preProcessedDocuments.length);
+          } else {
+            console.log('ℹ️ No uploaded files to process');
+          }
+        } catch (e) {
+          console.warn('⚠️ Failed to pre-process uploaded files for storage:', (e as any)?.message || e);
+        }
+
+        // Continue with storage after documents are processed
+        const extendedBookingDetails = {
+          ...bookingDetails,
+          documents: preProcessedDocuments,
+          country: bookingData.country || userCountry,
+          uploadedFiles: (bookingData as any).uploadedFiles
+        };
+
+        console.log('💾 Storing booking details for payment verification (Step 4 reached):', {
+          consultationType: extendedBookingDetails.consultationType,
+          hasPatientInfo: !!extendedBookingDetails.patientInfo,
+          patientPhone: extendedBookingDetails.patientInfo?.phone,
+          medicalHistoryLength: extendedBookingDetails.patientInfo?.medicalHistory?.length || 0,
+          hasDocuments: !!(extendedBookingDetails as any)?.documents,
+          documentsCount: (extendedBookingDetails as any)?.documents?.length || 0,
+          country: extendedBookingDetails.country
+        });
+
+        // Use persistent storage for step 4
+        storeBookingDataPersistent(extendedBookingDetails).then(() => {
+          console.log('✅ Persistent storage completed for step 4');
+        }).catch((error) => {
+          console.error('❌ Failed to store persistently for step 4:', error);
+        });
+      };
+
+      processDocuments();
+    }
+  }, [step, bookingData.consultationType, bookingData.date, bookingData.time, bookingData.patientInfo, bookingData.country, userCountry, pricing.currency]);
 
   useEffect(() => {
     // Get user's timezone and pricing (only run once on mount)
@@ -634,7 +855,9 @@ export default function BookingPage() {
 
   // Validation functions
   const validateAllFields = () => {
+    console.log('🔍 validateAllFields called, validating patientInfo:', bookingData.patientInfo);
     const validation = validatePatientInfo(bookingData.patientInfo);
+    console.log('🔍 Validation result:', validation);
     
     // Map validation errors to state
     const errorMap: {[key: string]: string} = {};
@@ -647,6 +870,8 @@ export default function BookingPage() {
       else if (error.includes('Medical') || error.includes('medical')) errorMap.medicalHistory = error;
     });
 
+    console.log('🔍 Error map:', errorMap);
+    console.log('🔍 Validation isValid:', validation.isValid);
     setValidationErrors(errorMap);
     return validation.isValid;
   };
@@ -736,17 +961,26 @@ export default function BookingPage() {
   ], [bookingData.country, userCountry, pricing.currency]);
 
   const handleNext = useCallback(() => {
+    console.log('🔄 handleNext called, current step:', step);
     if (step < 4) {
-      setStep(step + 1);
+      const nextStep = step + 1;
+      console.log('🔄 Moving to step:', nextStep);
+      setStep(nextStep);
       // Auto-select Cashfree when reaching payment step
-      if (step + 1 === 4 && !bookingData.paymentMethod) {
+      if (nextStep === 4 && !bookingData.paymentMethod) {
+        console.log('💳 Auto-selecting Cashfree payment method');
         setBookingData(prev => ({ ...prev, paymentMethod: 'cashfree' }));
       }
     }
   }, [step, bookingData.paymentMethod]);
 
   const handleBack = useCallback(() => {
-    if (step > 1) setStep(step - 1);
+    console.log('⬅️ handleBack called, current step:', step);
+    if (step > 1) {
+      const prevStep = step - 1;
+      console.log('⬅️ Moving to step:', prevStep);
+      setStep(prevStep);
+    }
   }, [step]);
 
   const handleSlotSelection = (slot: { time: string, istTime: string, available: boolean, isBooked?: boolean }) => {
@@ -768,15 +1002,40 @@ export default function BookingPage() {
   };
 
   const handleBooking = async () => {
+    console.log('🚀 handleBooking called with payment method:', bookingData.paymentMethod);
+    console.log('🚀 Full bookingData:', bookingData);
+    
     if (!bookingData.paymentMethod || bookingData.paymentMethod !== 'cashfree') {
+      console.log('❌ Payment method check failed:', {
+        hasPaymentMethod: !!bookingData.paymentMethod,
+        paymentMethod: bookingData.paymentMethod,
+        expected: 'cashfree'
+      });
       toast.error('Please select Cashfree as payment method');
       return;
     }
 
-    await processCashfreePayment();
+    console.log('✅ Payment method is cashfree, calling processCashfreePayment...');
+    try {
+      await processCashfreePayment();
+    } catch (error) {
+      console.error('❌ Error in processCashfreePayment:', error);
+      throw error;
+    }
   };
 
   const processCashfreePayment = async () => {
+    console.log('🎯 processCashfreePayment function called!');
+    console.log('🎯 Current bookingData:', {
+      consultationType: bookingData.consultationType,
+      date: bookingData.date,
+      time: bookingData.time,
+      hasPatientInfo: !!bookingData.patientInfo,
+      patientPhone: bookingData.patientInfo?.phone,
+      medicalHistoryLength: bookingData.patientInfo?.medicalHistory?.length || 0,
+      uploadedFilesCount: (bookingData as any).uploadedFiles?.length || 0
+    });
+    
     try {
       setIsProcessingPayment(true);
 
@@ -793,18 +1052,61 @@ export default function BookingPage() {
         currency: pricing.currency
       };
 
-      // Store booking details with uploaded files for payment verification
+      // Pre-convert uploaded files to base64 strings for storage (filename|base64)
+      let preProcessedDocuments: string[] = [];
+      try {
+        if (Array.isArray((bookingData as any).uploadedFiles) && (bookingData as any).uploadedFiles.length > 0) {
+          console.log('📄 Processing uploaded files for storage:', (bookingData as any).uploadedFiles.length);
+          preProcessedDocuments = await Promise.all(
+            (bookingData as any).uploadedFiles.map((file: File) => new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const base64 = reader.result as string;
+                console.log(`📄 Processed file: ${file.name}, size: ${base64.length} chars`);
+                resolve(`${file.name}|${base64}`);
+              };
+              reader.onerror = () => {
+                console.error(`❌ Failed to process file: ${file.name}`);
+                resolve(`${file.name}|error`);
+              };
+              reader.readAsDataURL(file);
+            }))
+          );
+          console.log('✅ Processed documents:', preProcessedDocuments.length);
+        } else {
+          console.log('ℹ️ No uploaded files to process');
+        }
+      } catch (e) {
+        console.warn('⚠️ Failed to pre-process uploaded files for storage:', (e as any)?.message || e);
+      }
+
+      // Store booking details with documents for payment verification
       const extendedBookingDetails = {
         ...bookingDetails,
-        uploadedFiles: bookingData.uploadedFiles,
+        documents: preProcessedDocuments,
         country: bookingData.country || userCountry
       };
       
-      console.log('📋 Storing booking details for payment verification:', extendedBookingDetails);
+      console.log('💾 About to store extendedBookingDetails:', extendedBookingDetails);
+      console.log('📋 Storing booking details for payment verification:', {
+        consultationType: extendedBookingDetails.consultationType,
+        hasPatientInfo: !!extendedBookingDetails.patientInfo,
+        patientPhone: extendedBookingDetails.patientInfo?.phone,
+        medicalHistoryLength: extendedBookingDetails.patientInfo?.medicalHistory?.length || 0,
+        hasDocuments: !!(extendedBookingDetails as any)?.documents,
+        documentsCount: (extendedBookingDetails as any)?.documents?.length || 0,
+        country: extendedBookingDetails.country
+      });
+      
+      // Store in localStorage
       localStorage.setItem('cashfree_booking_details', JSON.stringify(extendedBookingDetails));
+      console.log('✅ Stored in localStorage:', localStorage.getItem('cashfree_booking_details') ? 'Success' : 'Failed');
+      
+      // Store in sessionStorage
       sessionStorage.setItem('cashfree_payment_details', JSON.stringify({
         bookingDetails: extendedBookingDetails
       }));
+      console.log('✅ Stored in sessionStorage:', sessionStorage.getItem('cashfree_payment_details') ? 'Success' : 'Failed');
 
       // Validate required fields
       if (!bookingDetails.patientInfo.name || !bookingDetails.patientInfo.email || !bookingDetails.patientInfo.phone || !bookingDetails.patientInfo.age || !bookingDetails.patientInfo.gender || !bookingDetails.patientInfo.medicalHistory) {
@@ -813,9 +1115,9 @@ export default function BookingPage() {
         return;
       }
 
-      // Initiate Cashfree payment
+      // Initiate Cashfree payment with extended booking details
       await initiateCashfreePayment(
-        bookingDetails,
+        extendedBookingDetails,
         handlePaymentSuccess,
         handlePaymentError
       );
@@ -830,15 +1132,19 @@ export default function BookingPage() {
     try {
       toast.loading('Verifying payment...', { id: 'payment-verification' });
 
-      // Verify payment with backend
-      const bookingDetails: BookingDetails = {
-        consultationType: bookingData.consultationType,
-        date: bookingData.date,
-        time: bookingData.time,
-        patientInfo: bookingData.patientInfo,
-        amount: getConsultationPrice(bookingData.consultationType, bookingData.country || userCountry, pricing.currency),
-        currency: pricing.currency
-      };
+      // Use persistent retrieval for payment verification
+      const bookingDetails = await retrieveBookingDataPersistent();
+      if (!bookingDetails) {
+        console.error('❌ No stored booking details found for payment verification');
+        toast.error('Payment verification failed - no booking data found');
+        return;
+      }
+      console.log('✅ Retrieved stored booking details for verification:', {
+        consultationType: bookingDetails.consultationType,
+        hasDocuments: !!(bookingDetails as any)?.documents,
+        documentsCount: (bookingDetails as any)?.documents?.length || 0,
+        patientPhone: bookingDetails.patientInfo?.phone,
+      });
 
       const isVerified = await verifyCashfreePayment(response, bookingDetails);
 
@@ -846,119 +1152,31 @@ export default function BookingPage() {
         setPaymentCompleted(true);
         toast.success('Payment successful! Appointment booked successfully.', { id: 'payment-verification' });
         
-        // Create actual booking in database
-        try {
-          // Convert files to base64 first
-          const processedDocuments = await Promise.all(
-            bookingData.uploadedFiles.map(async (file: File) => {
-              console.log('📄 Processing document:', file.name, 'Size:', file.size);
-              
-              return new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                  const base64 = reader.result as string;
-                  resolve(`${file.name}|${base64}`); // Format: filename|base64data
-                };
-                reader.readAsDataURL(file);
-              });
-            })
-          );
-
-          // Use environment variable for API URL or fallback to relative path for localhost
-          const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-          const appointmentEndpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments` : '/api/appointments';
-          
-          const appointmentResponse = await fetch(appointmentEndpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-              date: bookingDetails.date,
-              timeSlot: bookingDetails.time,
-              typeId: bookingDetails.consultationType,
-              paymentMethod: 'card',
-              patientPhone: bookingDetails.patientInfo.phone,
-              patientCountry: bookingDetails.currency === 'INR' ? 'IN' : 
-                             bookingDetails.currency === 'USD' ? 'US' : 
-                             bookingDetails.currency === 'EUR' ? 'EU' : 
-                             bookingDetails.currency === 'GBP' ? 'GB' : 'default',
-              intake: {
-                description: bookingDetails.patientInfo.medicalHistory,
-                documents: processedDocuments
-              }
-            })
-          });
-
-          if (!appointmentResponse.ok) {
-            console.error('Failed to create appointment:', appointmentResponse.status, appointmentResponse.statusText);
-            
-            // Handle specific error cases
-            if (appointmentResponse.status === 409) {
-              const errorData = await appointmentResponse.json().catch(() => ({}));
-              toast.error('This time slot has already been booked. Please select a different time slot.', { id: 'appointment-creation' });
-              throw new Error('Time slot already booked');
-            }
-            
-            if (appointmentResponse.status === 401) {
-              toast.error('Please log in again to complete your booking.', { id: 'appointment-creation' });
-              throw new Error('Authentication required');
-            }
-            
-            if (appointmentResponse.status === 422) {
-              const errorData = await appointmentResponse.json().catch(() => ({}));
-              const errors = errorData.errors || {};
-              const errorMessages = Object.values(errors).map((error: any) => error.message).join(', ');
-              toast.error(`Failed to create appointment: ${errorMessages}`, { id: 'appointment-creation' });
-              throw new Error('Failed to create appointment');
-            }
-            
-            toast.error('Failed to create appointment. Please try again.', { id: 'appointment-creation' });
-            throw new Error('Failed to create appointment');
-          }
-
-          const appointmentData = await appointmentResponse.json();
-          console.log('✅ Appointment created successfully in database:', appointmentData);
-          
-          // Show success message and redirect to profile
-          toast.success('🎉 Appointment successfully created! Redirecting to your dashboard...', {
-            duration: 4000,
-            id: 'appointment-success'
-          });
-          
-          // Redirect to profile page after 2 seconds
-          setTimeout(() => {
-            window.location.href = '/profile';
-          }, 2000);
-        } catch (bookingError) {
-          console.error('❌ Booking creation error:', bookingError);
-          
-          if (bookingError instanceof Error && bookingError.message === 'Time slot already booked') {
-            toast.error('⚠️ Payment successful but this time slot was just taken by another user. Please contact support to reschedule or get a refund.', {
-              duration: 8000,
-              id: 'appointment-creation'
-            });
-          } else if (bookingError instanceof Error && bookingError.message === 'Authentication required') {
-            toast.error('⚠️ Payment successful but session expired. Please log in and contact support with your payment details.', {
-              duration: 8000,
-              id: 'appointment-creation'
-            });
-          } else {
-            toast.error('⚠️ Payment successful but booking creation failed. Please contact support with your payment reference.', {
-              duration: 8000,
-              id: 'appointment-creation'
-            });
-          }
+        // Clear all persistent storage after successful verification
+        localStorage.removeItem('cashfree_booking_details');
+        sessionStorage.removeItem('cashfree_payment_details');
+        document.cookie = 'booking_data=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
+        if ('indexedDB' in window) {
+          const request = indexedDB.open('NephroConsultDB', 1);
+          request.onsuccess = (event) => {
+            const db = (event.target as IDBOpenDBRequest).result;
+            const transaction = db.transaction(['bookingData'], 'readwrite');
+            const store = transaction.objectStore('bookingData');
+            store.delete('current_booking');
+          };
         }
-      
-      // Add the new booking to the booked appointments list
-      const newBooking = {
-        date: bookingDetails.date,
-        time: bookingDetails.time,
-        patientName: bookingDetails.patientInfo.name
-      };
-      setBookedAppointments(prev => [...prev, newBooking]);
+        console.log('🗑️ Cleared all persistent storage after successful payment');
+        
+        // Show success message and redirect to profile (appointment already created by server)
+        toast.success('🎉 Appointment successfully created! Redirecting to your dashboard...', {
+          duration: 4000,
+          id: 'appointment-success'
+        });
+        
+        // Redirect to profile page after 2 seconds
+        setTimeout(() => {
+          window.location.href = '/profile';
+        }, 2000);
       } else {
         throw new Error('Payment verification failed');
       }
@@ -1008,25 +1226,78 @@ export default function BookingPage() {
         currency: pricing.currency,
       };
 
-      console.log('Initiating payment with details:', bookingDetails);
+      // Pre-convert uploaded files to base64 strings for storage (filename|base64)
+      let preProcessedDocuments: string[] = [];
+      try {
+        if (Array.isArray((bookingData as any).uploadedFiles) && (bookingData as any).uploadedFiles.length > 0) {
+          console.log('📄 Processing uploaded files for storage:', (bookingData as any).uploadedFiles.length);
+          preProcessedDocuments = await Promise.all(
+            (bookingData as any).uploadedFiles.map((file: File) => new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const base64 = reader.result as string;
+                console.log(`📄 Processed file: ${file.name}, size: ${base64.length} chars`);
+                resolve(`${file.name}|${base64}`);
+              };
+              reader.onerror = () => {
+                console.error(`❌ Failed to process file: ${file.name}`);
+                resolve(`${file.name}|error`);
+              };
+              reader.readAsDataURL(file);
+            }))
+          );
+          console.log('✅ Processed documents:', preProcessedDocuments.length);
+        } else {
+          console.log('ℹ️ No uploaded files to process');
+        }
+      } catch (e) {
+        console.warn('⚠️ Failed to pre-process uploaded files for storage:', (e as any)?.message || e);
+      }
 
-      // Initiate Cashfree payment
+      // Store booking details with documents for payment verification
+      const extendedBookingDetails = {
+        ...bookingDetails,
+        documents: preProcessedDocuments,
+        country: bookingData.country || userCountry
+      };
+      
+      console.log('💾 About to store extendedBookingDetails:', extendedBookingDetails);
+      console.log('📋 Storing booking details for payment verification:', {
+        consultationType: extendedBookingDetails.consultationType,
+        hasPatientInfo: !!extendedBookingDetails.patientInfo,
+        patientPhone: extendedBookingDetails.patientInfo?.phone,
+        medicalHistoryLength: extendedBookingDetails.patientInfo?.medicalHistory?.length || 0,
+        hasDocuments: !!(extendedBookingDetails as any)?.documents,
+        documentsCount: (extendedBookingDetails as any)?.documents?.length || 0,
+        country: extendedBookingDetails.country
+      });
+      
+      // Store in localStorage
+      localStorage.setItem('cashfree_booking_details', JSON.stringify(extendedBookingDetails));
+      console.log('✅ Stored in localStorage:', localStorage.getItem('cashfree_booking_details') ? 'Success' : 'Failed');
+      
+      // Store in sessionStorage
+      sessionStorage.setItem('cashfree_payment_details', JSON.stringify({
+        bookingDetails: extendedBookingDetails
+      }));
+      console.log('✅ Stored in sessionStorage:', sessionStorage.getItem('cashfree_payment_details') ? 'Success' : 'Failed');
+
+      // Validate required fields
+      if (!bookingDetails.patientInfo.name || !bookingDetails.patientInfo.email || !bookingDetails.patientInfo.phone || !bookingDetails.patientInfo.age || !bookingDetails.patientInfo.gender || !bookingDetails.patientInfo.medicalHistory) {
+        toast.error('Please fill in all required patient information');
+        setIsProcessingPayment(false);
+        return;
+      }
+
+      // Initiate Cashfree payment with extended booking details
       await initiateCashfreePayment(
-        bookingDetails,
+        extendedBookingDetails,
         handlePaymentSuccess,
         handlePaymentError
       );
     } catch (error) {
       console.error('Payment processing error:', error);
-      
-      if (error instanceof Error && error.message === 'AUTHENTICATION_REQUIRED') {
-        toast.error('Session expired. Please log in again.');
-        // Redirect to login
-        navigate('/', { state: { showLogin: true } });
-      } else {
-        toast.error('Failed to initiate payment. Please try again.');
-      }
-      
+      toast.error('Failed to process payment. Please try again.');
       setIsProcessingPayment(false);
     }
   };
@@ -1669,13 +1940,21 @@ export default function BookingPage() {
               </Button>
               
               <Button
-                onClick={step === 4 ? handlePayment : () => {
+                onClick={step === 4 ? () => {
+                  console.log('🔘 Button clicked for step 4 - calling handleBooking');
+                  handleBooking();
+                } : () => {
+                  console.log('🔘 Button clicked for step:', step);
                   if (step === 3) {
+                    console.log('🔘 Step 3 button clicked - validating fields');
                     // Force validation check before proceeding
                     const isValid = validateAllFields();
+                    console.log('🔘 Validation result:', isValid);
                     if (isValid) {
+                      console.log('🔘 Validation passed, calling handleNext');
                       handleNext();
                     } else {
+                      console.log('🔘 Validation failed');
                       toast.error('Please fix all validation errors before proceeding');
                     }
                   } else {

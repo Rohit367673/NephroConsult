@@ -158,7 +158,7 @@ export default function DoctorAdminPanel() {
             id: apt.patient?.id || apt.patient?.email,
             name: apt.patient?.name || 'Unknown Patient',
             email: apt.patient?.email || '',
-            phone: apt.patient?.phone || '',
+            phone: apt.patient?.phone || apt.intake?.phone || '',
             age: 35, // Default age, not in API
             gender: 'Not specified', // Default gender, not in API
             medicalHistory: apt.intake?.description || 'No medical history provided',
@@ -169,6 +169,14 @@ export default function DoctorAdminPanel() {
               console.log(`📄 Documents array length:`, apt.intake?.documents?.length || 0);
               console.log(`📄 Documents array type:`, typeof apt.intake?.documents);
               console.log(`📄 Full appointment data:`, apt);
+              
+              // Debug phone number sources
+              console.log(`📱 Phone number sources for appointment ${apt._id}:`, {
+                patientPhone: apt.patient?.phone,
+                intakePhone: apt.intake?.phone,
+                intakePatientInfoPhone: apt.intake?.patientInfo?.phone,
+                finalPhone: apt.patient?.phone || apt.intake?.phone || ''
+              });
               
               // Check if documents exist in any field
               const docsFromIntake = apt.intake?.documents || [];
