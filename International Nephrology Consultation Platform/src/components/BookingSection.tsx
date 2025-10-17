@@ -13,7 +13,7 @@ export const BookingSection: React.FC = () => {
       icon: Video,
       type: 'Video Consultation',
       duration: '45 minutes',
-      price: '$150',
+      price: '$3300',
       description: 'Face-to-face consultation via secure video call',
       features: ['HD Video Quality', 'Screen Sharing', 'Recording Available', 'Instant Prescription'],
       recommended: true
@@ -22,7 +22,7 @@ export const BookingSection: React.FC = () => {
       icon: MessageCircle,
       type: 'Chat Consultation',
       duration: '30 minutes',
-      price: '$100',
+      price: '$3300',
       description: 'Text-based consultation with file sharing',
       features: ['Real-time Chat', 'File Upload', 'Message History', 'Follow-up Questions'],
       recommended: false
@@ -31,7 +31,7 @@ export const BookingSection: React.FC = () => {
       icon: Phone,
       type: 'Follow-up Consultation',
       duration: '30 minutes',
-      price: '$75',
+      price: '$2310',
       description: 'Follow-up voice consultation for existing patients',
       features: ['Clear Audio', 'Call Recording', 'Post-call Summary', 'Prescription via Email'],
       recommended: false
@@ -40,7 +40,7 @@ export const BookingSection: React.FC = () => {
       icon: Phone,
       type: 'Phone Consultation',
       duration: '30 minutes',
-      price: '$120',
+      price: '$3300',
       description: 'Voice consultation for new patients',
       features: ['Clear Audio', 'Call Recording', 'Post-call Summary', 'Prescription via Email'],
       recommended: false

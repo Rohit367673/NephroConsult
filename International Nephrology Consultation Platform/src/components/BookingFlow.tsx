@@ -37,7 +37,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
       icon: Video,
       name: 'Video Consultation',
       duration: '45 minutes',
-      price: 150,
+      price: 3300,
       description: 'Face-to-face consultation via secure video call'
     },
     {
@@ -45,7 +45,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
       icon: MessageCircle,
       name: 'Chat Consultation',
       duration: '30 minutes',
-      price: 100,
+      price: 3300,
       description: 'Text-based consultation with file sharing'
     },
     {
@@ -53,7 +53,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
       icon: Phone,
       name: 'Follow-up Consultation',
       duration: '30 minutes',
-      price: 75, // $75 USD equivalent for follow-up
+      price: 2310, // $2310 USD equivalent for follow-up
       description: 'Follow-up voice consultation for existing patients'
     },
     {
@@ -61,7 +61,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
       icon: Phone,
       name: 'Phone Consultation',
       duration: '30 minutes',
-      price: 120,
+      price: 3300,
       description: 'Voice consultation for new patients'
     }
   ];
@@ -141,17 +141,10 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
     const consultation = getSelectedConsultation();
     const currency = getSelectedCurrency();
     if (!consultation) return '';
-    
-    const rates: { [key: string]: number } = {
-      'USD': 1,
-      'EUR': 0.85,
-      'GBP': 0.73,
-      'CAD': 1.25,
-      'AUD': 1.35
-    };
-    
-    const convertedPrice = Math.round(consultation.price * rates[currency.code]);
-    return `${currency.symbol}${convertedPrice}`;
+
+    // Since we're showing USD equivalents on frontend, just return the USD price
+    // The backend will handle the actual currency conversion based on user's country
+    return `$${consultation.price}`;
   };
 
   const isStepValid = (step: number) => {
