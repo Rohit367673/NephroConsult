@@ -442,9 +442,7 @@ router.post('/appointments', requireAuth, async (req, res) => {
       type: typeName,
       status: 'confirmed', // mark confirmed (payments mocked)
       price: {
-        amount: (typeId === 'followup' && pricing.currency === 'INR')
-          ? 5
-          : (isFirst ? Math.round(pricing.consultation * 0.8) : pricing.consultation),
+        amount: isFirst ? Math.round(pricing.consultation * 0.8) : pricing.consultation,
         currency: pricing.currency,
         symbol: pricing.symbol,
         region: country,
