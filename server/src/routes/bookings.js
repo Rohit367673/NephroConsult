@@ -682,3 +682,5 @@ router.post('/appointments/test-telegram', async (req, res) => {
     });
   }
 });
+
+export default router;

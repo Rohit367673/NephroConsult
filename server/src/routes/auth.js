@@ -650,3 +650,5 @@ router.get('/test-email-config', async (req, res) => {
     });
   }
 });
+
+export default router;
