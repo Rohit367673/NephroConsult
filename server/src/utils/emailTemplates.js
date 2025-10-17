@@ -145,7 +145,7 @@ export function getOTPEmailTemplate(otp, userName = 'User') {
           </div>
           
           <div class="footer">
-            <p>Need help? Contact our support team at <a href="mailto:support@nephroconsult.com">support@nephroconsult.com</a></p>
+            <p>Need help? Contact our support team at <a href="mailto:support@nephroconsultation.com">support@nephroconsultation.com</a></p>
             <p>© 2024 NephroConsult. All rights reserved.</p>
           </div>
         </div>
@@ -168,7 +168,7 @@ export function getOTPEmailTemplate(otp, userName = 'User') {
       - Don't share this code with anyone
       - If you didn't request this, please ignore this email
       
-      Need help? Contact our support team at support@nephroconsult.com
+      Need help? Contact our support team at support@nephroconsultation.com
       
       © 2024 NephroConsult. All rights reserved.
     `
@@ -440,7 +440,7 @@ export function getConsultationReminderTemplate(patientName, doctorName, appoint
           </div>
           
           <div style="text-align: center;">
-            <a href="http://localhost:3001/video-consultation" class="cta-button">
+            <a href="https://www.nephroconsultation.com/video-consultation" class="cta-button">
               Join Consultation
             </a>
           </div>
@@ -450,7 +450,7 @@ export function getConsultationReminderTemplate(patientName, doctorName, appoint
           </div>
           
           <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
-            <p>Need help? Contact us at support@nephroconsult.com</p>
+            <p>Need help? Contact us at support@nephroconsultation.com</p>
             <p>© 2024 NephroConsult. All rights reserved.</p>
           </div>
         </div>

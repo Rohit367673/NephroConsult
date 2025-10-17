@@ -304,7 +304,7 @@ function generatePrescriptionEmail(prescription, data, doctorName) {
         
         <div class="footer">
           <p>This is an electronically generated prescription from NephroConsult.</p>
-          <p>For any queries, please contact us at support@nephroconsult.com</p>
+          <p>For any queries, please contact us at support@nephroconsultation.com</p>
         </div>
       </div>
     </body>
