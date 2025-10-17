@@ -31,7 +31,7 @@ export const BookingSection: React.FC = () => {
       icon: Phone,
       type: 'Follow-up Consultation',
       duration: '30 minutes',
-      price: '$120',
+      price: '$75',
       description: 'Follow-up voice consultation for existing patients',
       features: ['Clear Audio', 'Call Recording', 'Post-call Summary', 'Prescription via Email'],
       recommended: false

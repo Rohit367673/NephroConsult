@@ -422,6 +422,14 @@ router.post('/appointments', requireAuth, async (req, res) => {
 
     const typeName = mapConsultationTypeId(typeId);
 
+    // Determine the correct price based on consultation type
+    let basePrice;
+    if (typeId === 'followup') {
+      basePrice = pricing.followup;
+    } else {
+      basePrice = pricing.consultation;
+    }
+
     const appointment = await Appointment.create({
       patient: {
         id: userDoc?._id,
@@ -442,7 +450,7 @@ router.post('/appointments', requireAuth, async (req, res) => {
       type: typeName,
       status: 'confirmed', // mark confirmed (payments mocked)
       price: {
-        amount: isFirst ? Math.round(pricing.consultation * 0.8) : pricing.consultation,
+        amount: isFirst ? Math.round(basePrice * 0.8) : basePrice,
         currency: pricing.currency,
         symbol: pricing.symbol,
         region: country,

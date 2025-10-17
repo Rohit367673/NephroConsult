@@ -53,7 +53,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
       icon: Phone,
       name: 'Follow-up Consultation',
       duration: '30 minutes',
-      price: 120,
+      price: 75, // $75 USD equivalent for follow-up
       description: 'Follow-up voice consultation for existing patients'
     },
     {
