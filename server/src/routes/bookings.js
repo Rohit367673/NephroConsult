@@ -2,7 +2,7 @@ import express from 'express';
 import { requireAuth, requireRole } from '../middlewares/auth.js';
 import Appointment from '../models/Appointment.js';
 import User from '../models/User.js';
-import { priceFor, mapConsultationTypeId } from '../utils/pricing.js';
+import { getDisplayedPrice, mapConsultationTypeId } from '../utils/pricing.js';
 import { env } from '../config.js';
 import { sendBookingEmail } from '../utils/email.js';
 import { generateMeetLink } from '../utils/meet.js';
@@ -11,7 +11,33 @@ import { getConsultationReminderTemplate } from '../utils/emailTemplates.js';
 import { telegramService } from '../services/telegramService.js';
 import { z } from 'zod';
 
-const router = express.Router();
+// Get pricing information for frontend
+router.post('/pricing', async (req, res) => {
+  try {
+    const { consultationType, country, isFirstTime = false } = req.body;
+
+    if (!consultationType) {
+      return res.status(400).json({ error: 'Consultation type is required' });
+    }
+
+    // Get pricing using the new dynamic system
+    const pricingData = await getDisplayedPrice(
+      consultationType,
+      req.ip,
+      country || 'IN',
+      isFirstTime
+    );
+
+    return res.json({
+      success: true,
+      pricing: pricingData
+    });
+
+  } catch (error) {
+    console.error('Error getting pricing:', error);
+    return res.status(500).json({ error: 'Failed to get pricing information' });
+  }
+});
 
 // Create test appointment for debugging
 router.post('/appointments/create-test', async (req, res) => {
@@ -414,28 +440,14 @@ router.post('/appointments', requireAuth, async (req, res) => {
       console.log('📱 Updated user profile:', updateData);
     }
     
-    const country = patientCountry || userDoc?.country || 'default';
-    const pricing = priceFor(country);
-
+    const country = patientCountry || userDoc?.country || 'IN'; // Default to India
     const previousCount = await Appointment.countDocuments({ 'patient.id': userDoc?._id });
     const isFirst = previousCount === 0;
 
-    const typeName = mapConsultationTypeId(typeId);
+    // Get pricing using the new dynamic system
+    const pricingData = await getDisplayedPrice(typeId, req.ip, country, isFirst);
 
-    // Determine the correct base price based on consultation type
-    let basePrice;
-    switch (typeId) {
-      case 'followup':
-        basePrice = pricing.followup;
-        break;
-      case 'urgent':
-        basePrice = pricing.urgent;
-        break;
-      case 'initial':
-      default:
-        basePrice = pricing.initial;
-        break;
-    }
+    const typeName = mapConsultationTypeId(typeId);
 
     const appointment = await Appointment.create({
       patient: {
@@ -457,11 +469,14 @@ router.post('/appointments', requireAuth, async (req, res) => {
       type: typeName,
       status: 'confirmed', // mark confirmed (payments mocked)
       price: {
-        amount: isFirst ? Math.round(basePrice * 0.8) : basePrice,
-        currency: pricing.currency,
-        symbol: pricing.symbol,
+        amount: pricingData.finalInrToCharge, // Store INR amount to charge
+        currency: 'INR', // Always store in INR
+        symbol: '₹',
         region: country,
         discountApplied: isFirst,
+        displayPrice: pricingData.display.value, // Display price in local currency
+        displayCurrency: pricingData.display.currency, // Display currency
+        tier: pricingData.tier, // Pricing tier used
       },
       meetLink: generateMeetLink(date, timeSlot),
       intake: intake ? {

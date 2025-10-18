@@ -127,6 +127,13 @@ class ApiService {
     });
   }
 
+  async getPricing(consultationType: string, country?: string, isFirstTime?: boolean) {
+    return this.request('/bookings/pricing', {
+      method: 'POST',
+      body: JSON.stringify({ consultationType, country, isFirstTime }),
+    });
+  }
+
   async getBookings() {
     return this.request('/bookings');
   }

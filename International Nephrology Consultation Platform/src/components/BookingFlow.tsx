@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Calendar } from './ui/calendar';
-import { Card, CardContent } from './ui/card';
+import { Video, Calendar as CalendarIcon, Clock, User, CreditCard, CheckCircle, X } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
-import { Video, Calendar as CalendarIcon, Clock, User, CreditCard, CheckCircle, X } from 'lucide-react';
+import { apiService } from '../services/apiService';
 
 interface BookingFlowProps {
   onClose: () => void;
@@ -129,13 +128,39 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
     return currencies.find(curr => curr.code === bookingData.patientInfo.currency) || currencies[0];
   };
 
-  const calculatePrice = () => {
-    const consultation = getSelectedConsultation();
-    const currency = getSelectedCurrency();
-    if (!consultation) return '';
+  const [pricingData, setPricingData] = useState<any>(null);
+  const [isLoadingPricing, setIsLoadingPricing] = useState(false);
 
-    // Frontend shows USD prices, backend handles actual currency conversion
-    return `$${consultation.price}`;
+  // Fetch pricing when consultation type or country changes
+  useEffect(() => {
+    if (bookingData.consultationType && bookingData.patientInfo.country) {
+      fetchPricing();
+    }
+  }, [bookingData.consultationType, bookingData.patientInfo.country]);
+
+  const fetchPricing = async () => {
+    setIsLoadingPricing(true);
+    try {
+      const response = await apiService.getPricing(
+        bookingData.consultationType,
+        bookingData.patientInfo.country,
+        false // We'll check for first-time status later
+      );
+      if (response.success) {
+        setPricingData(response.pricing);
+      }
+    } catch (error) {
+      console.error('Failed to fetch pricing:', error);
+    } finally {
+      setIsLoadingPricing(false);
+    }
+  };
+
+  const calculatePrice = () => {
+    if (!pricingData) return '';
+
+    const { display } = pricingData;
+    return `${display.currency === 'INR' ? '₹' : '$'}${display.value}`;
   };
 
   const isStepValid = (step: number) => {
