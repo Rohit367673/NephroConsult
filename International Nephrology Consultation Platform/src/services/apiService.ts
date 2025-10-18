@@ -8,6 +8,7 @@ interface ApiResponse<T> {
     fallback?: boolean;
     mock?: boolean;
     user?: any; // For user data returned from registration/login
+    pricing?: any; // For pricing data returned from pricing API
   };
   message?: string;
   error?: string;

@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Video, Calendar as CalendarIcon, Clock, User, CreditCard, CheckCircle, X } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
+import { Card, CardContent } from './ui/card';
+import { Calendar } from './ui/calendar';
 import { apiService } from '../services/apiService';
 
 interface BookingFlowProps {
@@ -147,7 +149,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
         false // We'll check for first-time status later
       );
       if (response.success) {
-        setPricingData(response.pricing);
+        setPricingData(response.data?.pricing);
       }
     } catch (error) {
       console.error('Failed to fetch pricing:', error);
@@ -222,7 +224,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-1">
                           <h4 className="font-semibold text-gray-900">{type.name}</h4>
-                          <span className="font-semibold text-[#006f6f]">${type.price}</span>
+                          <span className="font-semibold text-[#006f6f]">
+                            {isLoadingPricing ? 'Loading...' : (pricingData ? `$${pricingData.display.value}` : `$${type.price}`)}
+                          </span>
                         </div>
                         <p className="text-sm text-gray-600 mb-1">{type.description}</p>
                         <span className="text-xs text-gray-500">{type.duration}</span>
