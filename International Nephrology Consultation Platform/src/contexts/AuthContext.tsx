@@ -225,9 +225,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = async (email: string, password: string, role?: string): Promise<boolean> => {
     try {
       const response = await apiService.login(email, password);
-      
-      if (response.success && response.data) {
-        const userData = response.data as User;
+
+      if (response.success && response.data?.user) {
+        const userData = response.data.user as User;
         setUser(userData);
         // Save to cookie as backup
         setCookie('nephro_user', encodeURIComponent(JSON.stringify(userData)), 7);
@@ -257,27 +257,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const register = async (userData: any): Promise<boolean> => {
-    // Mock registration
-    const newUser = {
-      id: userData.id || Date.now().toString(),
-      name: userData.name,
-      email: userData.email,
-      role: userData.role || 'patient',
-      country: userData.country || getUserCountry(),
-      avatar: userData.avatar || ''
-    };
-    
-    console.log('AuthContext register - userData received:', userData);
-    console.log('AuthContext register - newUser created:', newUser);
-    console.log('AuthContext register - avatar URL:', newUser.avatar);
-    console.log('AuthContext register - avatar length:', newUser.avatar ? newUser.avatar.length : 0);
-    
-    setUser(newUser);
-    // Save to cookie for persistent session
-    setCookie('nephro_user', encodeURIComponent(JSON.stringify(newUser)), 7);
-    clearLogoutFlag();
-    console.log('User registered and saved to cookie:', newUser);
-    return true;
+    try {
+      const response = await apiService.register(userData);
+
+      if (response.success && response.data?.user) {
+        const newUser = response.data.user as User;
+        setUser(newUser);
+        // Save to cookie for persistent session
+        setCookie('nephro_user', encodeURIComponent(JSON.stringify(newUser)), 7);
+        clearLogoutFlag();
+        console.log('User registered and saved to cookie:', newUser);
+        return true;
+      } else {
+        console.error('Registration failed:', response.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      return false;
+    }
   };
 
   const reloadSession = () => {
