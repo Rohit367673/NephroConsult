@@ -11,6 +11,8 @@ import { getConsultationReminderTemplate } from '../utils/emailTemplates.js';
 import { telegramService } from '../services/telegramService.js';
 import { z } from 'zod';
 
+const router = express.Router();
+
 // Get pricing information for frontend
 router.post('/pricing', async (req, res) => {
   try {
