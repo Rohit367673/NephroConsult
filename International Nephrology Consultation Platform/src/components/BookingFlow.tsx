@@ -8,7 +8,7 @@ import { Calendar } from './ui/calendar';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
-import { Video, MessageCircle, Phone, Calendar as CalendarIcon, Clock, User, CreditCard, CheckCircle, X } from 'lucide-react';
+import { Video, Calendar as CalendarIcon, Clock, User, CreditCard, CheckCircle, X } from 'lucide-react';
 
 interface BookingFlowProps {
   onClose: () => void;
@@ -33,36 +33,28 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
 
   const consultationTypes = [
     {
-      id: 'video',
+      id: 'initial',
       icon: Video,
-      name: 'Video Consultation',
+      name: 'Initial Consultation',
       duration: '45 minutes',
-      price: 3300,
-      description: 'Face-to-face consultation via secure video call'
-    },
-    {
-      id: 'chat',
-      icon: MessageCircle,
-      name: 'Chat Consultation',
-      duration: '30 minutes',
-      price: 3300,
-      description: 'Text-based consultation with file sharing'
+      price: 49, // $49 USD
+      description: 'First-time comprehensive nephrology consultation'
     },
     {
       id: 'followup',
-      icon: Phone,
+      icon: Video,
       name: 'Follow-up Consultation',
       duration: '30 minutes',
-      price: 2310, // $2310 USD equivalent for follow-up
-      description: 'Follow-up voice consultation for existing patients'
+      price: 39, // $39 USD
+      description: 'Follow-up appointment for existing patients'
     },
     {
-      id: 'phone',
-      icon: Phone,
-      name: 'Phone Consultation',
-      duration: '30 minutes',
-      price: 3300,
-      description: 'Voice consultation for new patients'
+      id: 'urgent',
+      icon: Video,
+      name: 'Urgent Consultation',
+      duration: '45 minutes',
+      price: 99, // $99 USD
+      description: 'Priority consultation for urgent kidney concerns'
     }
   ];
 
@@ -142,8 +134,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
     const currency = getSelectedCurrency();
     if (!consultation) return '';
 
-    // Since we're showing USD equivalents on frontend, just return the USD price
-    // The backend will handle the actual currency conversion based on user's country
+    // Frontend shows USD prices, backend handles actual currency conversion
     return `$${consultation.price}`;
   };
 

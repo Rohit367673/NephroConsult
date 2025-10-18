@@ -1,15 +1,15 @@
 export const regionalPricing = {
   // Tier 1 - South Asia (Low-income) - ×1.0 multiplier
   IN: {
-    consultation: 1000,  // Initial consultation base price
-    followup: 700,       // Follow-up consultation
-    urgent: 2000,        // Urgent consultation
+    initial: 1000,      // Initial consultation
+    followup: 700,      // Follow-up consultation
+    urgent: 2000,       // Urgent consultation
     currency: 'INR',
     symbol: '₹',
     tier: 1
   },
   PK: {
-    consultation: 1000,
+    initial: 1000,
     followup: 700,
     urgent: 2000,
     currency: 'PKR',
@@ -17,7 +17,7 @@ export const regionalPricing = {
     tier: 1
   },
   NP: {
-    consultation: 1000,
+    initial: 1000,
     followup: 700,
     urgent: 2000,
     currency: 'NPR',
@@ -25,7 +25,7 @@ export const regionalPricing = {
     tier: 1
   },
   BD: {
-    consultation: 1000,
+    initial: 1000,
     followup: 700,
     urgent: 2000,
     currency: 'BDT',
@@ -35,7 +35,7 @@ export const regionalPricing = {
 
   // Tier 2 - Middle-income - ×1.8 multiplier
   BR: {
-    consultation: 1800,
+    initial: 1800,
     followup: 1260,
     urgent: 3600,
     currency: 'BRL',
@@ -43,7 +43,7 @@ export const regionalPricing = {
     tier: 2
   },
   MY: {
-    consultation: 1800,
+    initial: 1800,
     followup: 1260,
     urgent: 3600,
     currency: 'MYR',
@@ -51,7 +51,7 @@ export const regionalPricing = {
     tier: 2
   },
   TR: {
-    consultation: 1800,
+    initial: 1800,
     followup: 1260,
     urgent: 3600,
     currency: 'TRY',
@@ -59,7 +59,7 @@ export const regionalPricing = {
     tier: 2
   },
   ID: {
-    consultation: 1800,
+    initial: 1800,
     followup: 1260,
     urgent: 3600,
     currency: 'IDR',
@@ -67,7 +67,7 @@ export const regionalPricing = {
     tier: 2
   },
   TH: {
-    consultation: 1800,
+    initial: 1800,
     followup: 1260,
     urgent: 3600,
     currency: 'THB',
@@ -75,7 +75,7 @@ export const regionalPricing = {
     tier: 2
   },
   MX: {
-    consultation: 1800,
+    initial: 1800,
     followup: 1260,
     urgent: 3600,
     currency: 'MXN',
@@ -85,15 +85,15 @@ export const regionalPricing = {
 
   // Tier 3 - High-income - ×3.3 multiplier
   US: {
-    consultation: 3300,
-    followup: 2310,
-    urgent: 6600,
+    initial: 3300,      // ≈ $49 USD
+    followup: 2310,     // ≈ $39 USD
+    urgent: 6600,       // ≈ $99 USD
     currency: 'USD',
     symbol: '$',
     tier: 3
   },
   CA: {
-    consultation: 3300,
+    initial: 3300,
     followup: 2310,
     urgent: 6600,
     currency: 'CAD',
@@ -101,7 +101,7 @@ export const regionalPricing = {
     tier: 3
   },
   GB: {
-    consultation: 3300,
+    initial: 3300,
     followup: 2310,
     urgent: 6600,
     currency: 'GBP',
@@ -109,7 +109,7 @@ export const regionalPricing = {
     tier: 3
   },
   DE: {
-    consultation: 3300,
+    initial: 3300,
     followup: 2310,
     urgent: 6600,
     currency: 'EUR',
@@ -117,7 +117,7 @@ export const regionalPricing = {
     tier: 3
   },
   FR: {
-    consultation: 3300,
+    initial: 3300,
     followup: 2310,
     urgent: 6600,
     currency: 'EUR',
@@ -125,7 +125,7 @@ export const regionalPricing = {
     tier: 3
   },
   AU: {
-    consultation: 3300,
+    initial: 3300,
     followup: 2310,
     urgent: 6600,
     currency: 'AUD',
@@ -133,7 +133,7 @@ export const regionalPricing = {
     tier: 3
   },
   JP: {
-    consultation: 3300,
+    initial: 3300,
     followup: 2310,
     urgent: 6600,
     currency: 'JPY',
@@ -141,7 +141,7 @@ export const regionalPricing = {
     tier: 3
   },
   SG: {
-    consultation: 3300,
+    initial: 3300,
     followup: 2310,
     urgent: 6600,
     currency: 'SGD',
@@ -151,7 +151,7 @@ export const regionalPricing = {
 
   // Default fallback
   default: {
-    consultation: 3300,
+    initial: 3300,
     followup: 2310,
     urgent: 6600,
     currency: 'USD',
@@ -167,11 +167,8 @@ export function priceFor(countryCode = 'default') {
 export function mapConsultationTypeId(id) {
   const mapping = {
     initial: 'Initial Consultation',
-    followup: 'Follow-up',
+    followup: 'Follow-up Consultation',
     urgent: 'Urgent Consultation',
-    video: 'Video Consultation',
-    chat: 'Chat Consultation',
-    phone: 'Phone Consultation',
   };
-  return mapping[id] || 'Video Consultation';
+  return mapping[id] || 'Initial Consultation';
 }

@@ -422,12 +422,19 @@ router.post('/appointments', requireAuth, async (req, res) => {
 
     const typeName = mapConsultationTypeId(typeId);
 
-    // Determine the correct price based on consultation type
+    // Determine the correct base price based on consultation type
     let basePrice;
-    if (typeId === 'followup') {
-      basePrice = pricing.followup;
-    } else {
-      basePrice = pricing.consultation;
+    switch (typeId) {
+      case 'followup':
+        basePrice = pricing.followup;
+        break;
+      case 'urgent':
+        basePrice = pricing.urgent;
+        break;
+      case 'initial':
+      default:
+        basePrice = pricing.initial;
+        break;
     }
 
     const appointment = await Appointment.create({

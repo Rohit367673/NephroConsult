@@ -3,7 +3,7 @@ import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { BookingFlow } from './BookingFlow';
-import { Video, MessageCircle, Phone, Calendar, Clock, DollarSign, Users, MapPin } from 'lucide-react';
+import { Video, Calendar, Clock, DollarSign, Users, MapPin } from 'lucide-react';
 
 export const BookingSection: React.FC = () => {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -11,38 +11,29 @@ export const BookingSection: React.FC = () => {
   const consultationTypes = [
     {
       icon: Video,
-      type: 'Video Consultation',
+      type: 'Initial Consultation',
       duration: '45 minutes',
-      price: '$3300',
-      description: 'Face-to-face consultation via secure video call',
-      features: ['HD Video Quality', 'Screen Sharing', 'Recording Available', 'Instant Prescription'],
+      price: '$49',
+      description: 'First-time comprehensive nephrology consultation',
+      features: ['Complete medical assessment', 'Treatment planning', 'Prescription management', 'Follow-up recommendations'],
       recommended: true
     },
     {
-      icon: MessageCircle,
-      type: 'Chat Consultation',
-      duration: '30 minutes',
-      price: '$3300',
-      description: 'Text-based consultation with file sharing',
-      features: ['Real-time Chat', 'File Upload', 'Message History', 'Follow-up Questions'],
-      recommended: false
-    },
-    {
-      icon: Phone,
+      icon: Video,
       type: 'Follow-up Consultation',
       duration: '30 minutes',
-      price: '$2310',
-      description: 'Follow-up voice consultation for existing patients',
-      features: ['Clear Audio', 'Call Recording', 'Post-call Summary', 'Prescription via Email'],
+      price: '$39',
+      description: 'Follow-up appointment for existing patients',
+      features: ['Progress review', 'Treatment adjustments', 'Medication management', 'Ongoing care planning'],
       recommended: false
     },
     {
-      icon: Phone,
-      type: 'Phone Consultation',
-      duration: '30 minutes',
-      price: '$3300',
-      description: 'Voice consultation for new patients',
-      features: ['Clear Audio', 'Call Recording', 'Post-call Summary', 'Prescription via Email'],
+      icon: Video,
+      type: 'Urgent Consultation',
+      duration: '45 minutes',
+      price: '$99',
+      description: 'Priority consultation for urgent kidney concerns',
+      features: ['Immediate assessment', 'Emergency protocols', 'Rapid response', 'Specialist referral if needed'],
       recommended: false
     }
   ];
@@ -51,7 +42,7 @@ export const BookingSection: React.FC = () => {
     { icon: Calendar, label: 'Same Day', value: 'Available' },
     { icon: Clock, label: 'Response Time', value: '< 2 hours' },
     { icon: Users, label: 'Patients Served', value: '5,000+' },
-    { icon: DollarSign, label: 'Starting From', value: '$100' }
+    { icon: DollarSign, label: 'Starting From', value: '$39' }
   ];
 
   return (
