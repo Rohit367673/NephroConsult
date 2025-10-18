@@ -225,7 +225,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
                         <div className="flex items-center justify-between mb-1">
                           <h4 className="font-semibold text-gray-900">{type.name}</h4>
                           <span className="font-semibold text-[#006f6f]">
-                            {isLoadingPricing ? 'Loading...' : (pricingData ? `$${pricingData.display.value}` : `$${type.price}`)}
+                            {isLoadingPricing ? 'Loading...' : (pricingData ? `${pricingData.display.currency === 'INR' ? '₹' : '$'}${pricingData.display.value}` : `${type.id === 'followup' ? '₹700' : type.id === 'initial' ? '₹1000' : '₹2000'}`)}
                           </span>
                         </div>
                         <p className="text-sm text-gray-600 mb-1">{type.description}</p>
