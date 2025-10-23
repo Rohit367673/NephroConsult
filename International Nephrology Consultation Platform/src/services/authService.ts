@@ -23,18 +23,22 @@ class AuthService {
     if (!hasFirebaseCredentials || !auth || !googleProvider) {
       throw new Error('Google authentication is not available. Firebase credentials are missing.');
     }
-    
+
     try {
+      console.log('🔐 Attempting Google sign in with popup...');
       const result: UserCredential = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      
+
+      console.log('✅ Google popup sign in successful:', user.email);
+
       // Send user data to backend (optional)
       try {
         await this.syncUserWithBackend(user);
+        console.log('✅ Backend sync successful');
       } catch (backendError) {
-        console.warn('Backend sync failed, continuing with client-only auth:', backendError);
+        console.warn('⚠️ Backend sync failed, continuing with client-only auth:', backendError);
       }
-      
+
       return {
         uid: user.uid,
         email: user.email,
@@ -42,17 +46,26 @@ class AuthService {
         photoURL: user.photoURL
       };
     } catch (error: any) {
-      console.error('Google sign in error:', error);
-      
-      // If popup is blocked or fails due to COOP policy, try redirect method
-      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user' || 
-          error.message?.includes('Cross-Origin-Opener-Policy') || 
-          error.message?.includes('window.closed')) {
-        console.log('Popup failed, trying redirect method...');
+      console.error('❌ Google popup sign in error:', error);
+
+      // Handle specific COOP and popup errors
+      if (error.code === 'auth/popup-blocked' ||
+          error.code === 'auth/popup-closed-by-user' ||
+          error.message?.includes('Cross-Origin-Opener-Policy') ||
+          error.message?.includes('window.closed') ||
+          error.message?.includes('disconnected port')) {
+
+        console.log('🔄 Popup failed or blocked, trying redirect method...');
+
+        // Wait a bit before trying redirect to avoid rapid successive calls
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         return this.signInWithGoogleRedirect();
       }
-      
-      throw new Error(error.message || 'Failed to sign in with Google');
+
+      // Handle other errors
+      const errorMessage = this.getErrorMessage(error.code);
+      throw new Error(errorMessage);
     }
   }
 
@@ -61,20 +74,24 @@ class AuthService {
     if (!hasFirebaseCredentials || !auth || !googleProvider) {
       throw new Error('Google authentication is not available. Firebase credentials are missing.');
     }
-    
+
     try {
+      console.log('🔄 Starting Google redirect sign in...');
+
       // Check if there's a redirect result first
       const result = await getRedirectResult(auth);
       if (result) {
+        console.log('✅ Found redirect result:', result.user.email);
         const user = result.user;
-        
+
         // Send user data to backend (optional)
         try {
           await this.syncUserWithBackend(user);
+          console.log('✅ Backend sync successful');
         } catch (backendError) {
-          console.warn('Backend sync failed, continuing with client-only auth:', backendError);
+          console.warn('⚠️ Backend sync failed, continuing with client-only auth:', backendError);
         }
-        
+
         return {
           uid: user.uid,
           email: user.email,
@@ -82,16 +99,20 @@ class AuthService {
           photoURL: user.photoURL
         };
       } else {
+        console.log('🚀 Initiating Google redirect flow...');
         // Start redirect flow
         await signInWithRedirect(auth, googleProvider);
         throw new Error('redirect_in_progress');
       }
     } catch (error: any) {
+      console.error('❌ Google redirect sign in error:', error);
+
       if (error.message === 'redirect_in_progress') {
         throw error;
       }
-      console.error('Google redirect sign in error:', error);
-      throw new Error(error.message || 'Failed to sign in with Google using redirect');
+
+      const errorMessage = this.getErrorMessage(error.code);
+      throw new Error(errorMessage);
     }
   }
 
@@ -216,11 +237,23 @@ class AuthService {
       case 'auth/too-many-requests':
         return 'Too many failed attempts. Please try again later';
       case 'auth/popup-closed-by-user':
-        return 'Sign in was cancelled';
+        return 'Sign in was cancelled. Please try again';
       case 'auth/popup-blocked':
-        return 'Popup was blocked by browser. Please allow popups and try again';
+        return 'Popup was blocked by browser. Please allow popups for this site and try again';
+      case 'auth/operation-not-allowed':
+        return 'This sign-in method is not enabled. Please contact support';
+      case 'auth/account-exists-with-different-credential':
+        return 'An account already exists with this email using a different sign-in method';
+      case 'auth/invalid-credential':
+        return 'Invalid credentials provided';
+      case 'auth/user-disabled':
+        return 'This account has been disabled';
+      case 'auth/user-token-expired':
+        return 'Your session has expired. Please sign in again';
+      case 'auth/web-storage-unsupported':
+        return 'Web storage is not supported in this browser';
       default:
-        return 'An error occurred during authentication';
+        return 'An error occurred during authentication. Please try again';
     }
   }
 }

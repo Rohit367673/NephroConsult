@@ -293,6 +293,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Update cookie with new user data
       setCookie('nephro_user', encodeURIComponent(JSON.stringify(updatedUser)), 7);
       console.log('User updated and saved to cookie:', updatedUser);
+    } else {
+      // If no current user, set as new user
+      const newUser: User = {
+        id: userData.id || '',
+        name: userData.name || '',
+        email: userData.email || '',
+        role: userData.role || 'patient',
+        country: userData.country,
+        avatar: userData.avatar,
+        phone: userData.phone
+      };
+      setUser(newUser);
+      setCookie('nephro_user', encodeURIComponent(JSON.stringify(newUser)), 7);
+      console.log('New user set from Firebase login:', newUser);
     }
   };
 

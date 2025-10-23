@@ -23,6 +23,7 @@ import contactRoutes from './routes/contact.js';
 import chatRoutes from './routes/chat.js';
 import prescriptionRoutes from './routes/prescriptions.js';
 import paymentRoutes from './routes/payments.js';
+import refundRoutes from './routes/refunds.js';
 import { startJobs } from './jobs.js';
 import './services/telegramService.js'; // Initialize Telegram service
 
@@ -222,6 +223,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactLimiter, contactRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/refunds', refundRoutes);
 
 // 404
 app.use((req, res) => {

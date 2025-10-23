@@ -12,6 +12,15 @@ interface Message {
   timestamp: Date;
 }
 
+interface RefundRequest {
+  email: string;
+  bookingId?: string;
+  reason: string;
+  paymentMethod: string;
+  amount?: number;
+  timestamp: Date;
+}
+
 const getDynamicPricing = () => {
   const tz = getUserTimezone();
   const pricing = getPricingForTimezone(tz);
@@ -74,8 +83,8 @@ const knowledgeBase = [
     response: "SECURITY & PRIVACY:\n\n🔒 HIPAA COMPLIANT:\n• All consultations fully encrypted\n• Secure video calling platform\n• Protected health information safeguards\n\n🛡️ DATA PROTECTION:\n• Bank-level security encryption\n• Secure file upload and storage\n• No data sharing with third parties\n• Regular security audits\n\n🌍 GLOBAL COMPLIANCE:\n• International privacy standards\n• Secure payment processing\n• GDPR compliant for EU patients"
   },
   {
-    keywords: ['kidney', 'nephrology', 'disease', 'treatment', 'conditions'],
-    response: "NEPHROLOGY EXPERTISE:\n\n🩺 CONDITIONS TREATED:\n• Chronic kidney disease (CKD)\n• Acute kidney injury\n• Hypertension management\n• Proteinuria and hematuria\n• Electrolyte disorders\n• Dialysis consultation\n\n👨‍⚕️ DR. ILANGO'S EXPERTISE:\n• Comprehensive kidney care\n• Preventive nephrology\n• Treatment plan optimization\n• Medication management\n• Lifestyle counseling\n\n📊 OUTCOMES:\n• 4.9/5 patient satisfaction\n• 500+ successful consultations\n• Global patient base"
+    keywords: ['refund', 'cancel', 'money back', 'payment issue', 'not satisfied', 'problem', 'complaint'],
+    response: "REFUND REQUEST PROCESS:\n\n💰 REFUND POLICY:\n• 24-hour refund window for paid consultations\n• Full refund if appointment not created within 1 hour\n• Partial refund for technical issues during consultation\n• No refund for completed consultations\n\n📋 REFUND REQUEST:\nTo request a refund, please provide:\n• Your email address\n• Booking/appointment ID (if available)\n• Reason for refund request\n• Payment method used\n\nOur team will review your request within 2-3 business days and process eligible refunds.\n\n🔗 Click 'Request Refund' below to submit your refund request with full details."
   }
 ];
 
@@ -91,6 +100,8 @@ export function SimpleChatbot() {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [refundStep, setRefundStep] = useState<'none' | 'email' | 'bookingId' | 'reason' | 'paymentMethod' | 'amount' | 'confirm'>('none');
+  const [refundData, setRefundData] = useState<Partial<RefundRequest>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -110,7 +121,14 @@ export function SimpleChatbot() {
 
   const getBotResponse = (userMessage: string): string => {
     const normalizedMessage = userMessage.toLowerCase();
-    
+
+    // Check for refund request keywords
+    if (normalizedMessage.includes('refund') || normalizedMessage.includes('money back') || normalizedMessage.includes('cancel') || normalizedMessage.includes('payment issue') || normalizedMessage.includes('return') || normalizedMessage.includes('reimbursement')) {
+      setRefundStep('email');
+      setRefundData({ timestamp: new Date() });
+      return "REFUND REQUEST INITIATED\n\n📧 Please provide your email address to start the refund process:\n\n• We'll verify your account and booking details\n• Check eligibility based on our refund policy\n• Process approved refunds within 2-3 business days";
+    }
+
     // Find matching knowledge base entry
     const matchedEntry = knowledgeBase.find(entry =>
       entry.keywords.some(keyword => normalizedMessage.includes(keyword))
@@ -118,13 +136,171 @@ export function SimpleChatbot() {
 
     if (matchedEntry) {
       // Check if response is a function (for dynamic content)
-      return typeof matchedEntry.response === 'function' 
-        ? matchedEntry.response() 
+      return typeof matchedEntry.response === 'function'
+        ? matchedEntry.response()
         : matchedEntry.response;
     }
 
     // Default response
     return "Thank you for your question! I'd be happy to help you with information about Dr. Ilango's nephrology services, booking appointments, pricing, or any other questions you have. Could you please be more specific about what you'd like to know?";
+  };
+
+  const submitRefundRequest = async (refundRequest: RefundRequest) => {
+    try {
+      // Submit refund request to server
+      const response = await fetch('/api/refunds', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(refundRequest),
+      });
+
+      if (response.ok) {
+        return { success: true, message: 'Refund request submitted successfully! Our team will review it within 2-3 business days.' };
+      } else {
+        const error = await response.json();
+        return { success: false, message: error.message || 'Failed to submit refund request. Please try again.' };
+      }
+    } catch (error) {
+      console.error('Refund submission error:', error);
+      return { success: false, message: 'Network error. Please try again later.' };
+    }
+  };
+
+  const checkExistingRefundRequest = async (email: string) => {
+    try {
+      const response = await fetch(`/api/refunds?email=${encodeURIComponent(email)}`);
+      const data = await response.json();
+
+      if (data.success && data.refunds && data.refunds.length > 0) {
+        // Find pending or recently submitted requests (within last 7 days)
+        const recentRequests = data.refunds.filter((refund: any) => {
+          const requestDate = new Date(refund.timestamp);
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          return requestDate > sevenDaysAgo && refund.status === 'pending';
+        });
+
+        return recentRequests;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error checking existing refunds:', error);
+      return [];
+    }
+  };
+
+  const handleRefundFlow = async (userInput: string) => {
+    // Check if user is responding to existing refund message
+    if (refundStep === 'none' && (userInput.toLowerCase().includes('additional information') || userInput.toLowerCase().includes('new request'))) {
+      setRefundStep('email');
+      return "📝 Starting new refund request process...\n\n📧 Please provide your email address:";
+    }
+
+    switch (refundStep) {
+      case 'email':
+        if (userInput.includes('@') && userInput.includes('.')) {
+          // Check for existing refund requests first
+          const existingRequests = await checkExistingRefundRequest(userInput);
+
+          if (existingRequests.length > 0) {
+            const recentRequest = existingRequests[0];
+            return `⚠️ ONGOING REFUND REQUEST DETECTED
+
+📋 Your existing refund request is currently under review:
+
+🔗 Request ID: ${recentRequest.id}
+📧 Email: ${recentRequest.email}
+💳 Payment Method: ${recentRequest.paymentMethod}
+💰 Amount: ${recentRequest.amount ? '$' + recentRequest.amount : 'Not specified'}
+📅 Submitted: ${new Date(recentRequest.timestamp).toLocaleDateString()}
+📝 Reason: ${recentRequest.reason}
+⏳ Status: ${recentRequest.status.toUpperCase()}
+
+Our team is reviewing your request and will respond within 2-3 business days.
+
+💬 If you have additional information or want to submit a new request, please let me know.`;
+          }
+
+          setRefundData(prev => ({ ...prev, email: userInput }));
+          setRefundStep('bookingId');
+          return "✅ Email verified!\n\n📋 Do you have a booking/appointment ID? (Type 'skip' if not available)";
+        } else {
+          return "❌ Please provide a valid email address.";
+        }
+
+      case 'bookingId':
+        if (userInput.toLowerCase() === 'skip') {
+          setRefundStep('reason');
+          return "⏭️ Skipped booking ID.\n\n📝 Please describe your reason for requesting a refund:";
+        } else {
+          setRefundData(prev => ({ ...prev, bookingId: userInput }));
+          setRefundStep('reason');
+          return "✅ Booking ID noted.\n\n📝 Please describe your reason for requesting a refund:";
+        }
+
+      case 'reason':
+        setRefundData(prev => ({ ...prev, reason: userInput }));
+        setRefundStep('paymentMethod');
+        return "✅ Reason noted.\n\n💳 What payment method did you use? (Card, PayPal, Bank Transfer, etc.)";
+
+      case 'paymentMethod':
+        setRefundData(prev => ({ ...prev, paymentMethod: userInput }));
+        setRefundStep('amount');
+        return "✅ Payment method noted.\n\n💰 What was the amount you paid? (Optional - type 'skip' if unsure)";
+
+      case 'amount':
+        if (userInput.toLowerCase() === 'skip') {
+          setRefundStep('confirm');
+          return "⏭️ Skipped amount.\n\n📋 Please confirm your refund request:\n\nEmail: " + refundData.email + "\nBooking ID: " + (refundData.bookingId || 'Not provided') + "\nReason: " + refundData.reason + "\nPayment Method: " + userInput + "\n\nType 'confirm' to submit or 'cancel' to start over.";
+        } else {
+          const amount = parseFloat(userInput);
+          if (isNaN(amount) || amount <= 0) {
+            return "❌ Please provide a valid amount or type 'skip'.";
+          }
+          setRefundData(prev => ({ ...prev, amount }));
+          setRefundStep('confirm');
+          return "✅ Amount noted: $" + amount + "\n\n📋 Please confirm your refund request:\n\nEmail: " + refundData.email + "\nBooking ID: " + (refundData.bookingId || 'Not provided') + "\nReason: " + refundData.reason + "\nPayment Method: " + userInput + "\nAmount: $" + amount + "\n\nType 'confirm' to submit or 'cancel' to start over.";
+        }
+
+      case 'confirm':
+        if (userInput.toLowerCase() === 'confirm') {
+          // Submit refund request
+          const completeRefundData: RefundRequest = {
+            email: refundData.email!,
+            bookingId: refundData.bookingId,
+            reason: refundData.reason!,
+            paymentMethod: refundData.paymentMethod!,
+            amount: refundData.amount,
+            timestamp: new Date(),
+          };
+
+          setIsLoading(true);
+          submitRefundRequest(completeRefundData).then(result => {
+            const responseMessage: Message = {
+              id: Date.now().toString(),
+              sender: 'bot',
+              text: result.success ? `✅ ${result.message}` : `❌ ${result.message}`,
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, responseMessage]);
+            setIsLoading(false);
+            setRefundStep('none');
+            setRefundData({});
+          });
+
+          return "⏳ Submitting your refund request...";
+        } else if (userInput.toLowerCase() === 'cancel') {
+          setRefundStep('none');
+          setRefundData({});
+          return "❌ Refund request cancelled. How else can I help you?";
+        } else {
+          return "❓ Please type 'confirm' to submit or 'cancel' to start over.";
+        }
+
+      default:
+        return "Something went wrong with the refund process. Please try again.";
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -139,22 +315,38 @@ export function SimpleChatbot() {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInputMessage('');
-    setIsLoading(true);
 
-    // Simulate thinking time
-    setTimeout(() => {
-      const botResponse = getBotResponse(inputMessage);
+    if (refundStep !== 'none') {
+      // Handle refund flow
+      const botResponse = await handleRefundFlow(inputMessage);
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'bot',
         text: botResponse,
         timestamp: new Date()
       };
-
       setMessages(prev => [...prev, botMessage]);
-      setIsLoading(false);
-    }, 1000);
+    } else {
+      // Regular chatbot response
+      setInputMessage('');
+      setIsLoading(true);
+
+      // Simulate thinking time
+      setTimeout(() => {
+        const botResponse = getBotResponse(inputMessage);
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          sender: 'bot',
+          text: botResponse,
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, botMessage]);
+        setIsLoading(false);
+      }, 1000);
+    }
+
+    setInputMessage('');
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -291,7 +483,7 @@ export function SimpleChatbot() {
                 {[
                   'Book consultation',
                   'Consultation fees',
-                  'Video process',
+                  'Refund request',
                   'Lab reports'
                 ].map((suggestion) => (
                   <button

@@ -5,7 +5,7 @@ import { useAuth, AuthContext } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 import apiService from '../services/apiService';
 import { useNavigate } from 'react-router-dom';
-import { hasFirebaseCredentials } from '../config/firebase';
+import { auth, hasFirebaseCredentials } from '../config/firebase';
 
 interface GoogleLoginButtonProps {
   onSuccess?: () => void;
@@ -24,7 +24,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
   className = ''
 }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { register } = useContext(AuthContext);
+  const { register, updateUser } = useContext(AuthContext);
   const navigate = useNavigate();
 
   // Don't render if Firebase credentials are missing
@@ -78,22 +78,80 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
           return 'default';
         };
 
-        // Prepare user data for registration
-        const userData = {
-          id: result.uid,
-          name: result.displayName || 'Google User',
-          email: result.email || '',
-          avatar: avatarUrl,
-          role: isAdmin ? 'admin' : 'patient',
-          country: getUserCountry()
+        // Get the actual Firebase ID token from the Firebase user
+        if (!auth) {
+          throw new Error('Firebase auth not initialized');
+        }
+
+        const firebaseUser = auth.currentUser;
+        if (!firebaseUser) {
+          throw new Error('No Firebase user found');
+        }
+
+        const idToken = await firebaseUser.getIdToken();
+        console.log('Got Firebase ID token, length:', idToken.length);
+
+        // Prepare user data for Firebase login (not registration)
+        const firebaseLoginData = {
+          idToken: idToken,
+          user: {
+            uid: result.uid,
+            email: result.email,
+            displayName: result.displayName,
+            photoURL: avatarUrl
+          }
         };
-        
-        console.log('Setting user data:', userData);
-        console.log('Avatar in userData:', userData.avatar);
-        console.log('User country detected:', userData.country);
-        
-        const success = await register(userData);
-        console.log('Register success:', success);
+
+        console.log('Firebase login data:', firebaseLoginData);
+
+        // Call Firebase login API instead of register
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/firebase-login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(firebaseLoginData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Firebase login failed');
+        }
+
+        const loginResult = await response.json();
+        console.log('Firebase login result:', loginResult);
+
+        if (loginResult.user) {
+          // Set user data in auth context using updateUser from context
+          updateUser({
+            id: loginResult.user.id,
+            name: loginResult.user.name,
+            email: loginResult.user.email,
+            role: loginResult.user.role,
+            avatar: loginResult.user.photoURL || avatarUrl,
+            country: getUserCountry()
+          });
+
+          toast.success('🎉 Successfully signed in with Google!');
+
+          // Call success callback
+          if (onSuccess) {
+            onSuccess();
+          }
+
+          // Navigate based on user role
+          setTimeout(() => {
+            if (isAdmin) {
+              console.log('Redirecting admin user to admin panel');
+              navigate('/admin');
+            } else {
+              navigate('/profile');
+            }
+          }, 500);
+        } else {
+          throw new Error('Login failed - no user data received');
+        }
         
         toast.success('🎉 Successfully signed in with Google!');
         

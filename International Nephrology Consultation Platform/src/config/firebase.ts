@@ -26,16 +26,27 @@ if (hasFirebaseCredentials) {
   try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
+
+    // Configure Google provider with better COOP handling
     googleProvider = new GoogleAuthProvider();
     googleProvider.setCustomParameters({
-      prompt: 'select_account'
+      prompt: 'select_account',
+      // Help with COOP issues by not requiring immediate popup
+      auth_type: 'rerequest'
     });
-    console.log('Firebase initialized successfully');
+
+    console.log('✅ Firebase initialized successfully');
+    console.log('Firebase config:', {
+      projectId: firebaseConfig.projectId,
+      authDomain: firebaseConfig.authDomain
+    });
   } catch (error) {
-    console.warn('Firebase initialization failed:', error);
+    console.warn('❌ Firebase initialization failed:', error);
+    console.warn('This might be due to missing or invalid Firebase credentials');
   }
 } else {
-  console.warn('Firebase credentials not found. Google authentication will be disabled.');
+  console.warn('⚠️ Firebase credentials not found. Google authentication will be disabled.');
+  console.warn('Please check your .env file and ensure VITE_FIREBASE_* variables are set');
 }
 
 export { auth, googleProvider, hasFirebaseCredentials };

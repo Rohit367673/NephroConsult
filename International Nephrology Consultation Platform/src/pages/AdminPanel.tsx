@@ -25,7 +25,8 @@ import {
   Send,
   ExternalLink,
   Stethoscope,
-  Pill
+  Pill,
+  DollarSign
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -34,6 +35,18 @@ import { Badge } from '../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
+
+// Types
+interface RefundRequest {
+  id: string;
+  email: string;
+  bookingId?: string;
+  reason: string;
+  paymentMethod: string;
+  amount?: number;
+  status: 'pending' | 'approved' | 'rejected';
+  timestamp: string;
+}
 
 // Enhanced mock data for consultations with patient details
 const mockConsultations = [
@@ -164,6 +177,7 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [consultations, setConsultations] = useState(mockConsultations);
   const [users, setUsers] = useState(mockUsers);
+  const [refundRequests, setRefundRequests] = useState<RefundRequest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -179,6 +193,43 @@ export default function AdminPanel() {
   if (!user || user.role !== 'admin') {
     return <Navigate to="/" replace />;
   }
+
+  // Fetch refund requests on component mount
+  useEffect(() => {
+    fetchRefundRequests();
+  }, []);
+
+  const fetchRefundRequests = async () => {
+    try {
+      const response = await fetch('/api/refunds');
+      const data = await response.json();
+
+      if (data.success && data.refunds) {
+        setRefundRequests(data.refunds);
+      }
+    } catch (error) {
+      console.error('Error fetching refund requests:', error);
+    }
+  };
+
+  const handleRefundAction = async (refundId: string, action: 'approved' | 'rejected') => {
+    try {
+      // In a real implementation, you'd make an API call to update the refund status
+      // For now, we'll update the local state
+      setRefundRequests(prev =>
+        prev.map(refund =>
+          refund.id === refundId
+            ? { ...refund, status: action }
+            : refund
+        )
+      );
+
+      alert(`Refund ${refundId} ${action === 'approved' ? 'approved' : 'rejected'}!`);
+    } catch (error) {
+      console.error('Error updating refund status:', error);
+      alert('Error updating refund status. Please try again.');
+    }
+  };
 
   // Filter consultations based on search and status
   const filteredConsultations = consultations.filter(consultation => {
@@ -249,6 +300,7 @@ export default function AdminPanel() {
             { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
             { id: 'consultations', label: 'Consultations', icon: Calendar },
             { id: 'prescriptions', label: 'Prescriptions', icon: Pill },
+            { id: 'refunds', label: 'Refunds', icon: DollarSign },
             { id: 'users', label: 'Users', icon: Users }
           ].map((tab) => (
             <button
@@ -525,6 +577,160 @@ export default function AdminPanel() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {activeTab === 'refunds' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            {/* Refund Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Requests</p>
+                      <p className="text-3xl font-bold text-gray-900">{refundRequests.length}</p>
+                    </div>
+                    <div className="p-3 rounded-full bg-blue-100">
+                      <DollarSign className="w-6 h-6 text-blue-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Pending</p>
+                      <p className="text-3xl font-bold text-yellow-600">
+                        {refundRequests.filter(r => r.status === 'pending').length}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-full bg-yellow-100">
+                      <Clock className="w-6 h-6 text-yellow-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Approved</p>
+                      <p className="text-3xl font-bold text-green-600">
+                        {refundRequests.filter(r => r.status === 'approved').length}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-full bg-green-100">
+                      <CheckCircle className="w-6 h-6 text-green-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Rejected</p>
+                      <p className="text-3xl font-bold text-red-600">
+                        {refundRequests.filter(r => r.status === 'rejected').length}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-full bg-red-100">
+                      <XCircle className="w-6 h-6 text-red-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Refund Requests Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Refund Requests ({refundRequests.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {refundRequests.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">No refund requests found</p>
+                  ) : (
+                    refundRequests.map((refund) => (
+                      <div key={refund.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h4 className="font-semibold text-lg">{refund.id}</h4>
+                            <p className="text-sm text-gray-600">{refund.email}</p>
+                          </div>
+                          <Badge
+                            className={`${
+                              refund.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              refund.status === 'approved' ? 'bg-green-100 text-green-800' :
+                              'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {refund.status}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div>
+                            <p className="text-xs text-gray-500">Booking ID</p>
+                            <p className="font-medium">{refund.bookingId || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Payment Method</p>
+                            <p className="font-medium">{refund.paymentMethod}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Amount</p>
+                            <p className="font-medium">
+                              {refund.amount ? `$${refund.amount}` : 'Not specified'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Date</p>
+                            <p className="font-medium">
+                              {new Date(refund.timestamp).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mb-4">
+                          <p className="text-xs text-gray-500 mb-2">Reason:</p>
+                          <p className="bg-white p-3 rounded border text-sm">{refund.reason}</p>
+                        </div>
+
+                        {refund.status === 'pending' && (
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => handleRefundAction(refund.id, 'approved')}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-red-300 text-red-600 hover:bg-red-50"
+                              onClick={() => handleRefundAction(refund.id, 'rejected')}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Reject
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

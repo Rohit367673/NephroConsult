@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Loader2, Eye, EyeOff, Heart, Stethoscope, User } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import { GoogleLoginButton } from '../../components/GoogleLoginButton';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -199,6 +200,22 @@ export function LoginPage() {
                     `Sign In as ${activeTab === 'doctor' ? 'Doctor' : 'Patient'}`
                   )}
                 </Button>
+
+                {/* Google Login */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                  </div>
+                </div>
+
+                <GoogleLoginButton
+                  onSuccess={() => {
+                    navigate('/profile');
+                  }}
+                />
               </form>
 
               <div className="mt-6 text-center space-y-2">
