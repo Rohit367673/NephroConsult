@@ -28,6 +28,7 @@ import PaymentSuccess from './pages/PaymentSuccess';
 import BookingPage from './pages/BookingPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
+import SEOHead from './components/SEOHead';
 // Images
 import DoctorPhoto from './asset/PHOTO-2025-09-26-17-36-15.jpg';
 import KidneyAnatomyImage from './asset/images.jpeg';
@@ -2039,32 +2040,100 @@ function AboutPage() {
   );
 }
 
-// Main App Component
-function ConditionalChatbot() {
-  const location = useLocation();
-  
-  // Don't show chatbot on admin pages
-  if (location.pathname.includes('/admin')) {
-    return null;
-  }
-  
-  return <SimpleChatbot />;
+// Page Wrapper Component with SEO
+function PageWrapper({ children, seoProps }: {
+  children: React.ReactNode;
+  seoProps?: {
+    title?: string;
+    description?: string;
+    keywords?: string;
+    canonical?: string;
+    ogImage?: string;
+  };
+}) {
+  return (
+    <>
+      {seoProps && <SEOHead {...seoProps} />}
+      {children}
+    </>
+  );
 }
 
+// Main App Component
 export default function App() {
+  // Conditional chatbot component - must be inside Router context
+  function ConditionalChatbot() {
+    const location = useLocation();
+
+    // Don't show chatbot on admin pages
+    if (location.pathname.includes('/admin')) {
+      return null;
+    }
+
+    return <SimpleChatbot />;
+  }
+
   return (
     <AuthProvider>
       <Router>
         <AnimatePresence mode="wait">
           <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/cookies" element={<CookiesPolicyPage />} />
+            <Route path="/" element={
+              <PageWrapper seoProps={{
+                title: "NephroConsult - Expert Kidney Specialist | Online Nephrology Consultation",
+                description: "Get expert nephrology consultations from Dr. Rohit Kumar (MBBS, MD, DM Nephrology). Specialized treatment for chronic kidney disease, dialysis planning, kidney transplant counseling, acute renal failure, and comprehensive kidney care. Book secure online consultations with experienced nephrologist.",
+                keywords: "nephrology consultation online, kidney specialist doctor, chronic kidney disease treatment, CKD management, dialysis planning, kidney transplant counseling, acute kidney injury, renal failure treatment, kidney disease symptoms, nephrology expert India, online kidney doctor consultation"
+              }}>
+                <HomePage />
+              </PageWrapper>
+            } />
+            <Route path="/about" element={
+              <PageWrapper seoProps={{
+                title: "About Dr. Rohit Kumar - Expert Nephrologist | NephroConsult",
+                description: "Learn about Dr. Rohit Kumar, MBBS, MD, DM Nephrology - a leading kidney specialist with extensive experience in chronic kidney disease treatment, dialysis planning, and kidney transplant counseling. Expert nephrology care with international consultation services.",
+                keywords: "Dr Rohit Kumar nephrologist, kidney specialist doctor, nephrology expert India, chronic kidney disease specialist, dialysis expert, kidney transplant doctor, renal medicine specialist, nephrology qualifications, kidney doctor experience"
+              }}>
+                <AboutPage />
+              </PageWrapper>
+            } />
+            <Route path="/contact" element={
+              <PageWrapper seoProps={{
+                title: "Contact NephroConsult - Book Kidney Specialist Consultation",
+                description: "Contact NephroConsult to book your online nephrology consultation with Dr. Rohit Kumar. Get expert kidney care through secure video consultations. Available internationally with region-specific pricing. Schedule your appointment today.",
+                keywords: "contact nephrologist, book kidney consultation, nephrology appointment, kidney specialist contact, online doctor booking, nephrology consultation contact, Dr Rohit Kumar contact, kidney doctor appointment"
+              }}>
+                <ContactPage />
+              </PageWrapper>
+            } />
+            <Route path="/terms" element={
+              <PageWrapper seoProps={{
+                title: "Terms of Service | NephroConsult - Online Nephrology Consultation",
+                description: "Read the terms of service for NephroConsult online nephrology consultation platform. Understand our policies for medical consultations, payments, privacy, and user responsibilities when using our kidney specialist services.",
+                keywords: "nephroconsult terms of service, medical consultation terms, online doctor terms, nephrology consultation policies, medical platform terms, healthcare service agreement"
+              }}>
+                <TermsPage />
+              </PageWrapper>
+            } />
+            <Route path="/cookies" element={
+              <PageWrapper seoProps={{
+                title: "Cookie Policy | NephroConsult - Online Nephrology Consultation",
+                description: "Read NephroConsult's cookie policy to understand how we use cookies on our online nephrology consultation platform. Learn about essential cookies, analytics cookies, and your privacy preferences for our kidney specialist services.",
+                keywords: "nephroconsult cookie policy, medical website cookies, online consultation cookies, healthcare platform privacy, cookie consent medical site, nephrology website cookies"
+              }}>
+                <CookiesPolicyPage />
+              </PageWrapper>
+            } />
             
             {/* Booking Routes */}
-            <Route path="/booking" element={<BookingPage />} />
+            <Route path="/booking" element={
+              <PageWrapper seoProps={{
+                title: "Book Online Nephrology Consultation | NephroConsult",
+                description: "Book your online nephrology consultation with Dr. Rohit Kumar. Easy 5-step booking process with secure payment options. International pricing in USD, INR, GBP, EUR. Schedule your kidney specialist appointment today.",
+                keywords: "book nephrology consultation, online kidney doctor appointment, nephrologist booking, kidney specialist appointment, online medical consultation booking, Dr Rohit Kumar appointment, nephrology video consultation booking"
+              }}>
+                <BookingPage />
+              </PageWrapper>
+            } />
             
             {/* Payment Routes */}
             <Route path="/payment/success" element={<PaymentSuccess />} />

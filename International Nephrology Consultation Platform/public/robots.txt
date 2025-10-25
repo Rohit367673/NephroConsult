@@ -1,8 +1,11 @@
 # Robots.txt for NephroConsult
+# Updated: January 25, 2025
 # Allow all search engines to crawl the site
 
 User-agent: *
 Allow: /
+
+# Sitemap location
 Sitemap: https://www.nephroconsultation.com/sitemap.xml
 
 # Block admin and api routes
@@ -10,6 +13,14 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /doctor/dashboard
 Disallow: /patient/dashboard
+
+# Allow important public pages
+Allow: /
+Allow: /about
+Allow: /booking
+Allow: /contact
+Allow: /terms
+Allow: /cookies
 
 # Crawl delay (in seconds) to be respectful
 Crawl-delay: 1
