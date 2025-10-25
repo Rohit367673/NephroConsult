@@ -2,14 +2,14 @@
 export const seoConfigs = {
   home: {
     title: 'NephroConsult - Expert Kidney Specialist | Online Nephrology Consultation',
-    description: 'Get expert nephrology consultations from Dr. Rohit Kumar (MBBS, MD, DM Nephrology). Specialized treatment for chronic kidney disease, dialysis planning, kidney transplant counseling, and comprehensive kidney care.',
-    keywords: 'nephrology consultation online, kidney specialist doctor, chronic kidney disease treatment, CKD management, dialysis planning, kidney transplant counseling, Dr Rohit Kumar nephrologist, online kidney doctor consultation, kidney health checkup',
+    description: 'Get expert nephrology consultations from Dr. Ilango S. Prakasam (MBBS, MD, DM Nephrology). Specialized treatment for chronic kidney disease, dialysis planning, kidney transplant counseling, and comprehensive kidney care.',
+    keywords: 'nephrology consultation online, kidney specialist doctor, chronic kidney disease treatment, CKD management, dialysis planning, kidney transplant counseling, Dr Ilango S Prakasam nephrologist, online kidney doctor consultation, kidney health checkup',
     canonical: 'https://www.nephroconsultation.com'
   },
 
   booking: {
     title: 'Book Online Nephrology Consultation | Kidney Specialist Appointment',
-    description: 'Book secure online appointment with Dr. Rohit Kumar for kidney disease treatment. Expert consultation for chronic kidney disease, dialysis planning, kidney stones, and comprehensive renal care. Available worldwide.',
+    description: 'Book secure online appointment with Dr. Ilango S. Prakasam for kidney disease treatment. Expert consultation for chronic kidney disease, dialysis planning, kidney stones, and comprehensive renal care. Available worldwide.',
     keywords: 'book nephrology appointment online, kidney doctor appointment, online kidney consultation booking, CKD consultation booking, dialysis consultation appointment, kidney specialist appointment India, virtual nephrology consultation',
     canonical: 'https://www.nephroconsultation.com/book'
   },
@@ -22,15 +22,15 @@ export const seoConfigs = {
   },
 
   about: {
-    title: 'Dr. Rohit Kumar - Expert Nephrologist | MBBS, MD, DM Nephrology',
-    description: 'Meet Dr. Rohit Kumar, experienced nephrologist with MBBS, MD (Medicine), DM (Nephrology) qualifications. Specialized in kidney disease treatment, dialysis management, and kidney transplant counseling with years of clinical experience.',
-    keywords: 'Dr Rohit Kumar nephrologist, kidney specialist doctor India, nephrology expert, MBBS MD DM Nephrology, experienced kidney doctor, qualified nephrologist, kidney disease specialist',
+    title: 'Dr. Ilango S. Prakasam - Expert Nephrologist | MBBS, MD, DM Nephrology',
+    description: 'Meet Dr. Ilango S. Prakasam, experienced nephrologist with MBBS, MD (Medicine), DM (Nephrology) qualifications. Specialized in kidney disease treatment, dialysis management, and kidney transplant counseling with years of clinical experience.',
+    keywords: 'Dr Ilango S Prakasam nephrologist, kidney specialist doctor India, nephrology expert, MBBS MD DM Nephrology, experienced kidney doctor, qualified nephrologist, kidney disease specialist',
     canonical: 'https://www.nephroconsultation.com/about'
   },
 
   contact: {
     title: 'Contact Kidney Specialist | Get Nephrology Consultation',
-    description: 'Contact Dr. Rohit Kumar for nephrology consultation and kidney care services. Get expert advice for kidney disease, dialysis planning, and comprehensive renal health management. Available for international consultations.',
+    description: 'Contact Dr. Ilango S. Prakasam for nephrology consultation and kidney care services. Get expert advice for kidney disease, dialysis planning, and comprehensive renal health management. Available for international consultations.',
     keywords: 'contact kidney specialist, nephrology consultation contact, kidney doctor contact, get kidney consultation, nephrology expert contact, kidney specialist India contact',
     canonical: 'https://www.nephroconsultation.com/contact'
   },
@@ -38,7 +38,7 @@ export const seoConfigs = {
   conditions: {
     chronicKidneyDisease: {
       title: 'Chronic Kidney Disease Treatment | CKD Management & Care',
-      description: 'Expert treatment for chronic kidney disease (CKD) stages 1-5. Comprehensive CKD management, progression monitoring, dietary guidance, and preparation for renal replacement therapy with experienced nephrologist Dr. Rohit Kumar.',
+      description: 'Expert treatment for chronic kidney disease (CKD) stages 1-5. Comprehensive CKD management, progression monitoring, dietary guidance, and preparation for renal replacement therapy with experienced nephrologist Dr. Ilango S. Prakasam.',
       keywords: 'chronic kidney disease treatment, CKD management, CKD stages, kidney disease progression, chronic renal failure treatment, CKD diet, kidney function decline, CKD specialist, chronic kidney disease care',
       canonical: 'https://www.nephroconsultation.com/conditions/chronic-kidney-disease'
     },
@@ -102,14 +102,14 @@ export const seoConfigs = {
 
   testimonials: {
     title: 'Patient Testimonials | Kidney Disease Treatment Success Stories',
-    description: 'Read success stories and testimonials from patients who received expert kidney care from Dr. Rohit Kumar. Real experiences with CKD management, dialysis planning, and comprehensive nephrology care.',
+    description: 'Read success stories and testimonials from patients who received expert kidney care from Dr. Ilango S. Prakasam. Real experiences with CKD management, dialysis planning, and comprehensive nephrology care.',
     keywords: 'nephrology patient testimonials, kidney disease success stories, CKD treatment reviews, dialysis patient experiences, kidney specialist reviews, patient feedback nephrology',
     canonical: 'https://www.nephroconsultation.com/testimonials'
   },
 
   faq: {
     title: 'Nephrology FAQ | Kidney Disease Questions & Answers',
-    description: 'Frequently asked questions about kidney disease, dialysis, kidney transplant, and nephrology care. Expert answers from Dr. Rohit Kumar on common kidney health concerns.',
+    description: 'Frequently asked questions about kidney disease, dialysis, kidney transplant, and nephrology care. Expert answers from Dr. Ilango S. Prakasam on common kidney health concerns.',
     keywords: 'nephrology FAQ, kidney disease questions, dialysis FAQ, kidney transplant questions, CKD questions, kidney health FAQ, nephrology answers',
     canonical: 'https://www.nephroconsultation.com/faq'
   }
