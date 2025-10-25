@@ -8,6 +8,10 @@
       <meta http-equiv="Pragma" content="no-cache" />
       <meta http-equiv="Expires" content="0" />
       
+      <!-- Google Search Console and Analytics Verification -->
+      <meta name="google-site-verification" content="YOUR_GOOGLE_VERIFICATION_CODE" />
+      <meta name="google-analytics" content="YOUR_GA_MEASUREMENT_ID" />
+
       <!-- Primary Meta Tags -->
       <title>NephroConsult - Expert Kidney Specialist | Online Nephrology Consultation</title>
       <meta name="title" content="NephroConsult - Expert Kidney Specialist | Online Nephrology Consultation">
@@ -160,6 +164,15 @@
       
       <div id="root"></div>
       <script type="module" src="/src/main.tsx?v=1-0-5"></script>
+
+      <!-- Google Analytics (gtag) -->
+      <script async src="https://www.googletagmanager.com/gtag/js?id=YOUR_GA_MEASUREMENT_ID"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'YOUR_GA_MEASUREMENT_ID');
+      </script>
       
       <!-- Aggressive cache busting script -->
       <script>
