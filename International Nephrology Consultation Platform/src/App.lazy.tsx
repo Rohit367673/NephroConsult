@@ -6,8 +6,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Import existing page components
 const HomePage = lazy(() => import('./pages/public/HomePage'));
-const AboutPage = lazy(() => import('./pages/public/AboutPage'));
-const ContactPage = lazy(() => import('./pages/public/ContactPage'));
 const TermsPage = lazy(() => import('./pages/public/TermsPage'));
 const CookiesPolicyPage = lazy(() => import('./pages/public/CookiesPolicyPage'));
 const BookingPage = lazy(() => import('./pages/BookingPage'));
@@ -15,7 +13,10 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const ProtectedAdminRoute = lazy(() => import('./components/ProtectedAdminRoute'));
 
-// Contact page is now properly implemented
+// For now, using placeholder components for About and Contact pages
+// These are still defined in App.tsx and should be extracted to separate files
+const AboutPage = lazy(() => Promise.resolve({ default: () => <div>About Page - Coming Soon</div> }));
+const ContactPage = lazy(() => Promise.resolve({ default: () => <div>Contact Page - Coming Soon</div> }));
 const PaymentPage = lazy(() => import('./pages/PaymentPage').then(module => ({ default: module.PaymentPage })));
 
 // Protected Route Component (copied from App.tsx)
