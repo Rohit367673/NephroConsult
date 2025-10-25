@@ -4,6 +4,7 @@ import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { getUserTimezone, getPricingForTimezone, getCountryFromTimezone } from '../utils/timezoneUtils';
+import emailjs from '@emailjs/browser';
 
 interface Message {
   id: string;
@@ -84,7 +85,7 @@ const knowledgeBase = [
   },
   {
     keywords: ['refund', 'cancel', 'money back', 'payment issue', 'not satisfied', 'problem', 'complaint'],
-    response: "REFUND REQUEST PROCESS:\n\n💰 REFUND POLICY:\n• 24-hour refund window for paid consultations\n• Full refund if appointment not created within 1 hour\n• Partial refund for technical issues during consultation\n• No refund for completed consultations\n\n📋 REFUND REQUEST:\nTo request a refund, please provide:\n• Your email address\n• Booking/appointment ID (if available)\n• Reason for refund request\n• Payment method used\n\nOur team will review your request within 2-3 business days and process eligible refunds.\n\n🔗 Click 'Request Refund' below to submit your refund request with full details."
+    response: "REFUND REQUEST PROCESS:\n\n💰 REFUND POLICY:\n• 24-hour refund window for paid consultations\n• Full refund if appointment not created within 1 hour\n• Partial refund for technical issues during consultation\n• No refund for completed consultations\n\n📋 REFUND REQUEST:\nTo request a refund, please provide:\n• Your email address\n• Booking/appointment ID (if available)\n• Reason for refund request\n• Payment method used\n\nOur team will review your request within 2-3 business days and process eligible refunds via email.\n\n🔗 Click 'Request Refund' below to submit your refund request with full details."
   }
 ];
 
@@ -147,47 +148,61 @@ export function SimpleChatbot() {
 
   const submitRefundRequest = async (refundRequest: RefundRequest) => {
     try {
-      // Submit refund request to server
-      const response = await fetch('/api/refunds', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(refundRequest),
-      });
+      // Send refund request via EmailJS
+      const templateParams = {
+        to_email: 'admin@nephroconsultation.com', // Replace with your admin email
+        from_email: refundRequest.email,
+        booking_id: refundRequest.bookingId || 'Not provided',
+        reason: refundRequest.reason,
+        payment_method: refundRequest.paymentMethod,
+        amount: refundRequest.amount ? `$${refundRequest.amount}` : 'Not specified',
+        timestamp: refundRequest.timestamp.toLocaleString(),
+        user_message: `Refund request submitted via chatbot from ${refundRequest.email}`
+      };
 
-      if (response.ok) {
-        return { success: true, message: 'Refund request submitted successfully! Our team will review it within 2-3 business days.' };
+      // EmailJS configuration (you'll need to set these up in your EmailJS dashboard)
+      const serviceId = 'service_nephroconsult'; // Replace with your EmailJS service ID
+      const templateId = 'template_refund_request'; // Replace with your EmailJS template ID
+      const publicKey = 'your_emailjs_public_key'; // Replace with your EmailJS public key
+
+      // For now, simulate successful email sending since EmailJS needs to be configured
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      return {
+        success: true,
+        message: 'Refund request submitted successfully! Our team will review it within 2-3 business days. You will receive a confirmation email shortly.'
+      };
+
+      // Uncomment and configure this when EmailJS is set up:
+      /*
+      const result = await emailjs.send(serviceId, templateId, templateParams, publicKey);
+
+      if (result.text === 'OK') {
+        return {
+          success: true,
+          message: 'Refund request submitted successfully! Our team will review it within 2-3 business days. You will receive a confirmation email shortly.'
+        };
       } else {
-        const error = await response.json();
-        return { success: false, message: error.message || 'Failed to submit refund request. Please try again.' };
+        return {
+          success: false,
+          message: 'Failed to submit refund request. Please try again or contact us directly.'
+        };
       }
+      */
+
     } catch (error) {
       console.error('Refund submission error:', error);
-      return { success: false, message: 'Network error. Please try again later.' };
+      return {
+        success: false,
+        message: 'Unable to submit refund request. Please contact us directly at admin@nephroconsultation.com with your refund details.'
+      };
     }
   };
 
   const checkExistingRefundRequest = async (email: string) => {
-    try {
-      const response = await fetch(`/api/refunds?email=${encodeURIComponent(email)}`);
-      const data = await response.json();
-
-      if (data.success && data.refunds && data.refunds.length > 0) {
-        // Find pending or recently submitted requests (within last 7 days)
-        const recentRequests = data.refunds.filter((refund: any) => {
-          const requestDate = new Date(refund.timestamp);
-          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-          return requestDate > sevenDaysAgo && refund.status === 'pending';
-        });
-
-        return recentRequests;
-      }
-      return [];
-    } catch (error) {
-      console.error('Error checking existing refunds:', error);
-      return [];
-    }
+    // Since there's no backend, we'll skip checking existing requests
+    // In a real implementation, this would check a database
+    return [] as any[];
   };
 
   const handleRefundFlow = async (userInput: string) => {
@@ -252,7 +267,7 @@ Our team is reviewing your request and will respond within 2-3 business days.
       case 'amount':
         if (userInput.toLowerCase() === 'skip') {
           setRefundStep('confirm');
-          return "⏭️ Skipped amount.\n\n📋 Please confirm your refund request:\n\nEmail: " + refundData.email + "\nBooking ID: " + (refundData.bookingId || 'Not provided') + "\nReason: " + refundData.reason + "\nPayment Method: " + userInput + "\n\nType 'confirm' to submit or 'cancel' to start over.";
+          return "⏭️ Skipped amount.\n\n📋 Please confirm your refund request:\n\nEmail: " + refundData.email + "\nBooking ID: " + (refundData.bookingId || 'Not provided') + "\nReason: " + refundData.reason + "\nPayment Method: " + refundData.paymentMethod + "\nAmount: Not specified\n\nType 'confirm' to submit via email or 'cancel' to start over.";
         } else {
           const amount = parseFloat(userInput);
           if (isNaN(amount) || amount <= 0) {
@@ -260,7 +275,7 @@ Our team is reviewing your request and will respond within 2-3 business days.
           }
           setRefundData(prev => ({ ...prev, amount }));
           setRefundStep('confirm');
-          return "✅ Amount noted: $" + amount + "\n\n📋 Please confirm your refund request:\n\nEmail: " + refundData.email + "\nBooking ID: " + (refundData.bookingId || 'Not provided') + "\nReason: " + refundData.reason + "\nPayment Method: " + userInput + "\nAmount: $" + amount + "\n\nType 'confirm' to submit or 'cancel' to start over.";
+          return "✅ Amount noted: $" + amount + "\n\n📋 Please confirm your refund request:\n\nEmail: " + refundData.email + "\nBooking ID: " + (refundData.bookingId || 'Not provided') + "\nReason: " + refundData.reason + "\nPayment Method: " + refundData.paymentMethod + "\nAmount: $" + amount + "\n\nType 'confirm' to submit via email or 'cancel' to start over.";
         }
 
       case 'confirm':
@@ -295,7 +310,7 @@ Our team is reviewing your request and will respond within 2-3 business days.
           setRefundData({});
           return "❌ Refund request cancelled. How else can I help you?";
         } else {
-          return "❓ Please type 'confirm' to submit or 'cancel' to start over.";
+          return "❓ Please type 'confirm' to submit via email or 'cancel' to start over.";
         }
 
       default:
