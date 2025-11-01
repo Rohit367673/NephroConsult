@@ -2081,7 +2081,7 @@ export default function App() {
             <Route path="/" element={
               <PageWrapper seoProps={{
                 title: "NephroConsult - Expert Kidney Specialist | Online Nephrology Consultation",
-                description: "Get expert nephrology consultations from Dr. Rohit Kumar (MBBS, MD, DM Nephrology). Specialized treatment for chronic kidney disease, dialysis planning, kidney transplant counseling, acute renal failure, and comprehensive kidney care. Book secure online consultations with experienced nephrologist.",
+                description: "Get expert nephrology consultations from Dr. Ilango S. Prakasam (MBBS, MD, DM Nephrology). Specialized treatment for chronic kidney disease, dialysis planning, kidney transplant counseling, acute renal failure, and comprehensive kidney care. Book secure online consultations with experienced nephrologist.",
                 keywords: "nephrology consultation online, kidney specialist doctor, chronic kidney disease treatment, CKD management, dialysis planning, kidney transplant counseling, acute kidney injury, renal failure treatment, kidney disease symptoms, nephrology expert India, online kidney doctor consultation"
               }}>
                 <HomePage />
@@ -2089,9 +2089,9 @@ export default function App() {
             } />
             <Route path="/about" element={
               <PageWrapper seoProps={{
-                title: "About Dr. Rohit Kumar - Expert Nephrologist | NephroConsult",
-                description: "Learn about Dr. Rohit Kumar, MBBS, MD, DM Nephrology - a leading kidney specialist with extensive experience in chronic kidney disease treatment, dialysis planning, and kidney transplant counseling. Expert nephrology care with international consultation services.",
-                keywords: "Dr Rohit Kumar nephrologist, kidney specialist doctor, nephrology expert India, chronic kidney disease specialist, dialysis expert, kidney transplant doctor, renal medicine specialist, nephrology qualifications, kidney doctor experience"
+                title: "About Dr. Ilango S. Prakasam - Expert Nephrologist | NephroConsult",
+                description: "Learn about Dr. Ilango S. Prakasam, MBBS, MD, DM Nephrology - a leading kidney specialist with extensive experience in chronic kidney disease treatment, dialysis planning, and kidney transplant counseling. Expert nephrology care with international consultation services.",
+                keywords: "Dr Ilango S Prakasam nephrologist, kidney specialist doctor, nephrology expert India, chronic kidney disease specialist, dialysis expert, kidney transplant doctor, renal medicine specialist, nephrology qualifications, kidney doctor experience"
               }}>
                 <AboutPage />
               </PageWrapper>
@@ -2099,8 +2099,8 @@ export default function App() {
             <Route path="/contact" element={
               <PageWrapper seoProps={{
                 title: "Contact NephroConsult - Book Kidney Specialist Consultation",
-                description: "Contact NephroConsult to book your online nephrology consultation with Dr. Rohit Kumar. Get expert kidney care through secure video consultations. Available internationally with region-specific pricing. Schedule your appointment today.",
-                keywords: "contact nephrologist, book kidney consultation, nephrology appointment, kidney specialist contact, online doctor booking, nephrology consultation contact, Dr Rohit Kumar contact, kidney doctor appointment"
+                description: "Contact NephroConsult to book your online nephrology consultation with Dr. Ilango S. Prakasam. Get expert kidney care through secure video consultations. Available internationally with region-specific pricing. Schedule your appointment today.",
+                keywords: "contact nephrologist, book kidney consultation, nephrology appointment, kidney specialist contact, online doctor booking, nephrology consultation contact, Dr Ilango S Prakasam contact, kidney doctor appointment"
               }}>
                 <ContactPage />
               </PageWrapper>
@@ -2128,8 +2128,8 @@ export default function App() {
             <Route path="/booking" element={
               <PageWrapper seoProps={{
                 title: "Book Online Nephrology Consultation | NephroConsult",
-                description: "Book your online nephrology consultation with Dr. Rohit Kumar. Easy 5-step booking process with secure payment options. International pricing in USD, INR, GBP, EUR. Schedule your kidney specialist appointment today.",
-                keywords: "book nephrology consultation, online kidney doctor appointment, nephrologist booking, kidney specialist appointment, online medical consultation booking, Dr Rohit Kumar appointment, nephrology video consultation booking"
+                description: "Book your online nephrology consultation with Dr. Ilango S. Prakasam. Easy 5-step booking process with secure payment options. International pricing in USD, INR, GBP, EUR. Schedule your kidney specialist appointment today.",
+                keywords: "book nephrology consultation, online kidney doctor appointment, nephrologist booking, kidney specialist appointment, online medical consultation booking, Dr Ilango S Prakasam appointment, nephrology video consultation booking"
               }}>
                 <BookingPage />
               </PageWrapper>

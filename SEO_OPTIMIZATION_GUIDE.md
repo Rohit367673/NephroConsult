@@ -11,7 +11,7 @@
 - `CKD management`
 - `dialysis planning`
 - `kidney transplant counseling`
-- `Dr Rohit Kumar nephrologist`
+- `Dr Ilango S Prakasam nephrologist`
 
 #### **Long-tail Keywords Added:**
 - `online kidney doctor consultation`
@@ -47,7 +47,7 @@
 
 #### **Enhanced Meta Description:**
 ```html
-<meta name="description" content="Get expert nephrology consultations from Dr. Rohit Kumar (MBBS, MD, DM Nephrology). Specialized treatment for chronic kidney disease, dialysis planning, kidney transplant counseling, acute renal failure, and comprehensive kidney care. Book secure online consultations with experienced nephrologist.">
+<meta name="description" content="Get expert nephrology consultations from Dr. Ilango S. Prakasam (MBBS, MD, DM Nephrology). Specialized treatment for chronic kidney disease, dialysis planning, kidney transplant counseling, acute renal failure, and comprehensive kidney care. Book secure online consultations with experienced nephrologist.">
 ```
 
 #### **Comprehensive Keywords:**
@@ -153,7 +153,7 @@ Created comprehensive SEO configs for:
 
 #### **Enhanced Image SEO:**
 ```html
-<meta property="og:image:alt" content="NephroConsult - Expert Kidney Specialist Dr. Rohit Kumar">
+<meta property="og:image:alt" content="NephroConsult - Expert Kidney Specialist Dr. Ilango S. Prakasam">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 ```
@@ -220,7 +220,7 @@ function BookingPage() {
 #### **Local Targets:**
 1. "kidney specialist doctor India"
 2. "nephrology expert consultation"
-3. "Dr Rohit Kumar nephrologist"
+3. "Dr Ilango S Prakasam nephrologist"
 4. "kidney disease treatment online India"
 
 ---

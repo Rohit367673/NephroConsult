@@ -112,7 +112,7 @@ export const validateName = (name: string): ValidationResult => {
   }
 
   // Check for valid characters (letters, spaces, common punctuation)
-  const nameRegex = /^[a-zA-Z\s\.\-']+$/;
+  const nameRegex = /^[a-zA-Z0-9\s\.\-']+$/;
   if (!nameRegex.test(name)) {
     errors.push('Name contains invalid characters');
   }
@@ -125,12 +125,7 @@ export const validateMedicalHistory = (history: string): ValidationResult => {
   const errors: string[] = [];
   
   if (!history || history.trim().length === 0) {
-    errors.push('Medical history is required');
-    return { isValid: false, errors };
-  }
-
-  if (history.trim().length < 10) {
-    errors.push('Please provide more detailed medical history (at least 10 characters)');
+    return { isValid: true, errors };
   }
 
   if (history.length > 2000) {

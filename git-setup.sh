@@ -37,7 +37,7 @@ else
 - Secure authentication with Firebase
 - Production-ready with comprehensive security
 
-🏥 Doctor: Dr. Ilango Krishnamurthy (Sr. Nephrologist)
+🏥 Doctor: Dr. Ilango S. Prakasam (Sr. Nephrologist)
 💰 Payments: Multi-currency support via Cashfree (INR, USD, EUR, GBP, AUD)
 🌍 Global: Timezone-aware booking system
 📧 Email: Professional consultation confirmations
