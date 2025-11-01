@@ -1,7 +1,7 @@
 
 # 🏥 NephroConsult - International Nephrology Consultation Platform
 
-A comprehensive telemedicine platform connecting patients worldwide with **Dr. Ilango Krishnamurthy** (Sr. Nephrologist) for expert kidney care consultations.
+A comprehensive telemedicine platform connecting patients worldwide with **Dr. Ilango S. Prakasam** (Sr. Nephrologist) for expert kidney care consultations.
 
 ## 🌟 Features
 
@@ -189,9 +189,9 @@ npm run validate:env         # Check environment variables
 
 ## 📱 Doctor Information
 
-**Dr. Ilango Krishnamurthy**
+**Dr. Ilango S. Prakasam**
 - Sr. Nephrologist
-- MD, DNB (Nephrology), MRCP (UK)
+- MBBS, MD, DM (Nephrology)
 - 15+ Years Experience
 - 5,000+ Patients Treated Worldwide
 
