@@ -186,19 +186,33 @@ router.post('/verify-payment', async (req, res) => {
       // Don't fail the payment verification if email fails
     }
 
-    // Best-effort: create appointment automatically (use booking_details or fallback to session snapshot or order tags)
+    // Best-effort: create appointment automatically (use booking_details or fallback to session snapshot or order tags or order note)
     let createdAppointment = null;
     try {
       const tags = orderInfo?.cfOrder?.orderTags || orderInfo?.orderTags || {};
       const sessionSnapshot = req.session?.pendingBookingDetails;
+      // Parse order note as last-resort source: "<type> consultation - YYYY-MM-DD at <time>"
+      const orderNote = orderInfo?.cfOrder?.orderNote || orderInfo?.orderNote || '';
+      let noteType = null, noteDate = null, noteTime = null;
+      try {
+        const lower = String(orderNote).toLowerCase();
+        if (lower) {
+          if (lower.includes('follow')) noteType = 'followup';
+          else if (lower.includes('urgent')) noteType = 'urgent';
+          else if (lower.includes('initial')) noteType = 'initial';
+        }
+        const match = orderNote.match(/(\d{4}-\d{2}-\d{2}).*?at\s+([^\n]+)/i);
+        if (match) { noteDate = match[1]; noteTime = match[2].trim(); }
+      } catch {}
+      const customer = orderInfo?.cfOrder?.customerDetails || orderInfo?.customerDetails || {};
       const details = req.body.booking_details || sessionSnapshot || (
         orderInfo ? {
-          consultationType: tags.consultation_type || tags.consultationType || 'initial',
-          patientName: tags.patient_name || tags.patientName,
-          patientEmail: tags.patient_email || tags.patientEmail,
-          patientPhone: tags.patient_phone || tags.patientPhone,
-          date: tags.appointment_date || tags.appointmentDate,
-          time: tags.appointment_time || tags.appointmentTime,
+          consultationType: tags.consultation_type || tags.consultationType || noteType || 'initial',
+          patientName: tags.patient_name || tags.patientName || customer.customerName,
+          patientEmail: tags.patient_email || tags.patientEmail || customer.customerEmail,
+          patientPhone: tags.patient_phone || tags.patientPhone || customer.customerPhone,
+          date: tags.appointment_date || tags.appointmentDate || noteDate,
+          time: tags.appointment_time || tags.appointmentTime || noteTime,
           amount: orderInfo?.cfOrder?.orderAmount || orderInfo?.orderAmount,
           currency: orderInfo?.cfOrder?.orderCurrency || orderInfo?.orderCurrency,
         } : undefined
@@ -220,6 +234,10 @@ router.post('/verify-payment', async (req, res) => {
       if (!details) {
         console.warn('⚠️ Payment verification: No booking details from client or order tags; skipping auto appointment creation');
       } else {
+        // If date/time still missing, do not create
+        if (!details.date || !details.time) {
+          console.warn('⚠️ Payment verification: Missing date/time even after parsing order note; cannot create appointment automatically');
+        } else {
         // Resolve user without relying solely on session (which may be missing after redirect)
         const sessionUser = req.session?.user;
         let patientId = sessionUser?.id || tags.user_id || null;
@@ -311,6 +329,7 @@ router.post('/verify-payment', async (req, res) => {
           meetLink: generateMeetLink(details.date, details.time),
           intake: intakeData,
         });
+        }
 
         console.log('💾 Appointment saved with intake data:', {
           appointmentId: createdAppointment._id,
