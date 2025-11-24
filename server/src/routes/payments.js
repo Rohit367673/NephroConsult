@@ -77,7 +77,9 @@ router.post('/create-order', requireAuth, async (req, res) => {
 });
 
 // Verify Cashfree payment
-router.post('/verify-payment', requireAuth, async (req, res) => {
+// Note: Do not require authentication here because payment redirects can drop the session cookie.
+// We verify authenticity with Cashfree APIs and associate the appointment via order tags.
+router.post('/verify-payment', async (req, res) => {
   try {
     console.log('💳 Payment verification request from user:', req.session?.user?.email);
     
@@ -218,8 +220,17 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
       if (!details) {
         console.warn('⚠️ Payment verification: No booking details from client or order tags; skipping auto appointment creation');
       } else {
-        const sessionUser = req.session.user || {};
-        const userDoc = await User.findById(sessionUser.id).lean().catch(() => null);
+        // Resolve user without relying solely on session (which may be missing after redirect)
+        const sessionUser = req.session?.user;
+        let patientId = sessionUser?.id || tags.user_id || null;
+        let userDoc = null;
+        if (patientId) {
+          userDoc = await User.findById(patientId).lean().catch(() => null);
+        }
+        if (!userDoc && details?.patientEmail) {
+          userDoc = await User.findOne({ email: details.patientEmail }).lean().catch(() => null);
+          if (userDoc) patientId = userDoc._id;
+        }
 
         const resolvedCountry = userDoc?.country
           || details.patientCountry
@@ -232,14 +243,12 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
         const amount = Number(details.amount) || pricing.consultation;
         const currency = String(details.currency || pricing.currency);
 
-        const patientName = userDoc?.name || sessionUser.name || details.patientName;
-        const patientEmail = userDoc?.email || sessionUser.email || details.patientEmail;
-        const patientPhone = userDoc?.phone || details.patientPhone || details.patientInfo?.phone || sessionUser.phone;
-
-        const patientId = userDoc?._id || sessionUser.id;
+        const patientName = userDoc?.name || sessionUser?.name || details.patientName;
+        const patientEmail = userDoc?.email || sessionUser?.email || details.patientEmail;
+        const patientPhone = userDoc?.phone || details.patientPhone || details.patientInfo?.phone || sessionUser?.phone;
 
         if (!patientId) {
-          console.warn('⚠️ Payment verification: Unable to resolve patient ID for appointment creation');
+          console.warn('⚠️ Payment verification: Unable to resolve patient ID for appointment creation (will still save without id)');
         }
 
         console.log('🗓️ Creating appointment after payment verification with:', {
@@ -275,7 +284,7 @@ router.post('/verify-payment', requireAuth, async (req, res) => {
 
         createdAppointment = await Appointment.create({
           patient: {
-            id: patientId,
+            id: patientId || undefined,
             name: patientName,
             email: patientEmail,
             phone: patientPhone,

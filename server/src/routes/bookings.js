@@ -171,7 +171,8 @@ router.get('/appointments/mine', requireAuth, async (req, res) => {
       // doctor view: recent and upcoming
       q = {};
     } else {
-      q = { 'patient.id': sessionUser.id };
+      // Show appointments linked by id; also fallback to email if id wasn't set during creation
+      q = { $or: [ { 'patient.id': sessionUser.id }, { 'patient.email': sessionUser.email } ] };
     }
     const list = await Appointment.find(q).sort({ createdAt: -1 }).limit(100).lean();
     return res.json({ appointments: list });

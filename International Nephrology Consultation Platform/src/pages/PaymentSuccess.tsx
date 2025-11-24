@@ -114,7 +114,7 @@ const PaymentSuccess: React.FC = () => {
           return null;
         };
 
-        const bookingDetails = await retrieveBookingDataFromMultipleSources();
+        let bookingDetails = await retrieveBookingDataFromMultipleSources();
 
         // Additional debugging - check raw storage content
         const rawSessionStorage = sessionStorage.getItem('cashfree_payment_details');
