@@ -4,7 +4,7 @@ import Appointment from '../models/Appointment.js';
 import User from '../models/User.js';
 import { getDisplayedPrice, mapConsultationTypeId } from '../utils/pricing.js';
 import { env } from '../config.js';
-import { sendBookingEmail } from '../utils/email.js';
+import { sendBookingEmail, sendPrescriptionEmail } from '../utils/email.js';
 import { generateMeetLink } from '../utils/meet.js';
 import { scheduleAppointmentReminder } from '../jobs.js';
 import { getConsultationReminderTemplate } from '../utils/emailTemplates.js';
@@ -44,32 +44,49 @@ router.post('/pricing', async (req, res) => {
 // Create test appointment for debugging
 router.post('/appointments/create-test', async (req, res) => {
   try {
+    // Optional overrides via JSON body
+    const {
+      patientName,
+      patientEmail,
+      patientPhone,
+      patientCountry,
+      date,
+      time,
+      typeId = 'initial',
+      amount = 2500,
+      currency = 'INR'
+    } = req.body || {};
+
+    const typeName = mapConsultationTypeId(String(typeId));
+
     const testAppointment = new Appointment({
       patient: {
-        id: 'test-patient-id',
-        name: 'Test Patient',
-        email: 'test@example.com',
-        phone: '1234567890'
+        name: patientName || 'Test Patient',
+        email: patientEmail || 'test@example.com',
+        phone: patientPhone || '1234567890',
+        country: patientCountry || 'IN'
       },
       doctor: {
-        id: 'test-doctor-id',
-        name: 'Dr. Test',
-        email: 'doctor@test.com'
+        name: 'Dr. Ilango S. Prakasam',
+        title: 'Sr. Nephrologist',
+        qualifications: 'MD, DNB (Nephrology), MRCP (UK)',
+        experience: '15+ Years Experience',
+        email: env.OWNER_EMAIL || 'suyambu54321@gmail.com'
       },
-      date: '2025-10-09',
-      timeSlot: '10:00 AM IST',
+      date: date || '2025-10-09',
+      timeSlot: time || '10:00 AM IST',
       status: 'confirmed',
-      meetLink: 'https://meet.jit.si/TestConsultation', 
-      type: 'Initial Consultation',
+      meetLink: generateMeetLink(date || '2025-10-09', time || '10:00 AM IST'), 
+      type: typeName,
       price: {
-        amount: 2500,
-        currency: 'INR',
-        symbol: '₹',
-        region: 'IN'
+        amount: Number(amount) || 2500,
+        currency: String(currency) || 'INR',
+        symbol: (String(currency) === 'INR') ? '₹' : '$',
+        region: patientCountry || 'IN'
       },
       intake: {
-        description: 'Test consultation for debugging admin panel', 
-        documents: ['test-document.pdf|data:application/pdf;base64,JVBERi0xLjMKJcTl8uXrp/Og0MTGCg==']
+        description: 'Test consultation created via create-test endpoint', 
+        documents: []
       }
     });
     
@@ -79,7 +96,8 @@ router.post('/appointments/create-test', async (req, res) => {
     res.json({ 
       success: true, 
       appointmentId: testAppointment._id,
-      message: 'Test appointment created successfully'
+      message: 'Appointment created successfully (test endpoint with overrides)',
+      appointment: testAppointment
     });
   } catch (error) {
     console.error('Error creating test appointment:', error);
@@ -351,6 +369,37 @@ router.post('/appointments/:id/prescription', requireRole('doctor', 'admin'), as
     await appointment.save();
     
     console.log(`✅ Prescription added to appointment ${id}`);
+
+    // Best-effort: Email prescription to patient
+    try {
+      const meds = (prescription?.medicines || []).map((m) => {
+        const parts = [m.name].filter(Boolean);
+        if (m.dosage) parts.push(m.dosage);
+        if (m.frequency) parts.push(m.frequency);
+        const text = parts.join(' — ');
+        return m.link ? `<li><a href="${m.link}">${text}</a></li>` : `<li>${text}</li>`;
+      }).join('');
+
+      const html = `
+        <p>Dear ${appointment.patient?.name || 'Patient'},</p>
+        <p>Your digital prescription from the recent consultation is attached below and also available on your profile.</p>
+        ${prescription?.notes ? `<p><b>Notes:</b> ${prescription.notes}</p>` : ''}
+        ${meds ? `<p><b>Medicines:</b></p><ul>${meds}</ul>` : ''}
+        ${appointment.date && appointment.timeSlot ? `<p><b>Consultation:</b> ${appointment.date} at ${appointment.timeSlot}</p>` : ''}
+        <p>— NephroConsult</p>
+      `;
+
+      if (appointment.patient?.email) {
+        await sendPrescriptionEmail(
+          appointment.patient.email,
+          'Your prescription is available - NephroConsult',
+          html
+        );
+      }
+    } catch (emailErr) {
+      console.warn('⚠️ Failed to send prescription email (non-blocking):', emailErr.message);
+    }
+
     return res.json({ message: 'Prescription added successfully', appointment });
   } catch (error) {
     console.error('Error adding prescription:', error);
