@@ -125,7 +125,7 @@ function computeHighIncomeMultiplier(baseInr, targetUsd, usdPerInr) {
 export function mapConsultationTypeId(id) {
   const mapping = {
     initial: 'Initial Consultation',
-    followup: 'Follow-up Consultation',
+    followup: 'Follow-up',
     urgent: 'Urgent Consultation',
   };
   return mapping[id] || 'Initial Consultation';
