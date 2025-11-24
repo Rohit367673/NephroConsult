@@ -523,6 +523,30 @@ export default function ProfilePage() {
     .filter((apt) => String(apt.status || '').toLowerCase() === 'completed')
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  const lastCompleted = historyAppointments[0] || null;
+  const lastCheckupDate = lastCompleted ? new Date(lastCompleted.date) : null;
+  const nextUpcoming = (activeAppointments.find(a => new Date(a.date) >= new Date()) || activeAppointments[0]) || null;
+
+  const fmtDate = (d?: Date | null, s?: string) => {
+    if (!d && !s) return '—';
+    const dd = d || (s ? new Date(s) : null);
+    return dd ? dd.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+  };
+
+  const lastCheckupLabel = fmtDate(lastCheckupDate);
+  const nextAppointmentLabel = nextUpcoming ? fmtDate(null, nextUpcoming.date) : '—';
+
+  const now = new Date();
+  let scoreLabel = 'Good';
+  let barW = 'w-16';
+  let color = 'text-green-600';
+  let barColor = 'bg-green-500';
+  if (!lastCheckupDate) { scoreLabel = 'New'; barW = 'w-12'; color = 'text-blue-600'; barColor = 'bg-blue-500'; }
+  else {
+    const months = (now.getTime() - lastCheckupDate.getTime()) / (1000 * 60 * 60 * 24 * 30);
+    if (months > 12) { scoreLabel = 'Needs follow-up'; barW = 'w-8'; color = 'text-red-600'; barColor = 'bg-red-500'; }
+    else if (months > 6) { scoreLabel = 'Fair'; barW = 'w-12'; color = 'text-yellow-600'; barColor = 'bg-yellow-500'; }
+  }
   // Mock documents data
   const documents = [
     {
@@ -768,19 +792,19 @@ For support: suyambu54321@gmail.com
                   <CardContent className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Last Checkup</span>
-                      <span className="font-medium">Aug 15, 2024</span>
+                      <span className="font-medium">{lastCheckupLabel}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Next Appointment</span>
-                      <span className="font-medium text-[#006f6f]">Sep 25, 2024</span>
+                      <span className="font-medium text-[#006f6f]">{nextAppointmentLabel}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Health Score</span>
                       <div className="flex items-center space-x-2">
                         <div className="w-20 h-2 bg-gray-200 rounded-full">
-                          <div className="w-16 h-2 bg-green-500 rounded-full"></div>
+                          <div className={`${barW} h-2 ${barColor} rounded-full`}></div>
                         </div>
-                        <span className="font-medium text-green-600">Good</span>
+                        <span className={`font-medium ${color}`}>{scoreLabel}</span>
                       </div>
                     </div>
                   </CardContent>
