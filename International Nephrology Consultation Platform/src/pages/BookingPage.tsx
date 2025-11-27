@@ -66,42 +66,23 @@ const getCountryPriceMultiplier = (country: string): number => {
 
 const getBasePricesINR = () => {
   return {
-    'Initial Consultation': 1000,
-    'Follow-up Consultation': 700,
-    'Urgent Consultation': 2000
+    'Initial Consultation': 599,
+    'Follow-up Consultation': 499,
+    'Urgent Consultation': 1499
   };
 };
 
 const getConsultationPrice = (type: string, country: string, currency: string) => {
-  const basePrices = getBasePricesINR();
-  const multiplier = getCountryPriceMultiplier(country);
-  
-  // Map consultation types
-  const typeMapping: { [key: string]: string } = {
-    'initial': 'Initial Consultation',
-    'followup': 'Follow-up Consultation', 
-    'urgent': 'Urgent Consultation'
-  };
-  
-  const consultationType = typeMapping[type] || 'Initial Consultation';
-  const basePrice = basePrices[consultationType as keyof typeof basePrices];
-  const adjustedPriceINR = Math.round(basePrice * multiplier);
-  
-  // Convert to different currencies
-  const exchangeRates = {
-    'INR': 1,
-    'USD': 0.012, // 1 INR = 0.012 USD (1 USD = 83 INR)
-    'EUR': 0.011, // 1 INR = 0.011 EUR
-    'GBP': 0.0095 // 1 INR = 0.0095 GBP
-  };
-  
-  const rate = exchangeRates[currency as keyof typeof exchangeRates] || exchangeRates['USD'];
-  
-  if (currency === 'INR') {
-    return adjustedPriceINR;
-  } else {
-    return Math.round(adjustedPriceINR * rate);
-  }
+  // Fixed pricing per client decision
+  // Cheap countries (IN and similar): INR 599/499/1499
+  // High-income countries: USD $49/$39/$99
+  const inrPrices = { initial: 599, followup: 499, urgent: 1499 } as const;
+  const usdPrices = { initial: 49, followup: 39, urgent: 99 } as const;
+
+  const key = (type === 'followup' || type === 'urgent') ? type : 'initial';
+
+  if (currency === 'INR') return inrPrices[key];
+  return usdPrices[key];
 };
 
 // Get formatted price with currency symbol

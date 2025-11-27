@@ -2,9 +2,9 @@
 
 // Base configuration (INR)
 const BASE_PRICES = {
-  initial: 1000,    // Initial consultation
-  followup: 700,    // Follow-up consultation
-  urgent: 2000      // Urgent consultation
+  initial: 599,     // Initial consultation (Tier A / India & cheap countries)
+  followup: 499,    // Follow-up consultation (Tier A)
+  urgent: 1499      // Urgent consultation (Tier A)
 };
 
 const FIRST_TIME_DISCOUNT = 0.20; // 20% off

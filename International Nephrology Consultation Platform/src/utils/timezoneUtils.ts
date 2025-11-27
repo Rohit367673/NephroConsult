@@ -47,12 +47,12 @@ export const REGION_PRICING = {
   'Asia/Hong_Kong': { initial: 120, followup: 85, currency: 'HKD', symbol: 'HK$' },
   'Asia/Tokyo': { initial: 125, followup: 90, currency: 'JPY', symbol: '¥' },
   'Asia/Shanghai': { initial: 100, followup: 70, currency: 'CNY', symbol: '¥' },
-  'Asia/Kolkata': { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' },
-  'Asia/Calcutta': { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' }, // Old name for Kolkata
-  'Asia/Mumbai': { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' },
-  'Asia/Delhi': { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' },
-  'Asia/Chennai': { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' },
-  'Asia/Bangalore': { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' },
+  'Asia/Kolkata': { initial: 599, followup: 499, currency: 'INR', symbol: '₹' },
+  'Asia/Calcutta': { initial: 599, followup: 499, currency: 'INR', symbol: '₹' }, // Old name for Kolkata
+  'Asia/Mumbai': { initial: 599, followup: 499, currency: 'INR', symbol: '₹' },
+  'Asia/Delhi': { initial: 599, followup: 499, currency: 'INR', symbol: '₹' },
+  'Asia/Chennai': { initial: 599, followup: 499, currency: 'INR', symbol: '₹' },
+  'Asia/Bangalore': { initial: 599, followup: 499, currency: 'INR', symbol: '₹' },
   
   // Australia & NZ
   'Australia/Sydney': { initial: 180, followup: 125, currency: 'AUD', symbol: 'AU$' },
@@ -91,7 +91,7 @@ export const getPricingForTimezone = (timezone: string) => {
       timezone.includes('Chennai') || timezone.includes('Bangalore') ||
       timezone === 'Asia/Colombo')) { // Sri Lanka also uses similar pricing
     console.log('Detected Indian region, returning INR pricing');
-    return { initial: 1000, followup: 700, currency: 'INR', symbol: '₹' };
+    return { initial: 599, followup: 499, currency: 'INR', symbol: '₹' };
   }
   
   // Try to match by region/city
