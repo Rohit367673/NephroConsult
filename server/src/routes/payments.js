@@ -322,7 +322,7 @@ router.post('/verify-payment', async (req, res) => {
           price: {
             amount,
             currency,
-            symbol: pricing.symbol,
+            symbol: (currency === 'INR') ? '₹' : (currency === 'USD') ? '$' : currency,
             region: resolvedCountry,
             discountApplied: false,
           },
@@ -388,6 +388,22 @@ router.post('/verify-payment', async (req, res) => {
             `;
             await sendBookingEmail(recipient, 'Booking Confirmed - NephroConsult', html);
           }
+
+          // Also notify doctor about the new booking (best-effort)
+          try {
+            const doctorRecipient = (env.OWNER_EMAIL && env.OWNER_EMAIL.trim()) ? env.OWNER_EMAIL.trim() : 'suyambu54321@gmail.com';
+            const doctorHtml = `
+              <p>Dear Doctor,</p>
+              <p>A new consultation has been booked.</p>
+              <p><strong>Patient:</strong> ${patientName || 'Unknown'} (${patientEmail || 'no-email'})<br/>
+              <strong>Date:</strong> ${createdAppointment.date}<br/>
+              <strong>Time:</strong> ${createdAppointment.timeSlot}<br/>
+              <strong>Type:</strong> ${createdAppointment.type}<br/>
+              <strong>Amount:</strong> ${createdAppointment.price.symbol}${createdAppointment.price.amount} ${createdAppointment.price.currency}</p>
+              <p><a href="${createdAppointment.meetLink}">Meet Link</a></p>
+            `;
+            await sendBookingEmail(doctorRecipient, 'New Consultation Booked - NephroConsult', doctorHtml);
+          } catch {}
         } catch (emailErr) {
           console.warn('⚠️ Booking confirmation email failed:', emailErr.message);
         }

@@ -150,7 +150,7 @@ export async function getDisplayedPrice(type, userIp, userCountryCode, isFirstTi
       throw new Error(`Unknown consultation type: ${type}`);
     }
 
-    // Apply first-time discount if applicable
+    // Apply first-time discount if applicable (Tier A/B only)
     const discountedInr = isFirstTime ? Math.round(baseInr * (1 - FIRST_TIME_DISCOUNT)) : baseInr;
 
     // Determine display currency (INR for Tier A, USD for others, local currency for high-income)
@@ -164,35 +164,35 @@ export async function getDisplayedPrice(type, userIp, userCountryCode, isFirstTi
     // Get exchange rate for display currency
     const inrToDisplayRate = displayCurrency === 'INR' ? 1 : (rates.rates?.[displayCurrency] ?? inrToUsd);
 
-    // Compute multiplier based on tier
-    let multiplier = 1.0;
-    if (tier === 'A') {
-      multiplier = 1.0; // No uplift for South Asia
-    } else if (tier === 'B') {
-      multiplier = TIER_B_MULTIPLIER; // 1.8x for middle-income
+    // Compute final INR to charge and display price
+    let finalInrToCharge = discountedInr;
+    if (tier === 'B') {
+      finalInrToCharge = Math.round(discountedInr * TIER_B_MULTIPLIER);
     } else if (tier === 'C') {
-      // Dynamic multiplier for high-income countries to hit target USD prices
+      // Charge the INR equivalent of target USD for high-income countries
       const targetUsd = HIGH_INCOME_TARGET_USD[type];
       if (targetUsd) {
-        multiplier = computeHighIncomeMultiplier(discountedInr, targetUsd, inrToUsd);
+        finalInrToCharge = Math.round(targetUsd / inrToUsd);
       } else {
-        multiplier = 3.3; // Fallback multiplier
+        finalInrToCharge = Math.round(discountedInr * 3.3);
       }
     }
 
-    // Compute display price
-    const displayValue = (discountedInr * multiplier) * inrToDisplayRate;
+    const displayValue = finalInrToCharge * inrToDisplayRate;
+
+    // Derive an effective multiplier for debugging/telemetry
+    const effectiveMultiplier = discountedInr > 0 ? (finalInrToCharge / discountedInr) : 1;
 
     return {
       country,
       tier,
       baseInr,
       discountedInr,
-      finalInrToCharge: discountedInr, // Amount to charge in INR
+      finalInrToCharge,
       display: {
         currency: displayCurrency,
         value: Number(displayValue.toFixed(2)),
-        rawMultiplier: Number(multiplier.toFixed(6))
+        rawMultiplier: Number(effectiveMultiplier.toFixed(6))
       }
     };
 
