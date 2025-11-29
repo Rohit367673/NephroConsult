@@ -236,7 +236,7 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -275,7 +275,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Consultations List */}
           <div className="lg:col-span-2">
             <Card>
@@ -284,6 +284,13 @@ export default function AdminDashboard() {
                   <CardTitle>Consultations</CardTitle>
                   <div className="flex items-center space-x-6">
                     <div className="flex items-center space-x-4">
+                      <Button
+                        variant={activeTab === 'all' ? 'default' : 'outline'}
+                        onClick={() => setActiveTab('all')}
+                        className={activeTab === 'all' ? 'bg-[#006f6f] hover:bg-[#005555]' : ''}
+                      >
+                        All ({consultations.length})
+                      </Button>
                       <Button
                         variant={activeTab === 'upcoming' ? 'default' : 'outline'}
                         onClick={() => setActiveTab('upcoming')}
@@ -319,7 +326,7 @@ export default function AdminDashboard() {
 
                 {/* Consultations Tab */}
                 <div>
-                  <div className="max-h-96 overflow-y-auto">
+                  <div className="max-h-[60vh] sm:max-h-[70vh] md:max-h-[72vh] overflow-y-auto overscroll-contain">
                     {filteredConsultations.map((consultation) => (
                     <motion.div
                       key={consultation.id}

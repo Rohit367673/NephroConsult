@@ -38,6 +38,7 @@ class AdminService {
       // Use environment variable for API URL or fallback to production backend
       const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://nephroconsult.onrender.com';
       const endpoint = `${apiBaseUrl}/api/appointments/doctor`;
+      const debugEndpoint = `${apiBaseUrl}/api/appointments/doctor-debug`;
       
       console.log('🔗 Admin Service API URL:', apiBaseUrl);
       console.log('🔗 Full endpoint:', endpoint);
@@ -54,6 +55,46 @@ class AdminService {
           console.error('❌ Unauthorized - user not logged in or session expired');
         } else if (response.status === 403) {
           console.error('❌ Forbidden - insufficient permissions (need doctor/admin role)');
+        }
+        // Safari/mobile fallback: use temporary no-auth debug endpoint
+        try {
+          console.warn('⚠️ Falling back to doctor-debug endpoint due to API error');
+          const fallback = await safariCompatibleFetch(debugEndpoint, { method: 'GET' });
+          if (fallback.ok) {
+            const fbData = await fallback.json();
+            console.log('📋 Fallback (doctor-debug) appointments:', fbData.appointments?.length || 0);
+            const consultations: Consultation[] = (fbData.appointments || []).map((apt: any) => ({
+              id: apt._id,
+              patientName: apt.patient?.name || 'Unknown Patient',
+              patientEmail: apt.patient?.email || 'N/A',
+              patientPhone: apt.patient?.phone || apt.patientPhone || 'N/A',
+              date: apt.date,
+              time: apt.timeSlot,
+              istTime: apt.timeSlot,
+              type: apt.type as 'Initial Consultation' | 'Follow-up',
+              status: apt.status === 'confirmed' ? 'upcoming' : 
+                      apt.status === 'completed' ? 'completed' : 
+                      apt.status === 'pending' ? 'upcoming' : 'upcoming',
+              documents: (apt.files && apt.files.length > 0) ? apt.files :
+                         (apt.intake?.documents && apt.intake.documents.length > 0) ? apt.intake.documents :
+                         (apt.documents && apt.documents.length > 0) ? apt.documents : [],
+              query: apt.intake?.description || apt.intake?.reason || apt.query || 'No query provided',
+              meetingLink: apt.meetLink,
+              country: (apt.patient?.country && apt.patient.country !== 'default') 
+                       ? apt.patient.country 
+                       : apt.country || 'Unknown',
+              prescription: apt.prescription ? {
+                medicines: apt.prescription.medicines || [],
+                instructions: apt.prescription.notes || '',
+                nextVisit: apt.prescription.nextConsultationDate || '',
+                createdAt: apt.prescription.createdAt,
+                doctorName: apt.doctor?.name || 'Dr. Ilango S. Prakasam'
+              } : undefined
+            }));
+            return consultations;
+          }
+        } catch (fbErr) {
+          console.warn('⚠️ Fallback to doctor-debug failed:', fbErr);
         }
         throw new Error(`Failed to fetch consultations: ${response.status} ${response.statusText}`);
       }
