@@ -200,11 +200,11 @@ export default function AdminDashboard() {
   const completedCount = consultations.filter(c => c.status === 'completed').length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-[#006f6f]/5">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-[#006f6f]/5" style={{ paddingBottom: 'env(safe-area-inset-bottom)' as any }}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)' as any }}>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-14 sm:h-16">
             <div className="flex items-center space-x-4">
               <div className="w-10 h-10 bg-[#006f6f] rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">N</span>
@@ -217,8 +217,8 @@ export default function AdminDashboard() {
             
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-600">{user?.email}</p>
+                <p className="text-sm font-medium text-gray-900 truncate max-w-[140px] sm:max-w-none">{user?.name}</p>
+                <p className="text-xs text-gray-600 hidden sm:block">{user?.email}</p>
               </div>
               <Button
                 variant="ghost"
@@ -238,7 +238,7 @@ export default function AdminDashboard() {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Upcoming Consultations</p>
@@ -278,30 +278,30 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Consultations List */}
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
+            <Card className="overflow-hidden">
+              <CardHeader className="sticky top-[56px] sm:static z-40 bg-white/95 supports-[backdrop-filter]:bg-white/80 backdrop-blur">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                   <CardTitle>Consultations</CardTitle>
-                  <div className="flex items-center space-x-6">
-                    <div className="flex items-center space-x-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-6 w-full sm:w-auto sm:justify-end mt-1 sm:mt-0">
+                    <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto whitespace-nowrap px-1 -mx-1" style={{ WebkitOverflowScrolling: 'touch' as any }}>
                       <Button
                         variant={activeTab === 'all' ? 'default' : 'outline'}
                         onClick={() => setActiveTab('all')}
-                        className={activeTab === 'all' ? 'bg-[#006f6f] hover:bg-[#005555]' : ''}
+                        className={(activeTab === 'all' ? 'bg-[#006f6f] hover:bg-[#005555] ' : '') + 'shrink-0 text-xs sm:text-sm'}
                       >
                         All ({consultations.length})
                       </Button>
                       <Button
                         variant={activeTab === 'upcoming' ? 'default' : 'outline'}
                         onClick={() => setActiveTab('upcoming')}
-                        className={activeTab === 'upcoming' ? 'bg-[#006f6f] hover:bg-[#005555]' : ''}
+                        className={(activeTab === 'upcoming' ? 'bg-[#006f6f] hover:bg-[#005555] ' : '') + 'shrink-0 text-xs sm:text-sm'}
                       >
                         Upcoming ({upcomingCount})
                       </Button>
                       <Button
                         variant={activeTab === 'completed' ? 'default' : 'outline'}
                         onClick={() => setActiveTab('completed')}
-                        className={activeTab === 'completed' ? 'bg-[#006f6f] hover:bg-[#005555]' : ''}
+                        className={(activeTab === 'completed' ? 'bg-[#006f6f] hover:bg-[#005555] ' : '') + 'shrink-0 text-xs sm:text-sm'}
                       >
                         Completed ({completedCount})
                       </Button>
@@ -309,7 +309,7 @@ export default function AdminDashboard() {
                     </div>
                     
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
-                      <SelectTrigger className="w-32">
+                      <SelectTrigger className="w-full sm:w-32 text-xs sm:text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -326,18 +326,17 @@ export default function AdminDashboard() {
 
                 {/* Consultations Tab */}
                 <div>
-                  <div className="max-h-[60vh] sm:max-h-[70vh] md:max-h-[72vh] overflow-y-auto overscroll-contain">
+                  <div className="md:max-h-[72vh] md:overflow-y-auto overflow-visible overflow-x-hidden overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' as any }}>
                     {filteredConsultations.map((consultation) => (
                     <motion.div
                       key={consultation.id}
-                      className={`p-6 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                      className={`p-4 sm:p-6 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
                         selectedConsultation?.id === consultation.id ? 'bg-blue-50 border-blue-200' : ''
                       }`}
                       onClick={() => setSelectedConsultation(consultation)}
-                      whileHover={{ scale: 1.01 }}
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="flex-1 min-w-0 break-words">
                           <div className="flex items-center space-x-3 mb-2">
                             <h3 className="font-semibold text-gray-900">{consultation.patientName}</h3>
                             <Badge 
@@ -349,28 +348,28 @@ export default function AdminDashboard() {
                             <Badge variant="outline">{consultation.type}</Badge>
                           </div>
                           
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <div className="flex items-center space-x-4">
-                              <span className="flex items-center">
+                          <div className="text-sm text-gray-600 space-y-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start">
+                              <span className="flex items-center min-w-0">
                                 <Calendar className="w-4 h-4 mr-1" />
                                 {consultation.date}
                               </span>
-                              <span className="flex items-center">
+                              <span className="flex items-center min-w-0">
                                 <Clock className="w-4 h-4 mr-1" />
                                 {consultation.time} ({consultation.istTime})
                               </span>
-                              <span className="flex items-center">
+                              <span className="flex items-center min-w-0">
                                 <Globe className="w-4 h-4 mr-1" />
                                 {consultation.country}
                               </span>
                             </div>
                             
-                            <div className="flex items-center space-x-4">
-                              <span className="flex items-center">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 items-start">
+                              <span className="flex items-center min-w-0">
                                 <Mail className="w-4 h-4 mr-1" />
-                                {consultation.patientEmail}
+                                <span className="truncate break-all max-w-[220px] sm:max-w-none">{consultation.patientEmail}</span>
                               </span>
-                              <span className="flex items-center">
+                              <span className="flex items-center min-w-0">
                                 <Phone className="w-4 h-4 mr-1" />
                                 {consultation.patientPhone}
                               </span>
@@ -421,7 +420,7 @@ export default function AdminDashboard() {
           {/* Patient Details Panel */}
           <div className="lg:col-span-1">
             {selectedConsultation ? (
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     Patient Details
