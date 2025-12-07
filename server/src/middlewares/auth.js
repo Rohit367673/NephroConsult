@@ -28,6 +28,20 @@ export function requireAuth(rolesOrReq, maybeRes, maybeNext) {
     return next();
   }
 
+  // Debug logs to diagnose missing session on mobile
+  try {
+    console.log('❌ Auth failed (default)');
+    console.log('🔐 Session exists:', !!req.session);
+    console.log('🔐 Session ID:', req.sessionID);
+    console.log('🔐 Session user:', req.session?.user);
+    console.log('🍪 Cookie header:', req.headers?.cookie);
+    console.log('🧭 Origin:', req.headers?.origin);
+    console.log('🔗 Referer:', req.headers?.referer);
+    console.log('📱 User-Agent:', req.headers?.['user-agent']);
+    console.log('🌐 Host:', req.headers?.host);
+  } catch (e) {
+    // noop
+  }
   return res.status(401).json({ error: 'Unauthorized' });
 }
 
