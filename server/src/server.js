@@ -158,12 +158,13 @@ const sessionConfig = {
   secret: env.SESSION_SECRET || 'dev_secret_change_me',
   resave: false,
   saveUninitialized: false,
+  proxy: isProd,
   cookie: {
     httpOnly: true,
     sameSite: isProd ? 'none' : 'lax',
     secure: isProd, // set true behind HTTPS/proxy in production
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    domain: isProd ? undefined : undefined, // Let browser set domain in dev
+    domain: isProd ? '.nephroconsultation.com' : undefined, // ensure cookie works on www and apex in prod
   },
 };
 
