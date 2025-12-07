@@ -269,9 +269,33 @@ export const verifyCashfreePayment = async (
   try {
     console.log('Verifying payment:', paymentResponse);
 
-    // Use environment variable for API URL or fallback to relative path for localhost
-    const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-    const endpoint = apiBaseUrl ? `${apiBaseUrl}/api/payments/verify-payment` : '/api/payments/verify-payment';
+    // Create API base URL (prefer same-origin in prod to keep cookies first-party)
+    let endpoint = '/api/payments/verify-payment';
+    try {
+      const configured = import.meta.env.VITE_API_URL as string | undefined;
+      const hasWindow = typeof window !== 'undefined';
+      if (configured && hasWindow) {
+        const cur = new URL(window.location.href);
+        const cfg = new URL(configured);
+        const isLoopback = (h: string) => h === 'localhost' || h === '127.0.0.1';
+        const sameSite = (h1: string, h2: string) => {
+          try {
+            const p1 = h1.split('.').slice(-2).join('.');
+            const p2 = h2.split('.').slice(-2).join('.');
+            return p1 === p2;
+          } catch { return false; }
+        };
+        if (isLoopback(cur.hostname) && isLoopback(cfg.hostname)) {
+          endpoint = `${configured}/api/payments/verify-payment`;
+        } else if (sameSite(cur.hostname, cfg.hostname)) {
+          endpoint = '/api/payments/verify-payment';
+        } else {
+          endpoint = '/api/payments/verify-payment';
+        }
+      } else if (configured) {
+        endpoint = `${configured}/api/payments/verify-payment`;
+      }
+    } catch {}
 
     const resolvedBooking = bookingDetails || resolveStoredBookingDetails();
     if (!resolvedBooking) {
