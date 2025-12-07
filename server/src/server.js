@@ -177,6 +177,31 @@ if (env.MONGO_URI) {
 
 app.use(session(sessionConfig));
 
+// Adjust cookie settings per-request based on host so cookies work on Render and custom domains
+app.use((req, res, next) => {
+  try {
+    if (req.session && req.session.cookie) {
+      const host = String(req.headers?.host || '').toLowerCase();
+      const originHost = (() => {
+        try {
+          if (req.headers?.origin) return new URL(req.headers.origin).hostname.toLowerCase();
+          if (req.headers?.referer) return new URL(req.headers.referer).hostname.toLowerCase();
+        } catch {}
+        return '';
+      })();
+      const underNephro = /(^|\.)nephroconsultation\.com$/.test(host) || /(^|\.)nephroconsultation\.com$/.test(originHost);
+      // Ensure secure/SameSite are enforced in prod
+      req.session.cookie.sameSite = isProd ? 'none' : 'lax';
+      req.session.cookie.secure = isProd;
+      // Set parent domain when original site is nephroconsultation.com (via proxy) or always in prod as fallback
+      req.session.cookie.domain = isProd ? '.nephroconsultation.com' : undefined;
+    }
+  } catch (_) {
+    // noop
+  }
+  next();
+});
+
 // Rate limiting
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

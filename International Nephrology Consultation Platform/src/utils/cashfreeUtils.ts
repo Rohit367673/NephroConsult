@@ -65,9 +65,34 @@ export const initiateCashfreePayment = async (
     const paymentSessionId = `session_${Math.random().toString(36).substr(2, 16)}`;
     const cashfreeAppId = import.meta.env.VITE_CASHFREE_APP_ID || 'TEST108386203fd97c98761cc8cc4b1402683801';
 
-    // Create API base URL
-    const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-    const endpoint = apiBaseUrl ? `${apiBaseUrl}/api/payments/create-order` : '/api/payments/create-order';
+    // Create API base URL (prefer same-origin in prod to keep cookies first-party)
+    let endpoint = '/api/payments/create-order';
+    try {
+      const configured = import.meta.env.VITE_API_URL as string | undefined;
+      const hasWindow = typeof window !== 'undefined';
+      if (configured && hasWindow) {
+        const cur = new URL(window.location.href);
+        const cfg = new URL(configured);
+        const isLoopback = (h: string) => h === 'localhost' || h === '127.0.0.1';
+        const sameSite = (h1: string, h2: string) => {
+          try {
+            const p1 = h1.split('.').slice(-2).join('.');
+            const p2 = h2.split('.').slice(-2).join('.');
+            return p1 === p2;
+          } catch { return false; }
+        };
+        if (isLoopback(cur.hostname) && isLoopback(cfg.hostname)) {
+          endpoint = `${configured}/api/payments/create-order`;
+        } else if (sameSite(cur.hostname, cfg.hostname)) {
+          endpoint = '/api/payments/create-order';
+        } else {
+          // Force same-origin to avoid third-party cookies
+          endpoint = '/api/payments/create-order';
+        }
+      } else if (configured) {
+        endpoint = `${configured}/api/payments/create-order`;
+      }
+    } catch {}
 
     // Prepare order data
     const orderData = {

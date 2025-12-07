@@ -1,5 +1,32 @@
 // API Service for backend communication
-const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api`;
+function getApiBaseUrl(): string {
+  try {
+    const configured = import.meta.env.VITE_API_URL as string | undefined;
+    const hasWindow = typeof window !== 'undefined';
+    const curHost = hasWindow ? window.location.hostname : '';
+    if (configured) {
+      const cfg = new URL(configured);
+      const isLoopback = (h: string) => h === 'localhost' || h === '127.0.0.1';
+      const sameSite = (h1: string, h2: string) => {
+        try {
+          const p1 = h1.split('.').slice(-2).join('.');
+          const p2 = h2.split('.').slice(-2).join('.');
+          return p1 === p2;
+        } catch { return false; }
+      };
+      if (hasWindow) {
+        if (isLoopback(curHost) && isLoopback(cfg.hostname)) return `${configured}/api`;
+        if (sameSite(curHost, cfg.hostname)) return '/api';
+        return '/api';
+      }
+      return `${configured}/api`;
+    }
+  } catch {}
+  return '/api';
+}
+
+const API_BASE_URL = getApiBaseUrl();
+export { getApiBaseUrl };
 
 interface ApiResponse<T> {
   success: boolean;

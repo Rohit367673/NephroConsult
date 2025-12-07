@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { UserCredential, User } from 'firebase/auth';
 import { auth, googleProvider, hasFirebaseCredentials } from '../config/firebase';
+import { getApiBaseUrl } from './apiService';
 
 export interface AuthUser {
   uid: string;
@@ -174,8 +175,9 @@ class AuthService {
       if (auth) {
         await signOut(auth);
       }
-      // Also sign out from backend
-      await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {
+      // Also sign out from backend (same-origin in prod)
+      const API_BASE = getApiBaseUrl();
+      await fetch(`${API_BASE}/auth/logout`, {
         method: 'POST',
         credentials: 'include'
       });
@@ -189,8 +191,8 @@ class AuthService {
   private async syncUserWithBackend(user: User): Promise<void> {
     try {
       const idToken = await user.getIdToken();
-      
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/firebase-login`, {
+      const API_BASE = getApiBaseUrl();
+      const response = await fetch(`${API_BASE}/auth/firebase-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

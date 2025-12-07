@@ -1,1 +1,4 @@
 /*    /index.html   200
+
+# Proxy API to backend (Render)
+/api/*  https://nephroconsult.onrender.com/:splat   200!

@@ -318,7 +318,7 @@ export default function ProfilePage() {
   };
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState(user?.role === 'doctor' || user?.role === 'admin' ? 'doctor-dashboard' : 'dashboard');
+  const [activeTab, setActiveTab] = useState(user?.role === 'doctor' ? 'doctor-dashboard' : 'dashboard');
   const [expandedPrescriptions, setExpandedPrescriptions] = useState<Set<number>>(new Set());
 
   // Debug user data for reload issues
@@ -342,6 +342,11 @@ export default function ProfilePage() {
   // Redirect to home if no user after loading
   if (!loading && !user) {
     navigate('/');
+    return null;
+  }
+  // Redirect admins to dedicated admin panel instead of showing admin content inside Profile
+  if (!loading && user?.role === 'admin') {
+    navigate('/admin');
     return null;
   }
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -411,9 +416,8 @@ export default function ProfilePage() {
   const fetchAppointments = async () => {
     try {
       setAppointmentsLoading(true);
-      // Use environment variable for API URL or fallback to relative path for localhost
-      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-      const appointmentsEndpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments/mine` : '/api/appointments/mine';
+      // Use same-origin endpoint to keep cookies first-party on mobile
+      const appointmentsEndpoint = '/api/appointments/mine';
       
       const response = await fetch(appointmentsEndpoint, {
         credentials: 'include'
@@ -444,9 +448,8 @@ export default function ProfilePage() {
   const fetchDoctorAppointments = async () => {
     try {
       setAppointmentsLoading(true);
-      // Use environment variable for API URL or fallback to relative path for localhost
-      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-      const doctorEndpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments/doctor` : '/api/appointments/doctor';
+      // Use same-origin endpoint to keep cookies first-party on mobile
+      const doctorEndpoint = '/api/appointments/doctor';
       
       const response = await fetch(doctorEndpoint, {
         credentials: 'include'
@@ -650,9 +653,9 @@ For support: suyambu54321@gmail.com
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white overflow-x-hidden">
       <Navigation />
-      <div className="container-medical py-12">
+      <div className="container-medical pt-8 sm:pt-12 pb-28 sm:pb-12 px-3 sm:px-0">
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -816,16 +819,19 @@ For support: suyambu54321@gmail.com
             <motion.div variants={itemVariants} className="lg:col-span-2">
               {/* Horizontal Navigation */}
               <div className="mb-6">
-                <nav className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+                <nav
+                  className="w-full flex flex-wrap sm:flex-nowrap space-x-1 bg-gray-100 p-1 rounded-lg overflow-x-auto sm:overflow-visible pr-3 min-w-0"
+                  style={{ WebkitOverflowScrolling: 'touch', scrollbarGutter: 'stable both-edges' as any }}
+                >
                   <button
-                    onClick={() => setActiveTab(user?.role === 'doctor' ? 'doctor-dashboard' : 'dashboard')}
+                    onClick={() => setActiveTab((user?.role === 'doctor' || user?.role === 'admin') ? 'doctor-dashboard' : 'dashboard')}
                     className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                      activeTab === (user?.role === 'doctor' ? 'doctor-dashboard' : 'dashboard')
+                      activeTab === ((user?.role === 'doctor' || user?.role === 'admin') ? 'doctor-dashboard' : 'dashboard')
                         ? 'bg-white text-[#006f6f] shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
-                    {user?.role === 'doctor' ? 'Practice' : 'Dashboard'}
+                    {(user?.role === 'doctor' || user?.role === 'admin') ? 'Practice' : 'Dashboard'}
                   </button>
                   <button
                     onClick={() => setActiveTab('personal')}
@@ -837,7 +843,7 @@ For support: suyambu54321@gmail.com
                   >
                     Personal Info
                   </button>
-                  {user?.role !== 'doctor' && (
+                  {(user?.role !== 'doctor' && user?.role !== 'admin') && (
                     <button
                       onClick={() => setActiveTab('history')}
                       className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
@@ -849,7 +855,7 @@ For support: suyambu54321@gmail.com
                       History
                     </button>
                   )}
-                  {user?.role === 'doctor' && (
+                  {(user?.role === 'doctor' || user?.role === 'admin') && (
                     <>
                       <button
                         onClick={() => setActiveTab('medical')}
@@ -889,9 +895,9 @@ For support: suyambu54321@gmail.com
               <div className="space-y-6">
 
                 {/* Dashboard Content */}
-                {activeTab === (user?.role === 'doctor' ? 'doctor-dashboard' : 'dashboard') && (
+                {activeTab === ((user?.role === 'doctor' || user?.role === 'admin') ? 'doctor-dashboard' : 'dashboard') && (
                   <div className="grid gap-6">
-                    {user?.role === 'doctor' ? (
+                    {(user?.role === 'doctor' || user?.role === 'admin') ? (
                       // Doctor Dashboard
                       <>
                         <div className="grid md:grid-cols-3 gap-6">
@@ -944,13 +950,13 @@ For support: suyambu54321@gmail.com
                                 ) : doctorAppointments.filter(apt => 
                                   new Date(apt.date).toDateString() === new Date().toDateString()
                                 ).map((appointment) => (
-                                  <div key={appointment._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div>
-                                      <p className="font-medium">{appointment.patient?.name || 'Patient'}</p>
-                                      <p className="text-sm text-gray-600">{appointment.type}</p>
-                                      <p className="text-xs text-gray-500">{appointment.patient?.email}</p>
+                                  <div key={appointment._id} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg">
+                                    <div className="min-w-0">
+                                      <p className="font-medium truncate max-w-[220px] sm:max-w-none">{appointment.patient?.name || 'Patient'}</p>
+                                      <p className="text-sm text-gray-600 truncate max-w-[220px] sm:max-w-none">{appointment.type}</p>
+                                      <p className="text-xs text-gray-500 truncate max-w-[220px] sm:max-w-xs">{appointment.patient?.email}</p>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-right shrink-0">
                                       <p className="font-medium text-[#006f6f]">{appointment.timeSlot}</p>
                                       <div className="flex gap-2 mt-2">
                                         {appointment.meetLink && (
@@ -1023,11 +1029,15 @@ For support: suyambu54321@gmail.com
                         <Card>
                           <CardHeader>
                             <CardTitle>All Appointments</CardTitle>
-                            <div className="flex gap-2 mt-4">
+                            <div
+                              className="flex flex-wrap sm:flex-nowrap gap-2 mt-4 overflow-x-auto sm:overflow-visible pr-3"
+                              style={{ WebkitOverflowScrolling: 'touch', scrollbarGutter: 'stable both-edges' as any }}
+                            >
                               <Button 
                                 size="sm" 
                                 variant={doctorFilter === 'upcoming' ? 'default' : 'outline'}
                                 onClick={() => setDoctorFilter('upcoming')}
+                                className="whitespace-normal sm:whitespace-nowrap"
                               >
                                 Upcoming ({doctorStats.upcomingConsultations})
                               </Button>
@@ -1035,6 +1045,7 @@ For support: suyambu54321@gmail.com
                                 size="sm" 
                                 variant={doctorFilter === 'completed' ? 'default' : 'outline'}
                                 onClick={() => setDoctorFilter('completed')}
+                                className="whitespace-normal sm:whitespace-nowrap"
                               >
                                 Completed ({doctorStats.completedToday})
                               </Button>
@@ -1042,6 +1053,7 @@ For support: suyambu54321@gmail.com
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => fetchDoctorAppointments()}
+                                className="whitespace-normal sm:whitespace-nowrap"
                               >
                                 🔄 Refresh
                               </Button>
@@ -1061,13 +1073,13 @@ For support: suyambu54321@gmail.com
                                 })
                                 .map((appointment) => (
                                 <div key={appointment._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                                  <div className="flex justify-between items-start">
-                                    <div>
+                                  <div className="flex justify-between items-start gap-3">
+                                    <div className="min-w-0">
                                       <h4 className="font-semibold">{appointment.type}</h4>
                                       <p className="text-sm text-gray-600">
                                         Patient: {appointment.patient?.name || 'Unknown'}
                                       </p>
-                                      <p className="text-sm text-gray-600">
+                                      <p className="text-sm text-gray-600 truncate max-w-[220px] sm:max-w-none">
                                         Email: {appointment.patient?.email || 'N/A'}
                                       </p>
                                       <p className="text-sm text-gray-500">
@@ -1081,7 +1093,7 @@ For support: suyambu54321@gmail.com
                                         {appointment.status}
                                       </span>
                                     </div>
-                                    <div className="flex flex-col gap-2">
+                                    <div className="flex flex-col gap-2 shrink-0">
                                       {appointment.meetLink && appointment.status === 'confirmed' && (
                                         <button
                                           className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
