@@ -296,26 +296,120 @@ async function sendChatNotifications(ticket, isNewTicket = false) {
   const doctorEmail = env.DOCTOR_EMAIL || 'suyambu54321@gmail.com';
   
   try {
-    // Email to admin
+    // Get pricing info for context
+    let pricingInfo = '';
+    if (ticket.user.country) {
+      try {
+        const pricing = await getDisplayedPrice('initial', null, ticket.user.country);
+        pricingInfo = `
+          <p><strong>User's Region Pricing:</strong></p>
+          <ul>
+            <li>Country: ${pricing.country}</li>
+            <li>Currency: ${pricing.display.currency}</li>
+            <li>Initial Consultation: ${pricing.display.currency} ${pricing.display.value}</li>
+            <li>Tier: ${pricing.tier}</li>
+          </ul>
+        `;
+      } catch (e) {
+        console.error('Error getting pricing:', e);
+      }
+    }
+
+    // Email to admin - DETAILED VERSION
     const adminSubject = isNewTicket 
-      ? `[${ticket.priority.toUpperCase()}] New Support Ticket: ${ticket.subject}`
-      : `[${ticket.priority.toUpperCase()}] Update on Ticket ${ticket.ticketId}: ${ticket.subject}`;
+      ? `[${ticket.priority.toUpperCase()}] ${ticket.category.toUpperCase()}: ${ticket.subject}`
+      : `[${ticket.priority.toUpperCase()}] RE: ${ticket.ticketId} - ${ticket.subject}`;
     
     const adminHtml = `
-      <h2>Support Ticket Notification</h2>
-      <p><strong>Ticket ID:</strong> ${ticket.ticketId}</p>
-      <p><strong>Category:</strong> ${ticket.category}</p>
-      <p><strong>Priority:</strong> ${ticket.priority.toUpperCase()}</p>
-      <p><strong>Status:</strong> ${ticket.status}</p>
-      <p><strong>From:</strong> ${ticket.user.name} (${ticket.user.email})</p>
-      <p><strong>Country:</strong> ${ticket.user.country || 'Not specified'}</p>
-      <p><strong>Subject:</strong> ${ticket.subject}</p>
-      ${ticket.amount ? `<p><strong>Amount:</strong> ${ticket.currency} ${ticket.amount}</p>` : ''}
-      <hr>
-      <h3>Latest Message:</h3>
-      <p>${ticket.messages[ticket.messages.length - 1]?.text || 'No messages'}</p>
-      <hr>
-      <p><a href="${env.CLIENT_URL || 'https://www.nephroconsultation.com'}/admin/tickets/${ticket.ticketId}">View Ticket</a></p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: #006f6f; color: white; padding: 20px; border-radius: 5px 5px 0 0;">
+          <h2 style="margin: 0;">🎫 Support Ticket Alert</h2>
+          <p style="margin: 5px 0 0 0; font-size: 14px;">Ticket ID: <strong>${ticket.ticketId}</strong></p>
+        </div>
+        
+        <div style="border: 1px solid #ddd; padding: 20px; border-radius: 0 0 5px 5px;">
+          <table style="width: 100%; margin-bottom: 20px;">
+            <tr>
+              <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold; width: 30%;">Category:</td>
+              <td style="padding: 8px;">${ticket.category.toUpperCase()}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold;">Priority:</td>
+              <td style="padding: 8px; color: ${ticket.priority === 'urgent' ? '#d32f2f' : ticket.priority === 'high' ? '#f57c00' : '#388e3c'}; font-weight: bold;">
+                ${ticket.priority.toUpperCase()}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold;">Status:</td>
+              <td style="padding: 8px;">${ticket.status.toUpperCase()}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold;">User:</td>
+              <td style="padding: 8px;">${ticket.user.name} <br><a href="mailto:${ticket.user.email}">${ticket.user.email}</a></td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold;">Country:</td>
+              <td style="padding: 8px;">${ticket.user.country || 'Not specified'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold;">Timezone:</td>
+              <td style="padding: 8px;">${ticket.user.timezone || 'Not specified'}</td>
+            </tr>
+            ${ticket.amount ? `
+            <tr>
+              <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold;">Amount:</td>
+              <td style="padding: 8px;"><strong>${ticket.currency} ${ticket.amount}</strong></td>
+            </tr>
+            ` : ''}
+          </table>
+
+          ${pricingInfo ? `
+          <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 4px solid #4caf50;">
+            <strong>💰 Pricing Context:</strong>
+            ${pricingInfo}
+          </div>
+          ` : ''}
+
+          <div style="background-color: #fff3e0; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 4px solid #ff9800;">
+            <strong>📝 User's Message:</strong>
+            <p style="margin: 10px 0 0 0; white-space: pre-wrap;">${ticket.messages[ticket.messages.length - 1]?.text || 'No message'}</p>
+          </div>
+
+          ${ticket.messages.length > 1 ? `
+          <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <strong>📋 Conversation History (${ticket.messages.length} messages):</strong>
+            <div style="max-height: 200px; overflow-y: auto; margin-top: 10px;">
+              ${ticket.messages.map((msg, idx) => `
+                <p style="margin: 5px 0; padding: 5px; border-bottom: 1px solid #ddd;">
+                  <strong>${msg.sender.toUpperCase()}:</strong> ${msg.text.substring(0, 100)}${msg.text.length > 100 ? '...' : ''}
+                </p>
+              `).join('')}
+            </div>
+          </div>
+          ` : ''}
+
+          <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 4px solid #2196f3;">
+            <strong>✅ Action Required:</strong>
+            <ul style="margin: 10px 0 0 0;">
+              <li>Review the ticket details above</li>
+              <li>Verify user's country and pricing context</li>
+              <li>Respond to user within 2 hours</li>
+              <li>Update ticket status as you progress</li>
+            </ul>
+          </div>
+
+          <div style="text-align: center; padding: 20px; border-top: 1px solid #ddd;">
+            <a href="${env.CLIENT_URL || 'https://www.nephroconsultation.com'}/admin/tickets/${ticket.ticketId}" 
+               style="background-color: #006f6f; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              View Full Ticket
+            </a>
+          </div>
+        </div>
+
+        <div style="text-align: center; color: #999; font-size: 12px; margin-top: 20px;">
+          <p>This is an automated notification from NephroConsult Support System</p>
+        </div>
+      </div>
     `;
     
     await sendEmail(adminEmail, adminSubject, adminHtml, { category: 'support_ticket' });
@@ -323,19 +417,47 @@ async function sendChatNotifications(ticket, isNewTicket = false) {
     
     // Email to doctor if it's a medical complaint or urgent
     if (['medical', 'complaint', 'urgent'].includes(ticket.category) || ticket.priority === 'urgent') {
-      const doctorSubject = `[URGENT] Patient Support Ticket: ${ticket.subject}`;
+      const doctorSubject = `[URGENT] Patient Issue: ${ticket.subject} (${ticket.ticketId})`;
       const doctorHtml = `
-        <h2>Patient Support Alert</h2>
-        <p><strong>Ticket ID:</strong> ${ticket.ticketId}</p>
-        <p><strong>Category:</strong> ${ticket.category}</p>
-        <p><strong>Priority:</strong> ${ticket.priority.toUpperCase()}</p>
-        <p><strong>Patient:</strong> ${ticket.user.name} (${ticket.user.email})</p>
-        <p><strong>Subject:</strong> ${ticket.subject}</p>
-        <hr>
-        <h3>Message:</h3>
-        <p>${ticket.messages[ticket.messages.length - 1]?.text || 'No messages'}</p>
-        <hr>
-        <p><a href="${env.CLIENT_URL || 'https://www.nephroconsultation.com'}/admin/tickets/${ticket.ticketId}">View Ticket</a></p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #d32f2f; color: white; padding: 20px; border-radius: 5px 5px 0 0;">
+            <h2 style="margin: 0;">🚨 Urgent Patient Support Alert</h2>
+            <p style="margin: 5px 0 0 0; font-size: 14px;">Ticket ID: <strong>${ticket.ticketId}</strong></p>
+          </div>
+          
+          <div style="border: 1px solid #ddd; padding: 20px; border-radius: 0 0 5px 5px;">
+            <table style="width: 100%; margin-bottom: 20px;">
+              <tr>
+                <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold; width: 30%;">Patient:</td>
+                <td style="padding: 8px;">${ticket.user.name}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold;">Email:</td>
+                <td style="padding: 8px;"><a href="mailto:${ticket.user.email}">${ticket.user.email}</a></td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold;">Issue Type:</td>
+                <td style="padding: 8px;">${ticket.category.toUpperCase()}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold;">Priority:</td>
+                <td style="padding: 8px; color: #d32f2f; font-weight: bold;">${ticket.priority.toUpperCase()}</td>
+              </tr>
+            </table>
+
+            <div style="background-color: #ffebee; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 4px solid #d32f2f;">
+              <strong>⚠️ Patient's Concern:</strong>
+              <p style="margin: 10px 0 0 0; white-space: pre-wrap;">${ticket.messages[ticket.messages.length - 1]?.text || 'No message'}</p>
+            </div>
+
+            <div style="text-align: center; padding: 20px; border-top: 1px solid #ddd;">
+              <a href="${env.CLIENT_URL || 'https://www.nephroconsultation.com'}/admin/tickets/${ticket.ticketId}" 
+                 style="background-color: #d32f2f; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                View Ticket & Respond
+              </a>
+            </div>
+          </div>
+        </div>
       `;
       
       await sendEmail(doctorEmail, doctorSubject, doctorHtml, { category: 'support_ticket' });
@@ -344,15 +466,59 @@ async function sendChatNotifications(ticket, isNewTicket = false) {
     
     // Email to user confirming ticket creation
     if (isNewTicket) {
-      const userSubject = `Support Ticket Created: ${ticket.ticketId}`;
+      const userSubject = `✅ Your Support Ticket Has Been Created (${ticket.ticketId})`;
       const userHtml = `
-        <h2>Thank you for contacting us!</h2>
-        <p>Your support ticket has been created successfully.</p>
-        <p><strong>Ticket ID:</strong> ${ticket.ticketId}</p>
-        <p><strong>Category:</strong> ${ticket.category}</p>
-        <p><strong>Subject:</strong> ${ticket.subject}</p>
-        <p>Our team will review your request and respond as soon as possible.</p>
-        <p>You can track your ticket status using the ID above.</p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #4caf50; color: white; padding: 20px; border-radius: 5px 5px 0 0;">
+            <h2 style="margin: 0;">✅ Ticket Created Successfully</h2>
+          </div>
+          
+          <div style="border: 1px solid #ddd; padding: 20px; border-radius: 0 0 5px 5px;">
+            <p>Hi ${ticket.user.name},</p>
+            
+            <p>Thank you for reaching out to NephroConsult! Your support request has been received and a ticket has been created.</p>
+
+            <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #4caf50;">
+              <p style="margin: 0;"><strong>Your Ticket ID:</strong></p>
+              <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #2e7d32;">${ticket.ticketId}</p>
+              <p style="margin: 10px 0 0 0; font-size: 12px; color: #666;">Please save this ID for your records</p>
+            </div>
+
+            <table style="width: 100%; margin: 20px 0;">
+              <tr>
+                <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold; width: 40%;">Category:</td>
+                <td style="padding: 8px;">${ticket.category}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold;">Priority:</td>
+                <td style="padding: 8px;">${ticket.priority}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; background-color: #f5f5f5; font-weight: bold;">Status:</td>
+                <td style="padding: 8px;">Open - Awaiting Review</td>
+              </tr>
+            </table>
+
+            <div style="background-color: #fff3e0; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ff9800;">
+              <strong>📋 What Happens Next:</strong>
+              <ol style="margin: 10px 0 0 0;">
+                <li>Our team will review your request within 2 hours</li>
+                <li>You'll receive an email response with next steps</li>
+                <li>For urgent issues, we'll prioritize your ticket</li>
+                <li>You can check your ticket status anytime using your ticket ID</li>
+              </ol>
+            </div>
+
+            <p style="color: #666; font-size: 14px;">If you have any additional information to add, please reply to this email with your ticket ID.</p>
+
+            <div style="text-align: center; padding: 20px; border-top: 1px solid #ddd; margin-top: 20px;">
+              <p style="margin: 0; color: #666; font-size: 12px;">
+                NephroConsult Support Team<br>
+                Available 24/7 for urgent issues
+              </p>
+            </div>
+          </div>
+        </div>
       `;
       
       await sendEmail(ticket.user.email, userSubject, userHtml, { category: 'support_ticket' });

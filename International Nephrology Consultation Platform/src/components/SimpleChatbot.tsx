@@ -85,7 +85,10 @@ const knowledgeBase = [
   },
   {
     keywords: ['refund', 'cancel', 'money back', 'payment issue', 'not satisfied', 'problem', 'complaint'],
-    response: "REFUND REQUEST PROCESS:\n\n💰 REFUND POLICY:\n• 24-hour refund window for paid consultations\n• Full refund if appointment not created within 1 hour\n• Partial refund for technical issues during consultation\n• No refund for completed consultations\n\n📋 REFUND REQUEST:\nTo request a refund, please provide:\n• Your email address\n• Booking/appointment ID (if available)\n• Reason for refund request\n• Payment method used\n\nOur team will review your request within 2-3 business days and process eligible refunds via email.\n\n🔗 Click 'Request Refund' below to submit your refund request with full details."
+    response: () => {
+      const { pricing, country } = getDynamicPricing();
+      return `REFUND REQUEST PROCESS:\n\n💰 REFUND POLICY:\n• 24-hour refund window for paid consultations\n• Full refund if appointment not created within 1 hour\n• Partial refund for technical issues during consultation\n• No refund for completed consultations\n\n📋 YOUR REGION (${country.toUpperCase()}) PRICING:\n• Initial Consultation: ${pricing.symbol}${pricing.initial} ${pricing.currency}\n• Follow-up Consultation: ${pricing.symbol}${pricing.followup} ${pricing.currency}\n\n📋 REFUND REQUEST:\nTo request a refund, please provide:\n• Your email address\n• Booking/appointment ID (if available)\n• Reason for refund request\n• Payment method used\n• Amount paid\n\nOur team will review your request within 2-3 business days and process eligible refunds via email.\n\n🔗 Click 'Request Refund' below to submit your refund request with full details.`;
+    }
   }
 ];
 
