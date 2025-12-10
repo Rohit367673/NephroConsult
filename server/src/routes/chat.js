@@ -2,6 +2,9 @@ import express from 'express';
 import { z } from 'zod';
 import OpenAI from 'openai';
 import { env } from '../config.js';
+import ChatTicket from '../models/ChatTicket.js';
+import { sendEmail } from '../utils/email.js';
+import { getDisplayedPrice } from '../utils/pricing.js';
 
 const router = express.Router();
 
@@ -15,12 +18,23 @@ const chatRequestSchema = z.object({
   history: z
     .array(
       z.object({
-        sender: z.enum(['user', 'support', 'bot']),
+        sender: z.enum(['user', 'support', 'bot', 'admin', 'doctor']),
         text: z.string().min(1).max(1000)
       })
     )
-    .max(10)
-    .optional()
+    .max(50)
+    .optional(),
+  ticketId: z.string().optional(),
+  category: z.enum(['general', 'booking', 'payment', 'refund', 'technical', 'medical', 'complaint']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  userEmail: z.string().email().optional(),
+  userName: z.string().optional(),
+  userCountry: z.string().optional(),
+  userTimezone: z.string().optional(),
+  subject: z.string().optional(),
+  amount: z.number().optional(),
+  currency: z.string().optional(),
+  bookingId: z.string().optional()
 });
 
 const knowledgeBase = [
@@ -276,6 +290,93 @@ function generateSuggestions(message) {
   ];
 }
 
+// Helper function to send email notifications
+async function sendChatNotifications(ticket, isNewTicket = false) {
+  const adminEmail = env.ADMIN_EMAIL || 'admin@nephroconsultation.com';
+  const doctorEmail = env.DOCTOR_EMAIL || 'suyambu54321@gmail.com';
+  
+  try {
+    // Email to admin
+    const adminSubject = isNewTicket 
+      ? `[${ticket.priority.toUpperCase()}] New Support Ticket: ${ticket.subject}`
+      : `[${ticket.priority.toUpperCase()}] Update on Ticket ${ticket.ticketId}: ${ticket.subject}`;
+    
+    const adminHtml = `
+      <h2>Support Ticket Notification</h2>
+      <p><strong>Ticket ID:</strong> ${ticket.ticketId}</p>
+      <p><strong>Category:</strong> ${ticket.category}</p>
+      <p><strong>Priority:</strong> ${ticket.priority.toUpperCase()}</p>
+      <p><strong>Status:</strong> ${ticket.status}</p>
+      <p><strong>From:</strong> ${ticket.user.name} (${ticket.user.email})</p>
+      <p><strong>Country:</strong> ${ticket.user.country || 'Not specified'}</p>
+      <p><strong>Subject:</strong> ${ticket.subject}</p>
+      ${ticket.amount ? `<p><strong>Amount:</strong> ${ticket.currency} ${ticket.amount}</p>` : ''}
+      <hr>
+      <h3>Latest Message:</h3>
+      <p>${ticket.messages[ticket.messages.length - 1]?.text || 'No messages'}</p>
+      <hr>
+      <p><a href="${env.CLIENT_URL || 'https://www.nephroconsultation.com'}/admin/tickets/${ticket.ticketId}">View Ticket</a></p>
+    `;
+    
+    await sendEmail(adminEmail, adminSubject, adminHtml, { category: 'support_ticket' });
+    ticket.emailsSent.adminNotification = true;
+    
+    // Email to doctor if it's a medical complaint or urgent
+    if (['medical', 'complaint', 'urgent'].includes(ticket.category) || ticket.priority === 'urgent') {
+      const doctorSubject = `[URGENT] Patient Support Ticket: ${ticket.subject}`;
+      const doctorHtml = `
+        <h2>Patient Support Alert</h2>
+        <p><strong>Ticket ID:</strong> ${ticket.ticketId}</p>
+        <p><strong>Category:</strong> ${ticket.category}</p>
+        <p><strong>Priority:</strong> ${ticket.priority.toUpperCase()}</p>
+        <p><strong>Patient:</strong> ${ticket.user.name} (${ticket.user.email})</p>
+        <p><strong>Subject:</strong> ${ticket.subject}</p>
+        <hr>
+        <h3>Message:</h3>
+        <p>${ticket.messages[ticket.messages.length - 1]?.text || 'No messages'}</p>
+        <hr>
+        <p><a href="${env.CLIENT_URL || 'https://www.nephroconsultation.com'}/admin/tickets/${ticket.ticketId}">View Ticket</a></p>
+      `;
+      
+      await sendEmail(doctorEmail, doctorSubject, doctorHtml, { category: 'support_ticket' });
+      ticket.emailsSent.doctorNotification = true;
+    }
+    
+    // Email to user confirming ticket creation
+    if (isNewTicket) {
+      const userSubject = `Support Ticket Created: ${ticket.ticketId}`;
+      const userHtml = `
+        <h2>Thank you for contacting us!</h2>
+        <p>Your support ticket has been created successfully.</p>
+        <p><strong>Ticket ID:</strong> ${ticket.ticketId}</p>
+        <p><strong>Category:</strong> ${ticket.category}</p>
+        <p><strong>Subject:</strong> ${ticket.subject}</p>
+        <p>Our team will review your request and respond as soon as possible.</p>
+        <p>You can track your ticket status using the ID above.</p>
+      `;
+      
+      await sendEmail(ticket.user.email, userSubject, userHtml, { category: 'support_ticket' });
+      ticket.emailsSent.userNotification = true;
+    }
+  } catch (error) {
+    console.error('Error sending chat notifications:', error);
+  }
+}
+
+// Helper function to detect complaint keywords
+function isComplaintMessage(message) {
+  const complaintKeywords = ['complaint', 'issue', 'problem', 'error', 'bug', 'wrong', 'incorrect', 'not working', 'broken', 'fail', 'failed', 'crash', 'crashed', 'refund', 'money back', 'charged', 'overcharge', 'currency', 'wrong price', 'incorrect price'];
+  const normalized = message.toLowerCase();
+  return complaintKeywords.some(keyword => normalized.includes(keyword));
+}
+
+// Helper function to detect currency issues
+function detectCurrencyIssue(message) {
+  const currencyKeywords = ['currency', 'price', 'cost', 'dollar', 'rupee', 'usd', 'inr', 'gbp', 'eur', 'wrong currency', 'wrong price', 'should be', 'expected'];
+  const normalized = message.toLowerCase();
+  return currencyKeywords.some(keyword => normalized.includes(keyword));
+}
+
 export async function handleChatRequest(req, res) {
   try {
     const parsed = chatRequestSchema.safeParse(req.body || {});
@@ -283,21 +384,156 @@ export async function handleChatRequest(req, res) {
       return res.status(400).json({ error: 'Invalid chat payload.' });
     }
 
-    const { message } = parsed.data;
+    const { 
+      message, 
+      ticketId, 
+      category, 
+      priority,
+      userEmail,
+      userName,
+      userCountry,
+      userTimezone,
+      subject,
+      amount,
+      currency,
+      bookingId,
+      history = []
+    } = parsed.data;
+
     const online = determineBusinessHoursStatus();
-    const answer = await buildReply(message, parsed.data.history || []);
+    
+    // Detect if this is a complaint or currency issue
+    const isComplaint = isComplaintMessage(message);
+    const hasCurrencyIssue = detectCurrencyIssue(message);
+    
+    // Determine category based on message content
+    let detectedCategory = category || 'general';
+    if (isComplaint) detectedCategory = 'complaint';
+    if (hasCurrencyIssue) detectedCategory = 'payment';
+    
+    // Determine priority based on message content
+    let detectedPriority = priority || 'medium';
+    if (isComplaint) detectedPriority = 'high';
+    if (message.toLowerCase().includes('urgent') || message.toLowerCase().includes('emergency')) {
+      detectedPriority = 'urgent';
+    }
+
+    // Get or create chat ticket
+    let ticket;
+    if (ticketId) {
+      // Update existing ticket
+      ticket = await ChatTicket.findOne({ ticketId });
+      if (!ticket) {
+        return res.status(404).json({ error: 'Ticket not found.' });
+      }
+    } else {
+      // Create new ticket
+      ticket = new ChatTicket({
+        user: {
+          name: userName || 'Anonymous',
+          email: userEmail || 'unknown@example.com',
+          country: userCountry,
+          timezone: userTimezone
+        },
+        category: detectedCategory,
+        priority: detectedPriority,
+        subject: subject || message.substring(0, 100),
+        currency,
+        amount,
+        bookingId,
+        messages: []
+      });
+    }
+
+    // Add user message to ticket
+    ticket.messages.push({
+      sender: 'user',
+      text: message,
+      timestamp: new Date()
+    });
+    
+    ticket.lastMessageAt = new Date();
+    ticket.status = ticket.status === 'resolved' || ticket.status === 'closed' ? 'open' : ticket.status || 'open';
+
+    // Get bot response
+    const answer = await buildReply(message, history);
+
+    // Add bot response to ticket
+    ticket.messages.push({
+      sender: 'bot',
+      text: answer.reply,
+      timestamp: new Date()
+    });
+
+    // Save ticket
+    await ticket.save();
+
+    // Send notifications for complaints or currency issues
+    if (isComplaint || hasCurrencyIssue || !ticketId) {
+      await sendChatNotifications(ticket, !ticketId);
+    }
+
+    // If currency issue detected, provide correction info
+    let currencyCorrection = null;
+    if (hasCurrencyIssue && userCountry) {
+      try {
+        const pricing = await getDisplayedPrice('initial', null, userCountry);
+        currencyCorrection = {
+          country: pricing.country,
+          currency: pricing.display.currency,
+          correctPrice: pricing.display.value,
+          message: `Based on your location (${userCountry}), the correct pricing should be ${pricing.display.currency} ${pricing.display.value}. We apologize for any confusion.`
+        };
+      } catch (error) {
+        console.error('Error getting currency correction:', error);
+      }
+    }
 
     return res.json({
       ok: true,
       online,
+      ticketId: ticket.ticketId,
       reply: answer.reply,
-      suggestions: answer.suggestions
+      suggestions: answer.suggestions,
+      isComplaint,
+      hasCurrencyIssue,
+      currencyCorrection,
+      status: ticket.status,
+      priority: ticket.priority,
+      category: ticket.category
     });
   } catch (error) {
+    console.error('Chat request error:', error);
     return res.status(500).json({ error: 'Failed to process chat message.' });
   }
 }
 
+// Get ticket details
+router.get('/:ticketId', async (req, res) => {
+  try {
+    const ticket = await ChatTicket.findOne({ ticketId: req.params.ticketId });
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found.' });
+    }
+    res.json({ ok: true, ticket });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch ticket.' });
+  }
+});
+
+// Get user's tickets
+router.get('/user/:email', async (req, res) => {
+  try {
+    const tickets = await ChatTicket.find({ 'user.email': req.params.email })
+      .sort({ createdAt: -1 })
+      .limit(50);
+    res.json({ ok: true, tickets });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch tickets.' });
+  }
+});
+
+// Create or update chat message
 router.post('/', handleChatRequest);
 
 export default router;

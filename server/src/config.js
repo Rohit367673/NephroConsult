@@ -5,6 +5,9 @@ export const env = {
   MONGO_URI: process.env.MONGO_URI || '',
   SESSION_SECRET: process.env.SESSION_SECRET || '',
   OWNER_EMAIL: process.env.OWNER_EMAIL || '',
+  ADMIN_EMAILS: process.env.ADMIN_EMAILS || '',
+  ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@nephroconsultation.com',
+  DOCTOR_EMAIL: process.env.DOCTOR_EMAIL || 'suyambu54321@gmail.com',
   // Cashfree Configuration
   CASHFREE_APP_ID: process.env.CASHFREE_APP_ID || '',
   CASHFREE_SECRET_KEY: process.env.CASHFREE_SECRET_KEY || '',

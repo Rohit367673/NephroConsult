@@ -8,7 +8,7 @@ import emailjs from '@emailjs/browser';
 
 interface Message {
   id: string;
-  sender: 'user' | 'bot';
+  sender: 'user' | 'bot' | 'admin' | 'doctor';
   text: string;
   timestamp: Date;
 }
@@ -330,6 +330,8 @@ Our team is reviewing your request and will respond within 2-3 business days.
     };
 
     setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsLoading(true);
 
     if (refundStep !== 'none') {
       // Handle refund flow
@@ -341,27 +343,80 @@ Our team is reviewing your request and will respond within 2-3 business days.
         timestamp: new Date()
       };
       setMessages(prev => [...prev, botMessage]);
+      setIsLoading(false);
     } else {
-      // Regular chatbot response
-      setInputMessage('');
-      setIsLoading(true);
+      // Send to backend API
+      try {
+        const { pricing, country, timezone } = getDynamicPricing();
+        
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: inputMessage,
+            history: messages.slice(-10).map(m => ({ sender: m.sender, text: m.text })),
+            userCountry: country,
+            userTimezone: timezone,
+            userName: 'User',
+            userEmail: 'user@example.com'
+          })
+        });
 
-      // Simulate thinking time
-      setTimeout(() => {
-        const botResponse = getBotResponse(inputMessage);
-        const botMessage: Message = {
+        const data = await response.json();
+        
+        if (data.ok) {
+          const botMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            sender: 'bot',
+            text: data.reply,
+            timestamp: new Date()
+          };
+
+          setMessages(prev => [...prev, botMessage]);
+
+          // Show currency correction if detected
+          if (data.currencyCorrection) {
+            const correctionMessage: Message = {
+              id: (Date.now() + 2).toString(),
+              sender: 'bot',
+              text: `💱 ${data.currencyCorrection.message}`,
+              timestamp: new Date()
+            };
+            setMessages(prev => [...prev, correctionMessage]);
+          }
+
+          // Show ticket info if created
+          if (data.ticketId && data.isComplaint) {
+            const ticketMessage: Message = {
+              id: (Date.now() + 3).toString(),
+              sender: 'bot',
+              text: `📋 Your support ticket has been created: ${data.ticketId}\nOur team will review your complaint and respond shortly.`,
+              timestamp: new Date()
+            };
+            setMessages(prev => [...prev, ticketMessage]);
+          }
+        } else {
+          const errorMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            sender: 'bot',
+            text: 'Sorry, I encountered an error. Please try again.',
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, errorMessage]);
+        }
+      } catch (error) {
+        console.error('Chat error:', error);
+        const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
           sender: 'bot',
-          text: botResponse,
+          text: 'Sorry, I encountered an error. Please try again.',
           timestamp: new Date()
         };
-
-        setMessages(prev => [...prev, botMessage]);
+        setMessages(prev => [...prev, errorMessage]);
+      } finally {
         setIsLoading(false);
-      }, 1000);
+      }
     }
-
-    setInputMessage('');
   };
 
   const handleSuggestionClick = (suggestion: string) => {
