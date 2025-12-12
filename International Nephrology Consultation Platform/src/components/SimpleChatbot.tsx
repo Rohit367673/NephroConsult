@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { getUserTimezone, getPricingForTimezone, getCountryFromTimezone } from '../utils/timezoneUtils';
 import emailjs from '@emailjs/browser';
+import { authService } from '../services/authService';
 
 interface Message {
   id: string;
@@ -189,10 +190,29 @@ export function SimpleChatbot() {
   };
 
   const handleRefundFlow = async (userInput: string) => {
-    // Check if user is starting refund request
+    const currentUser = authService.getCurrentUser();
+
+    // If not logged in, do not start refund wizard – require login first
+    if (!currentUser && refundStep === 'none') {
+      return (
+        "🔐 Secure refund request\n\n" +
+        "For your privacy and to verify your booking, please log in first.\n\n" +
+        "👉 Steps:\n" +
+        "• Click 'Login' in the top-right corner\n" +
+        "• Sign in with your email + password or your Google account\n" +
+        "• After login, return here and type 'refund' again to continue the refund process."
+      );
+    }
+
+    // Logged-in user starting refund flow
     if (refundStep === 'none' && (userInput.toLowerCase().includes('refund') || userInput.toLowerCase().includes('money back'))) {
       setRefundStep('email');
-      return "� PROFESSIONAL REFUND REQUEST PROCESS\n\n✅ Step 1: Verify Your Account\n\nTo process your refund request securely, we need to verify your account.\n\n📧 Please enter your email address:";
+      return (
+        "🔐 PROFESSIONAL REFUND REQUEST PROCESS\n\n" +
+        "✅ Step 1: Verify your account details\n\n" +
+        `Logged in as: ${currentUser?.email || 'patient'}\n\n` +
+        "📧 Please confirm the email you used for booking (type the same email here):"
+      );
     }
 
     switch (refundStep) {
@@ -321,8 +341,17 @@ export function SimpleChatbot() {
     setInputMessage('');
     setIsLoading(true);
 
-    if (refundStep !== 'none') {
-      // Handle refund flow
+    const normalized = inputMessage.toLowerCase();
+
+    // Always route refund-related queries through the advanced refund flow
+    const isRefundQuery =
+      normalized.includes('refund') ||
+      normalized.includes('money back') ||
+      normalized.includes('payment issue') ||
+      normalized.includes('reimbursement') ||
+      normalized.includes('cancel');
+
+    if (refundStep !== 'none' || isRefundQuery) {
       const botResponse = await handleRefundFlow(inputMessage);
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -332,68 +361,62 @@ export function SimpleChatbot() {
       };
       setMessages(prev => [...prev, botMessage]);
       setIsLoading(false);
-    } else {
-      // Send to backend API
-      try {
-        const { pricing, country, timezone } = getDynamicPricing();
-        
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: inputMessage,
-            history: messages.slice(-10).map(m => ({ sender: m.sender, text: m.text })),
-            userCountry: country,
-            userTimezone: timezone,
-            userName: 'User',
-            userEmail: 'user@example.com'
-          })
-        });
+      return;
+    }
 
-        const data = await response.json();
-        
-        if (data.ok) {
-          const botMessage: Message = {
-            id: (Date.now() + 1).toString(),
+    // Non-refund questions go to backend Q&A API
+    try {
+      const { country, timezone } = getDynamicPricing();
+      const currentUser = authService.getCurrentUser();
+
+      const userName = currentUser?.displayName || 'Guest';
+      const userEmail = currentUser?.email || undefined;
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: inputMessage,
+          history: messages.slice(-10).map(m => ({ sender: m.sender, text: m.text })),
+          userCountry: country,
+          userTimezone: timezone,
+          userName,
+          userEmail
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.ok) {
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          sender: 'bot',
+          text: data.reply,
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, botMessage]);
+
+        if (data.currencyCorrection) {
+          const correctionMessage: Message = {
+            id: (Date.now() + 2).toString(),
             sender: 'bot',
-            text: data.reply,
+            text: `💱 ${data.currencyCorrection.message}`,
             timestamp: new Date()
           };
-
-          setMessages(prev => [...prev, botMessage]);
-
-          // Show currency correction if detected
-          if (data.currencyCorrection) {
-            const correctionMessage: Message = {
-              id: (Date.now() + 2).toString(),
-              sender: 'bot',
-              text: `💱 ${data.currencyCorrection.message}`,
-              timestamp: new Date()
-            };
-            setMessages(prev => [...prev, correctionMessage]);
-          }
-
-          // Show ticket info if created
-          if (data.ticketId && data.isComplaint) {
-            const ticketMessage: Message = {
-              id: (Date.now() + 3).toString(),
-              sender: 'bot',
-              text: `📋 Your support ticket has been created: ${data.ticketId}\nOur team will review your complaint and respond shortly.`,
-              timestamp: new Date()
-            };
-            setMessages(prev => [...prev, ticketMessage]);
-          }
-        } else {
-          const errorMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            sender: 'bot',
-            text: 'Sorry, I encountered an error. Please try again.',
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, errorMessage]);
+          setMessages(prev => [...prev, correctionMessage]);
         }
-      } catch (error) {
-        console.error('Chat error:', error);
+
+        if (data.ticketId && data.isComplaint) {
+          const ticketMessage: Message = {
+            id: (Date.now() + 3).toString(),
+            sender: 'bot',
+            text: `📋 Your support ticket has been created: ${data.ticketId}\nOur team will review your complaint and respond shortly.`,
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, ticketMessage]);
+        }
+      } else {
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
           sender: 'bot',
@@ -401,9 +424,18 @@ export function SimpleChatbot() {
           timestamp: new Date()
         };
         setMessages(prev => [...prev, errorMessage]);
-      } finally {
-        setIsLoading(false);
       }
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'bot',
+        text: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
