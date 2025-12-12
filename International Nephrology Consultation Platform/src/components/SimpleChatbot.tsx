@@ -7,6 +7,14 @@ import { getUserTimezone, getPricingForTimezone, getCountryFromTimezone } from '
 import emailjs from '@emailjs/browser';
 import { authService } from '../services/authService';
 
+const maskEmail = (email?: string | null) => {
+  if (!email) return '';
+  const [user, domain] = email.split('@');
+  if (!domain) return email;
+  const visible = user.slice(0, 2);
+  return `${visible}*****@${domain}`;
+};
+
 interface Message {
   id: string;
   sender: 'user' | 'bot' | 'admin' | 'doctor';
@@ -128,10 +136,35 @@ export function SimpleChatbot() {
     const normalizedMessage = userMessage.toLowerCase();
 
     // Check for refund request keywords
-    if (normalizedMessage.includes('refund') || normalizedMessage.includes('money back') || normalizedMessage.includes('cancel') || normalizedMessage.includes('payment issue') || normalizedMessage.includes('return') || normalizedMessage.includes('reimbursement')) {
+    if (
+      normalizedMessage.includes('refund') ||
+      normalizedMessage.includes('money back') ||
+      normalizedMessage.includes('cancel') ||
+      normalizedMessage.includes('payment issue') ||
+      normalizedMessage.includes('return') ||
+      normalizedMessage.includes('reimbursement')
+    ) {
+      const currentUser = authService.getCurrentUser();
+      // If not logged in, ask to sign in first
+      if (!currentUser) {
+        setRefundStep('none');
+        return (
+          "🔐 Secure refund request\n\n" +
+          "Please sign in to continue with your refund.\n\n" +
+          "• Tap 'Login' (top right)\n" +
+          "• Sign in with email/password or Google\n" +
+          "• Then type 'refund' again to proceed"
+        );
+      }
+
+      // Logged in: start refund flow
       setRefundStep('email');
-      setRefundData({ timestamp: new Date() });
-      return "REFUND REQUEST INITIATED\n\n📧 Please provide your email address to start the refund process:\n\n• We'll verify your account and booking details\n• Check eligibility based on our refund policy\n• Process approved refunds within 2-3 business days";
+      setRefundData({ timestamp: new Date(), email: currentUser.email || undefined });
+      return (
+        "🔐 Refund request\n\n" +
+        `You're signed in as: ${maskEmail(currentUser.email)}\n` +
+        "Please confirm the email you used for booking:"
+      );
     }
 
     // Find matching knowledge base entry
@@ -195,12 +228,11 @@ export function SimpleChatbot() {
     // If not logged in, do not start refund wizard – require login first
     if (!currentUser && refundStep === 'none') {
       return (
-        "🔐 Secure refund request\n\n" +
-        "For your privacy and to verify your booking, please log in first.\n\n" +
-        "👉 Steps:\n" +
-        "• Click 'Login' in the top-right corner\n" +
-        "• Sign in with your email + password or your Google account\n" +
-        "• After login, return here and type 'refund' again to continue the refund process."
+        "🔐 Refund support\n\n" +
+        "Please sign in to continue so we can verify your booking securely.\n\n" +
+        "• Tap 'Login' (top right)\n" +
+        "• Sign in with email/password or Google\n" +
+        "• Then type 'refund' again to proceed"
       );
     }
 
@@ -208,10 +240,10 @@ export function SimpleChatbot() {
     if (refundStep === 'none' && (userInput.toLowerCase().includes('refund') || userInput.toLowerCase().includes('money back'))) {
       setRefundStep('email');
       return (
-        "🔐 PROFESSIONAL REFUND REQUEST PROCESS\n\n" +
-        "✅ Step 1: Verify your account details\n\n" +
-        `Logged in as: ${currentUser?.email || 'patient'}\n\n` +
-        "📧 Please confirm the email you used for booking (type the same email here):"
+        "🔐 Refund support\n\n" +
+        "We'll verify your booking and process your request.\n\n" +
+        `Signed in: ${maskEmail(currentUser?.email)}\n\n` +
+        "Please type the email you used for booking (for verification):"
       );
     }
 
