@@ -122,82 +122,71 @@
     <body>
       <!-- Emergency cache clearing script - runs immediately -->
       <script>
-        // Immediate cache clearing before any modules load
+        // Immediate cache check before any modules load (safe for Safari)
         (function() {
-          const CURRENT_VERSION = '1.0.5';
+          const CURRENT_VERSION = '1.0.6';
           const STORAGE_KEY = 'app_cache_version';
-          
-          // Check if this is a stale cache load
-          const isStaleCache = localStorage.getItem(STORAGE_KEY) !== CURRENT_VERSION;
-          const hasOldModules = document.querySelector('script[src*="firebase-BbRIwTCd.js"]') || 
-                               document.querySelector('script[src*="firebase-"]') && 
-                               !document.querySelector('script[src*="main.tsx"]');
-          
-          if (isStaleCache || hasOldModules) {
-            console.log('Detected stale cache, force clearing...');
-            
-            // Clear all storage
+          const RELOAD_KEY = 'app_cache_reloaded';
+
+          let storedVersion = null;
+          try {
+            storedVersion = localStorage.getItem(STORAGE_KEY);
+          } catch (e) {
+            storedVersion = null;
+          }
+
+          // First visit / storage blocked: just proceed
+          if (!storedVersion) {
             try {
-              localStorage.clear();
-              sessionStorage.clear();
-              if ('caches' in window) {
-                caches.keys().then(names => names.forEach(name => caches.delete(name)));
-              }
-            } catch(e) {}
-            
-            // Set new version
-            localStorage.setItem(STORAGE_KEY, CURRENT_VERSION);
-            
-            // Force hard reload
-            window.location.reload(true);
+              localStorage.setItem(STORAGE_KEY, CURRENT_VERSION);
+            } catch (e) {}
             return;
           }
-          
-          // Set version if not set
-          localStorage.setItem(STORAGE_KEY, CURRENT_VERSION);
+
+          // If version changed, clear Cache Storage and reload once (no infinite loops)
+          if (storedVersion !== CURRENT_VERSION) {
+            let alreadyReloaded = false;
+            try {
+              alreadyReloaded = sessionStorage.getItem(RELOAD_KEY) === '1';
+            } catch (e) {
+              alreadyReloaded = false;
+            }
+
+            try {
+              localStorage.setItem(STORAGE_KEY, CURRENT_VERSION);
+            } catch (e) {}
+
+            if (alreadyReloaded) return;
+
+            try {
+              sessionStorage.setItem(RELOAD_KEY, '1');
+            } catch (e) {}
+
+            if ('caches' in window) {
+              caches
+                .keys()
+                .then(names => Promise.all(names.map(name => caches.delete(name))))
+                .finally(() => window.location.reload());
+            } else {
+              window.location.reload();
+            }
+          }
         })();
       </script>
       
       <div id="root"></div>
-      <script type="module" src="/src/main.tsx?v=1-0-5"></script>
+      <script type="module" src="/src/main.tsx?v=1-0-6"></script>
       
       <!-- Aggressive cache busting script -->
       <script>
         // Comprehensive cache clearing
         (function() {
-          // Clear all caches
-          if ('caches' in window) {
-            caches.keys().then(function(names) {
-              names.forEach(name => caches.delete(name));
-            });
-          }
-          
-          // Clear localStorage and sessionStorage
-          try {
-            localStorage.clear();
-            sessionStorage.clear();
-          } catch(e) {}
-          
-          // Force reload if module loading fails
+          // Force reload only if module loading fails (avoid clearing storage on every load)
           window.addEventListener('error', function(e) {
-            if (e.message && e.message.includes('Expected a JavaScript-or-Wasm module script')) {
-              console.log('Detected stale cache, forcing reload...');
-              setTimeout(() => window.location.reload(true), 100);
+            if (e && e.message && e.message.includes('Expected a JavaScript-or-Wasm module script')) {
+              setTimeout(() => window.location.reload(), 100);
             }
           });
-          
-          // Check if we're loading stale modules
-          const currentTime = Date.now();
-          const cacheKey = 'app_version';
-          const lastVersion = localStorage.getItem(cacheKey);
-          const currentVersion = '1.0.4';
-          
-          if (lastVersion && lastVersion !== currentVersion) {
-            console.log('Version changed, clearing cache...');
-            window.location.reload(true);
-          } else {
-            localStorage.setItem(cacheKey, currentVersion);
-          }
         })();
       </script>
     </body>
