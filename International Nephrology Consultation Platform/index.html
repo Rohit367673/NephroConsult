@@ -72,6 +72,9 @@
       <!-- Web Manifest -->
       <link rel="manifest" href="/manifest.json">
 
+      <!-- Canonical URL -->
+      <link rel="canonical" href="https://www.nephroconsultation.com/" />
+
       <!-- Structured Data -->
       <script type="application/ld+json">
       {
@@ -111,6 +114,11 @@
         "url": "https://www.nephroconsultation.com",
         "description": "Online nephrology consultation platform providing expert kidney care services worldwide.",
         "inLanguage": "en-US",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://www.nephroconsultation.com/?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        },
         "copyrightHolder": {
           "@type": "Organization",
           "name": "NephroConsult"
