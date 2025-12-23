@@ -37,7 +37,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode;
   
   // Check for valid session (user with email)
   if (!user || !user.email) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/" replace state={{ showLogin: true }} />;
   }
   
   return <>{children}</>;
@@ -83,7 +83,14 @@ function AppLazy() {
               <Route path="/cookies" element={<CookiesPolicyPage />} />
               
               {/* Booking Route */}
-              <Route path="/booking" element={<BookingPage />} />
+              <Route
+                path="/booking"
+                element={
+                  <ProtectedRoute allowedRoles={["patient", "doctor", "admin"]}>
+                    <BookingPage />
+                  </ProtectedRoute>
+                }
+              />
               
               {/* Payment Route */}
               <Route path="/payment" element={<PaymentPage />} />

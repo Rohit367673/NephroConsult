@@ -1860,7 +1860,7 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
   // Check for valid session (user with email)
   if (!user || !user.email) {
     console.log('ProtectedRoute: No valid user session, redirecting to home');
-    return <Navigate to="/" replace />;
+    return <Navigate to="/" replace state={{ showLogin: true }} />;
   }
   
   if (!allowedRoles.includes(user.role)) {
@@ -2125,15 +2125,20 @@ export default function App() {
             } />
             
             {/* Booking Routes */}
-            <Route path="/booking" element={
-              <PageWrapper seoProps={{
-                title: "Book Online Nephrology Consultation | NephroConsult",
-                description: "Book your online nephrology consultation with Dr. Ilango S. Prakasam. Easy 5-step booking process with secure payment options. International pricing in USD, INR, GBP, EUR. Schedule your kidney specialist appointment today.",
-                keywords: "book nephrology consultation, online kidney doctor appointment, nephrologist booking, kidney specialist appointment, online medical consultation booking, Dr Ilango S Prakasam appointment, nephrology video consultation booking"
-              }}>
-                <BookingPage />
-              </PageWrapper>
-            } />
+            <Route
+              path="/booking"
+              element={
+                <ProtectedRoute allowedRoles={["patient", "doctor", "admin"]}>
+                  <PageWrapper seoProps={{
+                    title: "Book Online Nephrology Consultation | NephroConsult",
+                    description: "Book your online nephrology consultation with Dr. Ilango S. Prakasam. Easy 5-step booking process with secure payment options. International pricing in USD, INR, GBP, EUR. Schedule your kidney specialist appointment today.",
+                    keywords: "book nephrology consultation, online kidney doctor appointment, nephrologist booking, kidney specialist appointment, online medical consultation booking, Dr Ilango S Prakasam appointment, nephrology video consultation booking"
+                  }}>
+                    <BookingPage />
+                  </PageWrapper>
+                </ProtectedRoute>
+              }
+            />
             
             {/* Payment Routes */}
             <Route path="/payment/success" element={<PaymentSuccess />} />
