@@ -17,10 +17,12 @@ Disallow: /patient/dashboard
 # Allow important public pages
 Allow: /
 Allow: /about
-Allow: /booking
 Allow: /contact
 Allow: /terms
 Allow: /cookies
+
+# Booking flow requires login
+Disallow: /booking
 
 # Crawl delay (in seconds) to be respectful
 Crawl-delay: 1

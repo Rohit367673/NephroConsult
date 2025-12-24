@@ -37,7 +37,6 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     "logo": "https://www.nephroconsultation.com/logo.svg",
     "image": ogImage,
     "priceRange": "$$",
-    "telephone": "+91-XXXXXXXXXX",
     "address": {
       "@type": "PostalAddress",
       "addressCountry": "IN"
@@ -162,13 +161,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
         "opens": "09:00",
         "closes": "18:00"
       }
-    ],
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "reviewCount": "250",
-      "bestRating": "5"
-    }
+    ]
   };
 
   const finalSchema = schema || defaultSchema;

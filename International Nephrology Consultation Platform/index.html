@@ -79,50 +79,49 @@
       <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "MedicalBusiness",
-        "name": "NephroConsult",
-        "url": "https://www.nephroconsultation.com",
-        "logo": "https://www.nephroconsultation.com/logo.svg",
-        "description": "Expert nephrology consultations from Dr. Ilango S. Prakasam (MBBS, MD, DM Nephrology). Specialized treatment for chronic kidney disease, dialysis planning, kidney transplant counseling, and comprehensive kidney care.",
-        "address": {
-          "@type": "PostalAddress",
-          "addressCountry": "IN",
-          "addressRegion": "India"
-        },
-        "contactPoint": {
-          "@type": "ContactPoint",
-          "contactType": "customer service",
-          "availableLanguage": "English"
-        },
-        "medicalSpecialty": "Nephrology",
-        "areaServed": "Worldwide",
-        "serviceType": ["Online Consultation", "Kidney Disease Treatment", "Dialysis Planning", "Kidney Transplant Counseling"],
-        "founder": {
-          "@type": "Person",
-          "name": "Dr. Ilango S. Prakasam",
-          "jobTitle": "Nephrologist",
-          "knowsAbout": ["Chronic Kidney Disease", "Dialysis", "Kidney Transplant", "Acute Renal Failure", "Glomerulonephritis"]
-        }
-      }
-      </script>
-
-      <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "NephroConsult",
-        "url": "https://www.nephroconsultation.com",
-        "description": "Online nephrology consultation platform providing expert kidney care services worldwide.",
-        "inLanguage": "en-US",
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": "https://www.nephroconsultation.com/?q={search_term_string}",
-          "query-input": "required name=search_term_string"
-        },
-        "copyrightHolder": {
-          "@type": "Organization",
-          "name": "NephroConsult"
-        }
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://www.nephroconsultation.com/#organization",
+            "name": "NephroConsult",
+            "alternateName": ["Nephro Consult", "NephroConsultation", "NephroConsultation.com"],
+            "url": "https://www.nephroconsultation.com/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://www.nephroconsultation.com/logo.svg"
+            },
+            "description": "Online nephrology consultation platform providing expert kidney care services worldwide.",
+            "areaServed": "Worldwide",
+            "founder": {
+              "@type": "Person",
+              "name": "Dr. Ilango S. Prakasam",
+              "jobTitle": "Nephrologist"
+            }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://www.nephroconsultation.com/#website",
+            "name": "NephroConsult",
+            "alternateName": ["NephroConsultation"],
+            "url": "https://www.nephroconsultation.com/",
+            "publisher": { "@id": "https://www.nephroconsultation.com/#organization" },
+            "inLanguage": "en-US",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://www.nephroconsultation.com/?q={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://www.nephroconsultation.com/#webpage",
+            "url": "https://www.nephroconsultation.com/",
+            "name": "NephroConsult - Expert Kidney Specialist | Online Nephrology Consultation",
+            "isPartOf": { "@id": "https://www.nephroconsultation.com/#website" },
+            "about": { "@id": "https://www.nephroconsultation.com/#organization" },
+            "inLanguage": "en-US"
+          }
+        ]
       }
       </script>
     </head>
