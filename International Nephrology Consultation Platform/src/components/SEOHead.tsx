@@ -16,18 +16,24 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   title = 'NephroConsult - Expert Kidney Specialist | Online Nephrology Consultation',
   description = 'Get expert nephrology consultations from Dr. Ilango S. Prakasam (MBBS, MD, DM Nephrology). Specialized treatment for chronic kidney disease, dialysis planning, kidney transplant counseling, acute renal failure, and comprehensive kidney care. Book secure online consultations with experienced nephrologist.',
   keywords = 'nephrology consultation online, kidney specialist doctor, chronic kidney disease treatment, CKD management, dialysis planning, kidney transplant counseling, acute kidney injury, renal failure treatment, kidney disease symptoms, nephrology expert India, online kidney doctor consultation, kidney health checkup, proteinuria treatment, hypertension kidney, diabetic nephropathy, polycystic kidney disease, glomerulonephritis treatment, nephrotic syndrome, kidney stones treatment, electrolyte imbalance, kidney biopsy consultation, hemodialysis guidance, peritoneal dialysis, kidney function tests, creatinine levels, blood urea nitrogen, GFR calculation, kidney disease stages, renal diet consultation, Dr Ilango S Prakasam nephrologist, international kidney care, telemedicine nephrology, virtual kidney consultation, kidney second opinion, renal replacement therapy, kidney failure management, uremia treatment, fluid retention kidney',
-  canonical = 'https://www.nephroconsultation.com',
+  canonical,
   ogImage = '/og-image.png',
   ogType = 'website',
   author = 'Dr. Ilango S. Prakasam',
   schema = null
 }) => {
+  const resolvedCanonical =
+    canonical ||
+    (typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}`
+      : 'https://www.nephroconsultation.com/');
+
   const defaultSchema = {
     "@context": "https://schema.org",
     "@type": "MedicalBusiness",
     "name": "NephroConsult",
     "description": description,
-    "url": canonical,
+    "url": resolvedCanonical,
     "logo": "https://www.nephroconsultation.com/logo.svg",
     "image": ogImage,
     "priceRange": "$$",
@@ -179,11 +185,11 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       <meta name="robots" content="index, follow" />
       <meta name="language" content="English" />
       <meta name="revisit-after" content="7 days" />
-      <link rel="canonical" href={canonical} />
+      <link rel="canonical" href={resolvedCanonical} />
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={ogType} />
-      <meta property="og:url" content={canonical} />
+      <meta property="og:url" content={resolvedCanonical} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={ogImage} />
@@ -192,7 +198,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
 
       {/* Twitter */}
       <meta property="twitter:card" content="summary_large_image" />
-      <meta property="twitter:url" content={canonical} />
+      <meta property="twitter:url" content={resolvedCanonical} />
       <meta property="twitter:title" content={title} />
       <meta property="twitter:description" content={description} />
       <meta property="twitter:image" content={ogImage} />

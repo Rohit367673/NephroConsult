@@ -11,7 +11,7 @@ export const seoConfigs = {
     title: 'Book Online Nephrology Consultation | Kidney Specialist Appointment',
     description: 'Book secure online appointment with Dr. Ilango S. Prakasam for kidney disease treatment. Expert consultation for chronic kidney disease, dialysis planning, kidney stones, and comprehensive renal care. Available worldwide.',
     keywords: 'book nephrology appointment online, kidney doctor appointment, online kidney consultation booking, CKD consultation booking, dialysis consultation appointment, kidney specialist appointment India, virtual nephrology consultation',
-    canonical: 'https://www.nephroconsultation.com/book'
+    canonical: 'https://www.nephroconsultation.com/booking'
   },
 
   services: {
