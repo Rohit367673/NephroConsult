@@ -148,14 +148,16 @@ export default function Footer() {
                 <h5 className="font-medium mb-4">Follow Us</h5>
                 <div className="flex space-x-4">
                   {[
-                    { icon: Facebook, label: 'Facebook' },
-                    { icon: Twitter, label: 'Twitter' },
-                    { icon: Instagram, label: 'Instagram' },
-                    { icon: Linkedin, label: 'LinkedIn' }
-                  ].map(({ icon: Icon, label }) => (
+                    { icon: Facebook, label: 'Facebook', href: '#' },
+                    { icon: Twitter, label: 'Twitter', href: '#' },
+                    { icon: Instagram, label: 'Instagram', href: 'https://www.instagram.com/nephroconsult?igsh=MWVwa3Nhc2Y4MnplNA%3D%3D&utm_source=qr' },
+                    { icon: Linkedin, label: 'LinkedIn', href: '#' }
+                  ].map(({ icon: Icon, label, href }) => (
                     <motion.a
                       key={label}
-                      href="#"
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.95 }}
                       className="w-10 h-10 bg-white/10 hover:bg-[#006f6f] rounded-full flex items-center justify-center transition-colors duration-200"
