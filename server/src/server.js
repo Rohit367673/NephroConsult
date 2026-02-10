@@ -165,7 +165,7 @@ const sessionConfig = {
     sameSite: 'none', // Required for cross-site requests
     secure: true, // Always secure since we're on HTTPS
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    domain: '.nephroconsultation.com', // Set for production domain
+    // Remove domain restriction - let browser set for current domain
   },
 };
 
