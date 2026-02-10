@@ -42,7 +42,7 @@ export function MainNavigation({ onLoginOpen, onSignupOpen }: Props) {
       <div className="container-medical">
         <div className="flex items-center justify-between h-16">
           <motion.div
-            className="flex items-center space-x-3 cursor-pointer"
+            className="flex items-center space-x-3 cursor-pointer shrink-0"
             onClick={() => navigate('/')}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -57,25 +57,25 @@ export function MainNavigation({ onLoginOpen, onSignupOpen }: Props) {
           </motion.div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex flex-1 min-w-0 items-center justify-end gap-2 lg:gap-6 flex-nowrap">
             <Button
               variant="ghost"
               onClick={() => handleNavigation('/')}
-              className={location.pathname === '/' ? 'text-[#006f6f]' : ''}
+              className={`whitespace-nowrap text-sm lg:text-base ${location.pathname === '/' ? 'text-[#006f6f]' : ''}`}
             >
               Home
             </Button>
             <Button
               variant="ghost"
               onClick={() => handleNavigation('/about')}
-              className={location.pathname === '/about' ? 'text-[#006f6f]' : ''}
+              className={`whitespace-nowrap text-sm lg:text-base ${location.pathname === '/about' ? 'text-[#006f6f]' : ''}`}
             >
               About
             </Button>
             <Button
               variant="ghost"
               onClick={() => handleNavigation('/booking')}
-              className={location.pathname === '/booking' ? 'text-[#006f6f]' : ''}
+              className={`whitespace-nowrap text-sm lg:text-base ${location.pathname === '/booking' ? 'text-[#006f6f]' : ''}`}
             >
               <Calendar className="w-4 h-4 mr-2" />
               Book Appointment
@@ -83,7 +83,7 @@ export function MainNavigation({ onLoginOpen, onSignupOpen }: Props) {
             <Button
               variant="ghost"
               onClick={() => handleNavigation('/contact')}
-              className={location.pathname === '/contact' ? 'text-[#006f6f]' : ''}
+              className={`whitespace-nowrap text-sm lg:text-base ${location.pathname === '/contact' ? 'text-[#006f6f]' : ''}`}
             >
               Contact
             </Button>
@@ -93,12 +93,12 @@ export function MainNavigation({ onLoginOpen, onSignupOpen }: Props) {
                 <Button
                   variant="ghost"
                   onClick={() => handleNavigation('/profile')}
-                  className={location.pathname === '/profile' ? 'text-[#006f6f]' : ''}
+                  className={`whitespace-nowrap text-sm lg:text-base ${location.pathname === '/profile' ? 'text-[#006f6f]' : ''}`}
                 >
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </Button>
-                <Button variant="outline" onClick={logout}>
+                <Button variant="outline" onClick={logout} className="whitespace-nowrap">
                   <LogOut className="w-4 h-4 mr-2" />
                   Logout
                 </Button>
@@ -108,12 +108,13 @@ export function MainNavigation({ onLoginOpen, onSignupOpen }: Props) {
                 <Button
                   variant="outline"
                   onClick={() => (onLoginOpen ? onLoginOpen() : navigate('/login'))}
+                  className="whitespace-nowrap"
                 >
                   Login
                 </Button>
                 <Button
                   onClick={() => (onSignupOpen ? onSignupOpen() : navigate('/signup'))}
-                  className="bg-[#006f6f] hover:bg-[#005555]"
+                  className="bg-[#006f6f] hover:bg-[#005555] whitespace-nowrap"
                 >
                   Sign Up
                 </Button>

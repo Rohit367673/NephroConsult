@@ -88,7 +88,7 @@ export function Navigation({ onLoginOpen, onSignupOpen }: NavigationProps = {}) 
       <div className="container-medical">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
+          <Link to="/" className="flex items-center space-x-3 shrink-0">
             <div className="w-10 h-10 bg-[#006f6f] rounded-lg flex items-center justify-center">
               <Stethoscope className="w-6 h-6 text-white" />
             </div>
@@ -99,12 +99,12 @@ export function Navigation({ onLoginOpen, onSignupOpen }: NavigationProps = {}) 
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-8">
+          <div className="hidden lg:flex flex-1 min-w-0 items-center justify-end gap-4 xl:gap-8 flex-nowrap">
             {navItems.map((item, index) => (
               <button
                 key={index}
                 onClick={() => handleNavigation(item.path)}
-                className="text-gray-700 hover:text-[#006f6f] transition-colors duration-200 font-medium"
+                className="text-gray-700 hover:text-[#006f6f] transition-colors duration-200 font-medium whitespace-nowrap"
               >
                 {item.name}
               </button>
@@ -144,7 +144,7 @@ export function Navigation({ onLoginOpen, onSignupOpen }: NavigationProps = {}) 
                 <Button
                   variant="outline"
                   onClick={logout}
-                  className="text-gray-700 border-gray-300"
+                  className="text-gray-700 border-gray-300 whitespace-nowrap"
                 >
                   Logout
                 </Button>
@@ -154,13 +154,13 @@ export function Navigation({ onLoginOpen, onSignupOpen }: NavigationProps = {}) 
                 <Button
                   variant="outline"
                   onClick={onLoginOpen}
-                  className="text-gray-700 border-gray-300"
+                  className="text-gray-700 border-gray-300 whitespace-nowrap"
                 >
                   Login
                 </Button>
                 <Button
                   onClick={onSignupOpen}
-                  className="bg-[#006f6f] hover:bg-[#005555] text-white px-6 py-2 rounded-lg"
+                  className="bg-[#006f6f] hover:bg-[#005555] text-white px-6 py-2 rounded-lg whitespace-nowrap"
                 >
                   Get Started
                 </Button>

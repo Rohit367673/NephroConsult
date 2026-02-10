@@ -9,7 +9,7 @@ import compression from 'compression';
 import hpp from 'hpp';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { connectDB } from './db.js';
+import { connectDB, dbReady } from './db.js';
 import { env } from './config.js';
 import rateLimit from 'express-rate-limit';
 import { requireJson, verifyOrigin } from './middlewares/security.js';
@@ -34,8 +34,15 @@ const app = express();
 const isProd = env.NODE_ENV === 'production';
 
 // Database
-await connectDB();
-await startJobs();
+const didConnectDb = await connectDB();
+if (!didConnectDb) {
+  console.warn('[DB] Continuing startup without database connection');
+}
+if (didConnectDb) {
+  await startJobs();
+} else {
+  console.warn('[JOBS] Skipping job scheduler because database is not connected');
+}
 
 // Security & middleware
 // Production-grade security headers
@@ -169,7 +176,7 @@ const sessionConfig = {
   },
 };
 
-if (env.MONGO_URI) {
+if (env.MONGO_URI && didConnectDb) {
   console.log('🔧 Setting up MongoDB session store...');
   sessionConfig.store = MongoStore.create({
     mongoUrl: env.MONGO_URI,
@@ -177,7 +184,7 @@ if (env.MONGO_URI) {
   });
   console.log('✅ MongoDB session store configured');
 } else {
-  console.log('⚠️ No MONGO_URI found, using memory store (sessions will not persist)');
+  console.log('⚠️ Using memory store for sessions (sessions may not persist across restarts)');
 }
 
 app.use(session(sessionConfig));
@@ -211,7 +218,10 @@ app.use((req, res, next) => {
       // Ensure secure/SameSite are enforced in prod
       req.session.cookie.sameSite = isProd ? 'none' : 'lax';
       req.session.cookie.secure = isProd;
-      // Keep the domain as set in session config
+      // Ensure session cookie works across apex and www in production
+      if (isProd && underNephro) {
+        req.session.cookie.domain = '.nephroconsultation.com';
+      }
     }
   } catch (_) {
     // noop
@@ -253,7 +263,7 @@ app.get('/', (req, res) => {
 
 // Health
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, time: new Date().toISOString() });
+  res.json({ ok: true, time: new Date().toISOString(), dbReady });
 });
 
 // Mount routes

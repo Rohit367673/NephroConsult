@@ -514,13 +514,13 @@ export default function DoctorAdminPanel() {
                     className="border border-gray-200 rounded-lg p-4 hover:border-[#006f6f]/50 transition-colors cursor-pointer"
                     onClick={() => setSelectedAppointment(appointment)}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex items-center space-x-4 min-w-0">
                         <div className="w-12 h-12 bg-gradient-to-br from-[#006f6f] to-[#004f4f] rounded-full flex items-center justify-center text-white font-semibold">
                           {appointment.patient.name.split(' ').map(n => n[0]).join('')}
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{appointment.patient.name}</h3>
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-gray-900 truncate">{appointment.patient.name}</h3>
                           <p className="text-sm text-gray-600">{appointment.type}</p>
                           <div className="flex items-center space-x-4 mt-1">
                             <span className="text-sm text-gray-500 flex items-center">
@@ -534,7 +534,7 @@ export default function DoctorAdminPanel() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center justify-between sm:justify-end gap-3">
                         <Badge
                           variant={appointment.status === 'completed' ? 'default' : 
                                   appointment.status === 'scheduled' ? 'secondary' : 'destructive'}
@@ -625,13 +625,13 @@ export default function DoctorAdminPanel() {
       {/* Patient Details Modal */}
       {selectedAppointment && (
         <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[calc(100%-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Patient Details - {selectedAppointment.patient.name}</DialogTitle>
             </DialogHeader>
             
             <Tabs defaultValue="overview" className="mt-6">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="medical">Medical History</TabsTrigger>
                 <TabsTrigger value="files">Files</TabsTrigger>
