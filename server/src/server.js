@@ -40,7 +40,7 @@ await startJobs();
 // Security & middleware
 // Production-grade security headers
 app.use(helmet({
-  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+  crossOriginOpenerPolicy: false, // Disable COOP to allow Firebase Google sign-in popups
   crossOriginEmbedderPolicy: false,
   contentSecurityPolicy: isProd ? {
     directives: {
@@ -109,37 +109,38 @@ app.use(
         return callback(null, true);
       }
       
-      try {
-        const o = new URL(origin);
-        const originHost = o.hostname; // ignore port for matching
-        const ok = allAllowed.some((u) => {
-          try {
-            const au = new URL(u);
-            const allowedHost = au.hostname;
-            const loopback = (h) => h === '127.0.0.1' || h === 'localhost';
-            return (
-              allowedHost === originHost ||
-              (loopback(allowedHost) && loopback(originHost)) ||
-              origin === u // Exact match
-            );
-          } catch {
-            return false;
+      // Check if origin is allowed
+      const isAllowed = allAllowed.some(allowedOrigin => {
+        try {
+          // Handle exact matches
+          if (allowedOrigin === origin) return true;
+          
+          // Handle wildcard patterns (if any)
+          if (allowedOrigin.includes('*')) {
+            const pattern = allowedOrigin.replace(/\*/g, '.*');
+            return new RegExp(pattern).test(origin);
           }
-        });
-        
-        if (ok) {
-          console.log('✅ CORS Allow - Origin matched:', origin);
-          return callback(null, true);
-        } else {
-          console.log('❌ CORS Deny - Origin not allowed:', origin);
-          return callback(new Error('Not allowed by CORS'));
+          
+          // Handle domain matching
+          const originUrl = new URL(origin);
+          const allowedUrl = new URL(allowedOrigin);
+          return originUrl.hostname === allowedUrl.hostname;
+        } catch {
+          return false;
         }
-      } catch (err) {
-        console.log('❌ CORS Error - Invalid origin format:', origin, err.message);
+      });
+      
+      if (isAllowed) {
+        console.log('✅ CORS Allow - Origin matched:', origin);
+        return callback(null, true);
+      } else {
+        console.log('❌ CORS Deny - Origin not allowed:', origin);
         return callback(new Error('Not allowed by CORS'));
       }
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Referer'],
   })
 );
 
@@ -158,13 +159,13 @@ const sessionConfig = {
   secret: env.SESSION_SECRET || 'dev_secret_change_me',
   resave: false,
   saveUninitialized: false,
-  proxy: isProd,
+  proxy: true, // Always trust proxy since we're behind Render
   cookie: {
     httpOnly: true,
-    sameSite: isProd ? 'none' : 'lax',
-    secure: isProd, // set true behind HTTPS/proxy in production
+    sameSite: 'none', // Required for cross-site requests
+    secure: true, // Always secure since we're on HTTPS
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    domain: isProd ? '.nephroconsultation.com' : undefined, // ensure cookie works on www and apex in prod
+    domain: '.nephroconsultation.com', // Set for production domain
   },
 };
 
@@ -191,10 +192,9 @@ app.use((req, res, next) => {
       })();
       const underNephro = /(^|\.)nephroconsultation\.com$/.test(host) || /(^|\.)nephroconsultation\.com$/.test(originHost);
       // Ensure secure/SameSite are enforced in prod
-      req.session.cookie.sameSite = isProd ? 'none' : 'lax';
-      req.session.cookie.secure = isProd;
-      // Set parent domain when original site is nephroconsultation.com (via proxy) or always in prod as fallback
-      req.session.cookie.domain = isProd ? '.nephroconsultation.com' : undefined;
+      req.session.cookie.sameSite = 'none'; // Always 'none' for cross-site compatibility
+      req.session.cookie.secure = true; // Always secure on HTTPS
+      // Keep the domain as set in session config
     }
   } catch (_) {
     // noop
