@@ -162,8 +162,8 @@ const sessionConfig = {
   proxy: true, // Always trust proxy since we're behind Render
   cookie: {
     httpOnly: true,
-    sameSite: 'lax', // Changed from 'none' to 'lax' for better incognito compatibility
-    secure: true, // Always secure since we're on HTTPS
+    sameSite: isProd ? 'none' : 'lax',
+    secure: isProd,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     // Remove domain restriction - let browser set for current domain
   },
@@ -209,8 +209,8 @@ app.use((req, res, next) => {
       })();
       const underNephro = /(^|\.)nephroconsultation\.com$/.test(host) || /(^|\.)nephroconsultation\.com$/.test(originHost);
       // Ensure secure/SameSite are enforced in prod
-      req.session.cookie.sameSite = 'lax'; // Changed to 'lax' for better incognito compatibility
-      req.session.cookie.secure = true; // Always secure on HTTPS
+      req.session.cookie.sameSite = isProd ? 'none' : 'lax';
+      req.session.cookie.secure = isProd;
       // Keep the domain as set in session config
     }
   } catch (_) {
