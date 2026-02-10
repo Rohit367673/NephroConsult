@@ -111,6 +111,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
             if (redirectResult && redirectResult.user) {
               clearLogoutFlag();
               console.log('Firebase redirect result found:', redirectResult.user);
+
+              try {
+                const idToken = await redirectResult.user.getIdToken();
+                const response = await fetch('/api/auth/firebase-login', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    idToken,
+                    user: {
+                      uid: redirectResult.user.uid,
+                      email: redirectResult.user.email,
+                      displayName: redirectResult.user.displayName,
+                      photoURL: redirectResult.user.photoURL
+                    }
+                  })
+                });
+
+                if (!response.ok) {
+                  const errText = await response.text().catch(() => '');
+                  console.error('Firebase redirect backend sync failed:', response.status, errText);
+                } else {
+                  const data = await response.json().catch(() => null);
+                  console.log('Firebase redirect backend sync success:', data);
+                }
+              } catch (syncErr) {
+                console.error('Firebase redirect backend sync error:', syncErr);
+              }
+
               const firebaseUser = {
                 id: redirectResult.user.uid,
                 name: redirectResult.user.displayName || redirectResult.user.email?.split('@')[0] || 'User',
