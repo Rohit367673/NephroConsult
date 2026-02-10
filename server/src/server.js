@@ -170,13 +170,30 @@ const sessionConfig = {
 };
 
 if (env.MONGO_URI) {
+  console.log('🔧 Setting up MongoDB session store...');
   sessionConfig.store = MongoStore.create({
     mongoUrl: env.MONGO_URI,
     ttl: 60 * 60 * 24 * 14, // 14 days
   });
+  console.log('✅ MongoDB session store configured');
+} else {
+  console.log('⚠️ No MONGO_URI found, using memory store (sessions will not persist)');
 }
 
 app.use(session(sessionConfig));
+
+// Debug session middleware
+app.use((req, res, next) => {
+  console.log('📋 SESSION DEBUG:', {
+    sessionId: req.sessionID,
+    hasSession: !!req.session,
+    hasUser: !!req.session?.user,
+    user: req.session?.user ? { id: req.session.user.id, email: req.session.user.email, role: req.session.user.role } : null,
+    cookie: req.headers.cookie ? 'present' : 'missing',
+    userAgent: req.headers['user-agent']?.substring(0, 50) + '...'
+  });
+  next();
+});
 
 // Adjust cookie settings per-request based on host so cookies work on Render and custom domains
 app.use((req, res, next) => {
