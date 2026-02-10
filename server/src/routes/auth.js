@@ -406,19 +406,29 @@ router.post('/login', async (req, res) => {
 
 // Firebase Google Login
 router.post('/firebase-login', async (req, res) => {
+  console.log('🔥 [FIREBASE LOGIN] Request received');
+  console.log('🔥 [FIREBASE LOGIN] Body:', { idToken: !!req.body.idToken, user: !!req.body.user });
+  console.log('🔥 [FIREBASE LOGIN] Session before:', !!req.session, req.sessionID);
+
   try {
     const { idToken, user: firebaseUser } = req.body;
-    
+
     if (!firebaseAuth) {
+      console.log('❌ [FIREBASE LOGIN] Firebase not configured');
       return res.status(500).json({ error: 'Firebase not configured' });
     }
 
+    console.log('🔥 [FIREBASE LOGIN] Verifying ID token...');
+
     // Verify the Firebase ID token
     const decodedToken = await firebaseAuth.verifyIdToken(idToken);
-    
+
     if (decodedToken.uid !== firebaseUser.uid) {
+      console.log('❌ [FIREBASE LOGIN] Token verification failed:', decodedToken.uid, 'vs', firebaseUser.uid);
       return res.status(401).json({ error: 'Token verification failed' });
     }
+
+    console.log('✅ [FIREBASE LOGIN] Token verified for:', firebaseUser.email);
 
     // Check if user exists in database
     let user = await User.findOne({ 
@@ -484,6 +494,9 @@ router.post('/firebase-login', async (req, res) => {
       photoURL: user.photoURL
     };
 
+    console.log('🔥 [FIREBASE LOGIN] Session user set:', req.session.user);
+    console.log('🔥 [FIREBASE LOGIN] Session after:', !!req.session, req.sessionID, !!req.session.user);
+
     const userResponse = {
       id: String(user._id),
       name: user.name,
@@ -493,9 +506,11 @@ router.post('/firebase-login', async (req, res) => {
       isEmailVerified: user.isEmailVerified
     };
 
+    console.log('🔥 [FIREBASE LOGIN] Response user:', userResponse);
+
     return res.json({ user: userResponse });
   } catch (error) {
-    console.error('Firebase login error:', error);
+    console.error('❌ [FIREBASE LOGIN] Error:', error);
     return res.status(500).json({ error: 'Firebase authentication failed' });
   }
 });
