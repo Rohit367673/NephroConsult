@@ -105,7 +105,14 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
         console.log('Firebase login data:', firebaseLoginData);
 
         // Call Firebase login API instead of register
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/firebase-login`, {
+        const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+        const endpoint = apiBaseUrl
+          ? `${apiBaseUrl}/api/auth/firebase-login`
+          : `/api/auth/firebase-login`;
+
+        console.log('🔗 [GOOGLE LOGIN] API endpoint:', endpoint);
+
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
