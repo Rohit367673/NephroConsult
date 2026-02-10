@@ -104,11 +104,8 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
 
         console.log('Firebase login data:', firebaseLoginData);
 
-        // Call Firebase login API instead of register
-        const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-        const endpoint = apiBaseUrl
-          ? `${apiBaseUrl}/api/auth/firebase-login`
-          : `/api/auth/firebase-login`;
+        // Call Firebase login API using relative path to go through Vercel proxy
+        const endpoint = `/api/auth/firebase-login`;
 
         console.log('🔗 [GOOGLE LOGIN] API endpoint:', endpoint);
 
