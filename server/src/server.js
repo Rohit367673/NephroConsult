@@ -40,7 +40,7 @@ await startJobs();
 // Security & middleware
 // Production-grade security headers
 app.use(helmet({
-  crossOriginOpenerPolicy: false, // Disable COOP to allow Firebase Google sign-in popups
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }, // Allow popups for Firebase Google sign-in
   crossOriginEmbedderPolicy: false,
   contentSecurityPolicy: isProd ? {
     directives: {
