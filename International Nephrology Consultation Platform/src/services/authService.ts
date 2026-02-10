@@ -197,9 +197,13 @@ class AuthService {
 
   // Sync user with backend
   private async syncUserWithBackend(user: User): Promise<void> {
+    console.log('🔗 [FRONTEND] Starting backend sync for user:', user.email);
     try {
       const idToken = await user.getIdToken();
       const API_BASE = getApiBaseUrl();
+      console.log('🔗 [FRONTEND] API_BASE:', API_BASE);
+      console.log('🔗 [FRONTEND] Making request to:', `${API_BASE}/auth/firebase-login`);
+      
       const response = await fetch(`${API_BASE}/auth/firebase-login`, {
         method: 'POST',
         headers: {
@@ -217,11 +221,19 @@ class AuthService {
         })
       });
 
+      console.log('🔗 [FRONTEND] Backend sync response status:', response.status);
+      console.log('🔗 [FRONTEND] Backend sync response ok:', response.ok);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔗 [FRONTEND] Backend sync failed:', response.status, errorText);
         throw new Error('Failed to sync with backend');
       }
+
+      const data = await response.json();
+      console.log('🔗 [FRONTEND] Backend sync successful:', data);
     } catch (error) {
-      console.error('Backend sync error:', error);
+      console.error('🔗 [FRONTEND] Backend sync error:', error);
       // Don't throw here - allow frontend auth to proceed
     }
   }
