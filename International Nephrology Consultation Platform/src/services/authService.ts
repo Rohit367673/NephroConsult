@@ -25,6 +25,14 @@ class AuthService {
       throw new Error('Google authentication is not available. Firebase credentials are missing.');
     }
 
+    // Use redirect in production to avoid COOP issues, popup in development
+    const isProduction = import.meta.env.PROD;
+    
+    if (isProduction) {
+      console.log('🔐 Using redirect flow for production to avoid COOP issues...');
+      return this.signInWithGoogleRedirect();
+    }
+
     try {
       console.log('🔐 Attempting Google sign in with popup...');
       const result: UserCredential = await signInWithPopup(auth, googleProvider);
@@ -49,7 +57,7 @@ class AuthService {
     } catch (error: any) {
       console.error('❌ Google popup sign in error:', error);
 
-      // Handle specific COOP and popup errors
+      // Handle specific COOP and popup errors - fall back to redirect
       if (error.code === 'auth/popup-blocked' ||
           error.code === 'auth/popup-closed-by-user' ||
           error.message?.includes('Cross-Origin-Opener-Policy') ||
