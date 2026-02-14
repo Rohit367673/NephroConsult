@@ -37,16 +37,34 @@ export default async function handler(req, res) {
 
     res.status(upstreamRes.status);
 
+    const getSetCookies = (hdrs) => {
+      if (!hdrs) return [];
+      if (typeof hdrs.getSetCookie === 'function') {
+        const arr = hdrs.getSetCookie();
+        return Array.isArray(arr) ? arr : [];
+      }
+      const combined = hdrs.get('set-cookie');
+      if (!combined) return [];
+      // Best-effort split: commas that are NOT part of an Expires attribute
+      return combined
+        .split(/,(?=\s*[^;\s]+=)/g)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    };
+
+    // Copy non-cookie headers
     upstreamRes.headers.forEach((value, key) => {
       const lower = key.toLowerCase();
       if (lower === 'transfer-encoding') return;
       if (lower === 'content-encoding') return;
+      if (lower === 'set-cookie') return;
       res.setHeader(key, value);
     });
 
-    const setCookie = upstreamRes.headers.get('set-cookie');
-    if (setCookie) {
-      res.setHeader('set-cookie', setCookie);
+    const cookies = getSetCookies(upstreamRes.headers);
+    if (cookies.length) {
+      // Important: set as array to preserve multiple Set-Cookie headers
+      res.setHeader('set-cookie', cookies);
     }
 
     const arrayBuf = await upstreamRes.arrayBuffer();
