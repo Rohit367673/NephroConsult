@@ -154,7 +154,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
               console.log('Redirecting patient user to profile');
               navigate('/profile');
             }
-          }, 500);
+          }, 100);
         } else {
           throw new Error('Login failed - no user data received');
         }
