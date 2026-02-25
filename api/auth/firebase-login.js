@@ -29,6 +29,8 @@ export default async function handler(req, res) {
         'cookie': req.headers.cookie || '', // Important for session cookies
         'user-agent': req.headers['user-agent'] || '',
         'accept': req.headers.accept || '*/*',
+        'origin': 'https://www.nephroconsultation.com', // Spoof origin to bypass CORS
+        'referer': 'https://www.nephroconsultation.com/',
       },
       body: JSON.stringify(body),
       credentials: 'include', // Include cookies
