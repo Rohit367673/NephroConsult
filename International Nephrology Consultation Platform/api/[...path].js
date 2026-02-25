@@ -2,6 +2,14 @@ import { Buffer } from 'node:buffer';
 
 const UPSTREAM_BASE = 'https://nephroconsult.onrender.com/api';
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
 export default async function handler(req, res) {
   try {
     const pathParam = req.query?.path;
