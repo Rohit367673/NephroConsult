@@ -144,35 +144,20 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
             onSuccess();
           }
 
-          // Navigate based on user role
+          // Navigate based on user role from backend (not just email check)
+          const userRole = loginResult.user.role || 'patient';
           setTimeout(() => {
-            if (isAdmin) {
-              console.log('Redirecting admin user to admin panel');
+            if (userRole === 'admin' || userRole === 'doctor') {
+              console.log('Redirecting admin/doctor user to admin panel');
               navigate('/admin');
             } else {
+              console.log('Redirecting patient user to profile');
               navigate('/profile');
             }
           }, 500);
         } else {
           throw new Error('Login failed - no user data received');
         }
-        
-        toast.success('🎉 Successfully signed in with Google!');
-        
-        // Call success callback
-        if (onSuccess) {
-          onSuccess();
-        }
-        
-        // Navigate based on user role
-        setTimeout(() => {
-          if (isAdmin) {
-            console.log('Redirecting admin user to admin panel');
-            navigate('/admin');
-          } else {
-            navigate('/profile');
-          }
-        }, 500);
       }
       
     } catch (error: any) {
