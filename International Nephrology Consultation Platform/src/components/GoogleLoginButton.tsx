@@ -161,6 +161,12 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
       }
       
     } catch (error: any) {
+      // Handle redirect in progress - this is expected behavior, not an error
+      if (error.message === 'redirect_in_progress') {
+        console.log('Google redirect in progress, page will reload...');
+        // Don't show error, just keep loading state until redirect completes
+        return;
+      }
       console.error('Google login error:', error);
       toast.error(`❌ ${error.message || 'Failed to sign in with Google'}`);
     } finally {

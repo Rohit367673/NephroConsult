@@ -134,25 +134,62 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 if (!response.ok) {
                   const errText = await response.text().catch(() => '');
                   console.error('Firebase redirect backend sync failed:', response.status, errText);
+                  // Fallback to client-only user
+                  const fallbackUser = {
+                    id: redirectResult.user.uid,
+                    name: redirectResult.user.displayName || redirectResult.user.email?.split('@')[0] || 'User',
+                    email: redirectResult.user.email || '',
+                    role: 'patient' as const,
+                    avatar: redirectResult.user.photoURL || '',
+                    country: getUserCountry()
+                  };
+                  setUser(fallbackUser);
+                  setCookie('nephro_user', encodeURIComponent(JSON.stringify(fallbackUser)), 7);
                 } else {
                   const data = await response.json().catch(() => null);
                   console.log('Firebase redirect backend sync success:', data);
+                  // Use backend response for correct role
+                  if (data && data.user) {
+                    const backendUser = {
+                      id: data.user.id,
+                      name: data.user.name || redirectResult.user.displayName || 'User',
+                      email: data.user.email || redirectResult.user.email || '',
+                      role: data.user.role || 'patient',
+                      avatar: data.user.photoURL || redirectResult.user.photoURL || '',
+                      country: getUserCountry()
+                    };
+                    setUser(backendUser);
+                    setCookie('nephro_user', encodeURIComponent(JSON.stringify(backendUser)), 7);
+                    console.log('User set from backend response:', backendUser);
+                  } else {
+                    // Fallback if no data
+                    const fallbackUser = {
+                      id: redirectResult.user.uid,
+                      name: redirectResult.user.displayName || redirectResult.user.email?.split('@')[0] || 'User',
+                      email: redirectResult.user.email || '',
+                      role: 'patient' as const,
+                      avatar: redirectResult.user.photoURL || '',
+                      country: getUserCountry()
+                    };
+                    setUser(fallbackUser);
+                    setCookie('nephro_user', encodeURIComponent(JSON.stringify(fallbackUser)), 7);
+                  }
                 }
               } catch (syncErr) {
                 console.error('Firebase redirect backend sync error:', syncErr);
+                // Fallback to client-only user on error
+                const fallbackUser = {
+                  id: redirectResult.user.uid,
+                  name: redirectResult.user.displayName || redirectResult.user.email?.split('@')[0] || 'User',
+                  email: redirectResult.user.email || '',
+                  role: 'patient' as const,
+                  avatar: redirectResult.user.photoURL || '',
+                  country: getUserCountry()
+                };
+                setUser(fallbackUser);
+                setCookie('nephro_user', encodeURIComponent(JSON.stringify(fallbackUser)), 7);
               }
 
-              const firebaseUser = {
-                id: redirectResult.user.uid,
-                name: redirectResult.user.displayName || redirectResult.user.email?.split('@')[0] || 'User',
-                email: redirectResult.user.email || '',
-                role: 'patient' as const,
-                avatar: redirectResult.user.photoURL || '',
-                country: getUserCountry()
-              };
-              setUser(firebaseUser);
-              setCookie('nephro_user', encodeURIComponent(JSON.stringify(firebaseUser)), 7);
-              console.log('Firebase user set from redirect:', firebaseUser);
               setLoading(false);
               return;
             }
