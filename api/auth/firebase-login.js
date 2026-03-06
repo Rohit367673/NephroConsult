@@ -1,4 +1,9 @@
 export default async function handler(req, res) {
+  console.log('🔥 [VERCEL PROXY] Firebase login request received');
+  console.log('🔥 [VERCEL PROXY] Method:', req.method);
+  console.log('🔥 [VERCEL PROXY] Has body:', !!req.body);
+  console.log('🔥 [VERCEL PROXY] Has cookie:', !!req.headers.cookie);
+
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -15,12 +20,18 @@ export default async function handler(req, res) {
       }
     }
 
+    console.log('🔥 [VERCEL PROXY] Parsed body - has idToken:', !!body?.idToken);
+    console.log('🔥 [VERCEL PROXY] Parsed body - has user:', !!body?.user);
+    console.log('🔥 [VERCEL PROXY] User email:', body?.user?.email);
+
     if (!body || !body.idToken) {
+      console.log('🔥 [VERCEL PROXY] Missing idToken');
       return res.status(400).json({ error: 'Missing idToken in request body' });
     }
 
     // Proxy to Render backend
     const upstreamUrl = 'https://nephroconsult.onrender.com/api/auth/firebase-login';
+    console.log('🔥 [VERCEL PROXY] Calling upstream:', upstreamUrl);
 
     const upstreamRes = await fetch(upstreamUrl, {
       method: 'POST',
@@ -34,6 +45,8 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify(body),
     });
+
+    console.log('🔥 [VERCEL PROXY] Upstream response status:', upstreamRes.status);
 
     res.status(upstreamRes.status);
 
