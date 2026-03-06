@@ -80,6 +80,11 @@ class AuthService {
 
   // Google Sign In with Redirect (fallback method)
   async signInWithGoogleRedirect(): Promise<AuthUser> {
+    console.log('🔵 [AUTH SERVICE] signInWithGoogleRedirect called');
+    console.log('🔵 [AUTH SERVICE] hasFirebaseCredentials:', hasFirebaseCredentials);
+    console.log('🔵 [AUTH SERVICE] auth:', !!auth);
+    console.log('🔵 [AUTH SERVICE] googleProvider:', !!googleProvider);
+    
     if (!hasFirebaseCredentials || !auth || !googleProvider) {
       throw new Error('Google authentication is not available. Firebase credentials are missing.');
     }
@@ -89,6 +94,8 @@ class AuthService {
 
       // Check if there's a redirect result first
       const result = await getRedirectResult(auth);
+      console.log('🔵 [AUTH SERVICE] getRedirectResult:', result ? 'has result' : 'no result');
+      
       if (result) {
         console.log('✅ Found redirect result:', result.user.email);
         const user = result.user;
@@ -111,6 +118,7 @@ class AuthService {
         console.log('🚀 Initiating Google redirect flow...');
         // Start redirect flow
         await signInWithRedirect(auth, googleProvider);
+        console.log('🔵 [AUTH SERVICE] signInWithRedirect called, throwing redirect_in_progress');
         throw new Error('redirect_in_progress');
       }
     } catch (error: any) {

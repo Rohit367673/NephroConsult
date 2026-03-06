@@ -33,11 +33,16 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
   }
 
   const handleGoogleLogin = async () => {
+    console.log('🔵 [GOOGLE LOGIN] Button clicked');
+    console.log('🔵 [GOOGLE LOGIN] hasFirebaseCredentials:', hasFirebaseCredentials);
+    console.log('🔵 [GOOGLE LOGIN] auth object:', !!auth);
+    
     if (disabled || isLoading) return;
     
     setIsLoading(true);
     
     try {
+      console.log('🔵 [GOOGLE LOGIN] Calling authService.signInWithGoogle()...');
       const result = await authService.signInWithGoogle();
       
       if (result) {
