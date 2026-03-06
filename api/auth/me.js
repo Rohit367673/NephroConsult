@@ -41,7 +41,12 @@ export default async function handler(req, res) {
     // Forward Set-Cookie headers for session management
     const cookies = getSetCookies(upstreamRes.headers);
     if (cookies.length) {
-      res.setHeader('set-cookie', cookies);
+      // Rewrite cookies to work on Vercel domain - remove explicit domain to let browser use current domain
+      const rewrittenCookies = cookies.map(cookie => {
+        // Remove Domain attribute so browser uses current domain (nephroconsultation.com)
+        return cookie.replace(/;\s*Domain=[^;]+/gi, '');
+      });
+      res.setHeader('set-cookie', rewrittenCookies);
     }
 
     const arrayBuf = await upstreamRes.arrayBuffer();

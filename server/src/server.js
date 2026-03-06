@@ -172,7 +172,7 @@ const sessionConfig = {
     sameSite: isProd ? 'none' : 'lax',
     secure: isProd,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    // Remove domain restriction - let browser set for current domain
+    domain: isProd ? '.nephroconsultation.com' : undefined, // Set domain for cross-subdomain cookies in production
   },
 };
 

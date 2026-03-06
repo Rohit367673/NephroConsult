@@ -71,8 +71,13 @@ export default async function handler(req, res) {
 
     const cookies = getSetCookies(upstreamRes.headers);
     if (cookies.length) {
+      // Rewrite cookies to work on Vercel domain - remove explicit domain to let browser use current domain
+      const rewrittenCookies = cookies.map(cookie => {
+        // Remove Domain attribute so browser uses current domain (nephroconsultation.com)
+        return cookie.replace(/;\s*Domain=[^;]+/gi, '');
+      });
       // Important: set as array to preserve multiple Set-Cookie headers
-      res.setHeader('set-cookie', cookies);
+      res.setHeader('set-cookie', rewrittenCookies);
     }
 
     const arrayBuf = await upstreamRes.arrayBuffer();
