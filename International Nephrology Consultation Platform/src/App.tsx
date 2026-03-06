@@ -35,6 +35,7 @@ import KidneyAnatomyImage from './asset/images.jpeg';
 import HeroImage from './assets/hero-nephrology.jpg';
 import TermsPage from './pages/public/TermsPage';
 import CookiesPolicyPage from './pages/public/CookiesPolicyPage';
+import DebugPage from './pages/DebugPage';
 import { hasFirebaseCredentials } from './config/firebase';
 
 // Regional pricing (aligned with timezoneUtils.ts)
@@ -2123,6 +2124,8 @@ export default function App() {
                 <CookiesPolicyPage />
               </PageWrapper>
             } />
+            {/* Debug Route - remove in production */}
+            <Route path="/debug" element={<DebugPage />} />
             
             {/* Booking Routes */}
             <Route

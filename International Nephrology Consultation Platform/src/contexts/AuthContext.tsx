@@ -35,6 +35,24 @@ export const AuthContext = createContext<AuthContextType>({
   updateUser: () => {},
 });
 
+// Debug logging helper that survives page redirects
+const debugLog = (key: string, value: any) => {
+  console.log(`🔵 [AUTH] ${key}:`, value);
+  try {
+    const logs = JSON.parse(sessionStorage.getItem('nephro_debug_logs') || '[]');
+    logs.push({ time: new Date().toISOString(), key, value });
+    sessionStorage.setItem('nephro_debug_logs', JSON.stringify(logs.slice(-20))); // Keep last 20 logs
+  } catch {}
+};
+
+const getDebugLogs = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem('nephro_debug_logs') || '[]');
+  } catch {
+    return [];
+  }
+};
+
 // Cookie utility functions
 const LOGOUT_FLAG_KEY = 'nephro_explicit_logout';
 
@@ -103,17 +121,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Load user from cookie immediately, then sync with backend
   useEffect(() => {
     const loadUser = async () => {
+      debugLog('loadUser_start', { hasAuth: !!auth });
+      
       try {
         // Check for Firebase redirect result first
         if (auth) {
           try {
+            debugLog('checking_redirect_result', 'calling getRedirectResult');
             const redirectResult = await getRedirectResult(auth);
+            debugLog('redirect_result', { 
+              hasResult: !!redirectResult, 
+              hasUser: !!redirectResult?.user,
+              email: redirectResult?.user?.email 
+            });
+            
             if (redirectResult && redirectResult.user) {
               clearLogoutFlag();
-              console.log('Firebase redirect result found:', redirectResult.user);
+              debugLog('redirect_user_found', redirectResult.user.email);
 
               try {
                 const idToken = await redirectResult.user.getIdToken();
+                debugLog('got_id_token', { tokenLength: idToken?.length });
+                
                 const response = await fetch('/api/auth/firebase-login', {
                   method: 'POST',
                   headers: {
@@ -131,9 +160,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
                   })
                 });
 
+                debugLog('api_response', { status: response.status, ok: response.ok });
+
                 if (!response.ok) {
                   const errText = await response.text().catch(() => '');
-                  console.error('Firebase redirect backend sync failed:', response.status, errText);
+                  debugLog('api_error', { status: response.status, error: errText });
                   // Fallback to client-only user
                   const fallbackUser = {
                     id: redirectResult.user.uid,
@@ -145,9 +176,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
                   };
                   setUser(fallbackUser);
                   setCookie('nephro_user', encodeURIComponent(JSON.stringify(fallbackUser)), 7);
+                  debugLog('set_fallback_user', fallbackUser);
                 } else {
                   const data = await response.json().catch(() => null);
-                  console.log('Firebase redirect backend sync success:', data);
+                  debugLog('api_success', data);
                   // Use backend response for correct role
                   if (data && data.user) {
                     const backendUser = {
@@ -160,7 +192,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     };
                     setUser(backendUser);
                     setCookie('nephro_user', encodeURIComponent(JSON.stringify(backendUser)), 7);
-                    console.log('User set from backend response:', backendUser);
+                    debugLog('set_backend_user', backendUser);
                   } else {
                     // Fallback if no data
                     const fallbackUser = {
@@ -173,10 +205,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     };
                     setUser(fallbackUser);
                     setCookie('nephro_user', encodeURIComponent(JSON.stringify(fallbackUser)), 7);
+                    debugLog('set_fallback_user_no_data', fallbackUser);
                   }
                 }
               } catch (syncErr) {
-                console.error('Firebase redirect backend sync error:', syncErr);
+                debugLog('sync_error', syncErr);
                 // Fallback to client-only user on error
                 const fallbackUser = {
                   id: redirectResult.user.uid,
@@ -191,16 +224,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
               }
 
               setLoading(false);
+              debugLog('redirect_flow_complete', 'returning early');
               return;
             }
           } catch (error) {
-            console.error('Error handling redirect result:', error);
+            debugLog('redirect_error', error);
           }
         }
 
         if (hasLogoutFlag()) {
           deleteCookie('nephro_user');
-          console.log('AuthContext: explicit logout flag detected, skipping auto login');
+          debugLog('logout_flag_detected', 'skipping auto login');
           setLoading(false);
           return;
         }
