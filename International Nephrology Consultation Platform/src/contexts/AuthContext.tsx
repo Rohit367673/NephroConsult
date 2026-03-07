@@ -118,6 +118,89 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Listen to Firebase auth state changes - this works even when getRedirectResult fails
+  useEffect(() => {
+    if (!auth) {
+      debugLog('onAuthStateChanged', 'no auth object');
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      debugLog('firebase_auth_state_changed', { 
+        hasUser: !!firebaseUser, 
+        email: firebaseUser?.email,
+        uid: firebaseUser?.uid 
+      });
+
+      if (firebaseUser) {
+        // User is signed in via Firebase
+        clearLogoutFlag();
+        
+        try {
+          const idToken = await firebaseUser.getIdToken();
+          debugLog('firebase_user_id_token', { tokenLength: idToken?.length });
+
+          const response = await fetch('/api/auth/firebase-login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              idToken,
+              user: {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL
+              }
+            })
+          });
+
+          debugLog('firebase_api_response', { status: response.status, ok: response.ok });
+
+          if (response.ok) {
+            const data = await response.json().catch(() => null);
+            debugLog('firebase_api_success', data);
+            
+            if (data && data.user) {
+              const backendUser = {
+                id: data.user.id,
+                name: data.user.name || firebaseUser.displayName || 'User',
+                email: data.user.email || firebaseUser.email || '',
+                role: data.user.role || 'patient',
+                avatar: data.user.photoURL || firebaseUser.photoURL || '',
+                country: getUserCountry()
+              };
+              setUser(backendUser);
+              setCookie('nephro_user', encodeURIComponent(JSON.stringify(backendUser)), 7);
+              debugLog('firebase_user_set_from_backend', backendUser);
+            }
+          } else {
+            // Fallback to client-only user
+            const fallbackUser = {
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+              email: firebaseUser.email || '',
+              role: 'patient' as const,
+              avatar: firebaseUser.photoURL || '',
+              country: getUserCountry()
+            };
+            setUser(fallbackUser);
+            setCookie('nephro_user', encodeURIComponent(JSON.stringify(fallbackUser)), 7);
+            debugLog('firebase_fallback_user', fallbackUser);
+          }
+        } catch (err) {
+          debugLog('firebase_auth_state_error', err);
+        }
+        
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Load user from cookie immediately, then sync with backend
   useEffect(() => {
     const loadUser = async () => {
@@ -227,6 +310,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
               debugLog('redirect_flow_complete', 'returning early');
               return;
             }
+            
+            // getRedirectResult returned null - check onAuthStateChanged as fallback
+            debugLog('redirect_result_null', 'checking onAuthStateChanged fallback');
           } catch (error) {
             debugLog('redirect_error', error);
           }
