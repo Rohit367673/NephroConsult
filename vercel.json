@@ -10,7 +10,7 @@
     },
     {
       "source": "/((?!api/).*)",
-      "destination": "/International Nephrology Consultation Platform/index.html"
+      "destination": "/index.html"
     }
   ],
   "headers": [
