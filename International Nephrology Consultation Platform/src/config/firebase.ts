@@ -1,5 +1,5 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, Auth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 // Check if Firebase credentials are available
 const hasFirebaseCredentials = !!(
@@ -26,6 +26,13 @@ if (hasFirebaseCredentials) {
   try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
+    
+    // Set persistence to local storage so auth survives redirects
+    setPersistence(auth, browserLocalPersistence).then(() => {
+      console.log('✅ Firebase persistence set to browserLocalPersistence');
+    }).catch((err) => {
+      console.error('❌ Failed to set Firebase persistence:', err);
+    });
 
     // Configure Google provider with better COOP handling
     googleProvider = new GoogleAuthProvider();
