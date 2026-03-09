@@ -19,13 +19,27 @@ export interface AuthUser {
 }
 
 class AuthService {
+  // Detect if user is on mobile device
+  private isMobileDevice(): boolean {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+      || (window.innerWidth <= 768 && 'ontouchstart' in window);
+  }
+
   // Google Sign In
   async signInWithGoogle(): Promise<AuthUser> {
     if (!hasFirebaseCredentials || !auth || !googleProvider) {
       throw new Error('Google authentication is not available. Firebase credentials are missing.');
     }
 
-    // Try popup first (more reliable), fall back to redirect if popup fails
+    // Use redirect for mobile devices (popups are often blocked), popup for desktop
+    const isMobile = this.isMobileDevice();
+    
+    if (isMobile) {
+      console.log('📱 Mobile device detected, using redirect flow...');
+      return this.signInWithGoogleRedirect();
+    }
+
+    // Try popup first for desktop (more reliable), fall back to redirect if popup fails
     try {
       console.log('🔐 Attempting Google sign in with popup...');
       const result: UserCredential = await signInWithPopup(auth, googleProvider);
