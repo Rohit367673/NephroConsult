@@ -25,7 +25,7 @@ class AuthService {
       throw new Error('Google authentication is not available. Firebase credentials are missing.');
     }
 
-    // Try popup first for all devices (more reliable)
+    // Try popup first, fall back to redirect for ANY error (Safari/mobile have strict popup blocking)
     try {
       console.log('🔐 Attempting Google sign in with popup...');
       const result: UserCredential = await signInWithPopup(auth, googleProvider);
@@ -48,26 +48,17 @@ class AuthService {
         photoURL: user.photoURL
       };
     } catch (error: any) {
-      console.error('❌ Google popup sign in error:', error);
+      console.error('❌ Google popup sign in error:', error.code || error.message);
 
-      // Handle specific COOP and popup errors - fall back to redirect
-      if (error.code === 'auth/popup-blocked' ||
-          error.code === 'auth/popup-closed-by-user' ||
-          error.message?.includes('Cross-Origin-Opener-Policy') ||
-          error.message?.includes('window.closed') ||
-          error.message?.includes('disconnected port')) {
+      // Fall back to redirect for ANY popup error (Safari/mobile block popups differently)
+      // Common error codes: auth/popup-blocked, auth/popup-closed-by-user, auth/network-request-failed
+      // Safari often throws generic errors without specific codes
+      console.log('🔄 Popup failed, trying redirect method...');
 
-        console.log('🔄 Popup failed or blocked, trying redirect method...');
+      // Wait a bit before trying redirect to avoid rapid successive calls
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Wait a bit before trying redirect to avoid rapid successive calls
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        return this.signInWithGoogleRedirect();
-      }
-
-      // Handle other errors
-      const errorMessage = this.getErrorMessage(error.code);
-      throw new Error(errorMessage);
+      return this.signInWithGoogleRedirect();
     }
   }
 
