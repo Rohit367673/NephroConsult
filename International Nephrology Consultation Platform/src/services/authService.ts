@@ -25,14 +25,7 @@ class AuthService {
       throw new Error('Google authentication is not available. Firebase credentials are missing.');
     }
 
-    // Use redirect in production to avoid COOP issues, popup in development
-    const isProduction = import.meta.env.PROD;
-    
-    if (isProduction) {
-      console.log('🔐 Using redirect flow for production to avoid COOP issues...');
-      return this.signInWithGoogleRedirect();
-    }
-
+    // Try popup first (more reliable), fall back to redirect if popup fails
     try {
       console.log('🔐 Attempting Google sign in with popup...');
       const result: UserCredential = await signInWithPopup(auth, googleProvider);
