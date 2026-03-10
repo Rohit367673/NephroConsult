@@ -33,14 +33,42 @@ export interface Medicine {
 }
 
 class AdminService {
+  // Get API base URL - use same-origin in production for proper cookie handling
+  private getApiBaseUrl(): string {
+    const configured = import.meta.env.VITE_API_URL as string | undefined;
+    const hasWindow = typeof window !== 'undefined';
+    const curHost = hasWindow ? window.location.hostname : '';
+    
+    if (configured) {
+      try {
+        const cfg = new URL(configured);
+        const isLoopback = (h: string) => h === 'localhost' || h === '127.0.0.1';
+        const sameSite = (h1: string, h2: string) => {
+          try {
+            const p1 = h1.split('.').slice(-2).join('.');
+            const p2 = h2.split('.').slice(-2).join('.');
+            return p1 === p2;
+          } catch { return false; }
+        };
+        if (hasWindow) {
+          if (isLoopback(curHost) && isLoopback(cfg.hostname)) return configured;
+          if (sameSite(curHost, cfg.hostname)) return ''; // Same-origin via Vercel proxy
+          return ''; // Force same-origin via Vercel proxy
+        }
+        return configured;
+      } catch {}
+    }
+    return ''; // Use same-origin via Vercel proxy in production
+  }
+
   async getConsultations(): Promise<Consultation[]> {
     try {
-      // Use environment variable for API URL or fallback to production backend
-      const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://nephroconsult.onrender.com';
+      // Use same-origin API path in production for proper cookie handling
+      const apiBaseUrl = this.getApiBaseUrl();
       const endpoint = `${apiBaseUrl}/api/appointments/doctor`;
       const debugEndpoint = `${apiBaseUrl}/api/appointments/doctor-debug`;
       
-      console.log('🔗 Admin Service API URL:', apiBaseUrl);
+      console.log('🔗 Admin Service API URL:', apiBaseUrl || '(same-origin)');
       console.log('🔗 Full endpoint:', endpoint);
       
       console.log('🍎 Browser detection:', { isSafari: isSafari() });
@@ -178,7 +206,7 @@ class AdminService {
 
   async createPrescription(consultationId: string, prescription: Prescription, doctorName: string): Promise<void> {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://nephroconsult.onrender.com';
+      const apiBaseUrl = this.getApiBaseUrl();
       const response = await fetch(`${apiBaseUrl}/api/appointments/${consultationId}/prescription`, {
         method: 'POST',
         headers: {
@@ -221,7 +249,7 @@ class AdminService {
 
   async updateConsultationStatus(consultationId: string, status: 'completed' | 'cancelled'): Promise<void> {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://nephroconsult.onrender.com';
+      const apiBaseUrl = this.getApiBaseUrl();
       const response = await fetch(`${apiBaseUrl}/api/appointments/${consultationId}/status`, {
         method: 'PATCH',
         headers: {
