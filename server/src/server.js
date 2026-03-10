@@ -239,7 +239,7 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 50, // Increased from 10 to handle multiple API calls during login flow
   standardHeaders: 'draft-7',
   legacyHeaders: false,
 });
