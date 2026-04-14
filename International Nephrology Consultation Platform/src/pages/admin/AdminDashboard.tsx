@@ -35,9 +35,14 @@ export default function AdminDashboard() {
     
     try {
       console.log('🔄 Restoring backend session for:', user.email);
-      // Use environment variable for API URL or fallback to production backend
-      const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://nephroconsult.onrender.com';
-      const response = await fetch(`${apiBaseUrl}/api/auth/restore-session`, {
+      // In production, always use same-origin so cookies remain first-party (Vercel proxies /api -> backend)
+      // In development, VITE_API_URL can point to localhost backend.
+      const configured = import.meta.env.VITE_API_URL as string | undefined;
+      const hasWindow = typeof window !== 'undefined';
+      const isProdSite = hasWindow && /(^|\.)nephroconsultation\.com$/.test(window.location.hostname);
+      const baseUrl = isProdSite ? '' : (configured || '');
+
+      const response = await fetch(`${baseUrl}/api/auth/restore-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

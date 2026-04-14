@@ -97,7 +97,12 @@ export default function DoctorAdminPanel() {
       setLoading(true);
       
       // First, try to refresh the session with admin role
-      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+      // In production, always use same-origin so cookies remain first-party (Vercel proxies /api -> backend)
+      // In development, VITE_API_URL can point to localhost backend.
+      const configured = import.meta.env.VITE_API_URL as string | undefined;
+      const hasWindow = typeof window !== 'undefined';
+      const isProdSite = hasWindow && /(^|\.)nephroconsultation\.com$/.test(window.location.hostname);
+      const apiBaseUrl = isProdSite ? '' : (configured || '');
       try {
         const refreshResponse = await fetch(
           apiBaseUrl ? `${apiBaseUrl}/api/auth/refresh-session` : '/api/auth/refresh-session',
@@ -237,7 +242,7 @@ export default function DoctorAdminPanel() {
           date: apt.date,
           time: apt.timeSlot || apt.time,
           type: apt.type,
-          status: apt.status === 'confirmed' ? 'scheduled' : apt.status === 'completed' ? 'completed' : apt.status,
+          status: String(apt.status || '').toLowerCase() === 'confirmed' ? 'scheduled' : String(apt.status || '').toLowerCase() === 'completed' ? 'completed' : String(apt.status || ''),
           duration: apt.type?.includes('Initial') ? 45 : 30,
           meetingUrl: apt.meetLink || 'https://meet.google.com/new',
           notes: apt.prescription?.notes || '',
