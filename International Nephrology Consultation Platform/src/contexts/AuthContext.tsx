@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import apiService from '../services/apiService';
 import { auth } from '../config/firebase';
-import { getRedirectResult, onAuthStateChanged } from 'firebase/auth';
+import { getRedirectResult, onAuthStateChanged, signOut } from 'firebase/auth';
 import { authService } from '../services/authService';
 
 // Types
@@ -438,10 +438,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('Logout error:', error);
     }
+    
+    // CRITICAL: Also sign out from Firebase Auth to prevent old Google account
+    // from persisting in browser storage and taking over on page refresh
+    if (auth) {
+      try {
+        await signOut(auth);
+        console.log('Firebase Auth signed out');
+      } catch (firebaseError) {
+        console.error('Firebase sign out error:', firebaseError);
+      }
+    }
+    
     setUser(null);
     deleteCookie('nephro_user');
     setLogoutFlag();
-    console.log('User logged out and cookie removed');
+    console.log('User logged out, Firebase cleared, cookie removed');
   };
 
   const register = async (userData: any): Promise<boolean> => {
