@@ -7,7 +7,9 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import apiService from '../services/apiService';
 import { GoogleLoginButton } from './GoogleLoginButton';
-import { hasFirebaseCredentials } from '../config/firebase';
+import { auth, hasFirebaseCredentials } from '../config/firebase';
+import { useAuth } from '../contexts/AuthContext';
+import { signOut } from 'firebase/auth';
 
 interface OTPSignupModalProps {
   isOpen: boolean;
@@ -22,6 +24,7 @@ interface SignupData {
 }
 
 export function OTPSignupModal({ isOpen, onClose }: OTPSignupModalProps) {
+  const { updateUser } = useAuth();
   const [step, setStep] = useState<'details' | 'otp'>('details');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -84,6 +87,13 @@ export function OTPSignupModal({ isOpen, onClose }: OTPSignupModalProps) {
     
     if (!validateSignupData()) return;
     
+    // IMPORTANT: Sign out any existing Firebase user before OTP signup
+    // This prevents old Google account from interfering
+    if (auth?.currentUser) {
+      console.log('[OTP Signup] Signing out existing Firebase user:', auth.currentUser.email);
+      await signOut(auth);
+    }
+    
     setIsLoading(true);
     
     try {
@@ -138,10 +148,22 @@ export function OTPSignupModal({ isOpen, onClose }: OTPSignupModalProps) {
       if (response.success) {
         toast.success('🎉 Account created successfully!');
         
-        // If user data is returned, update the auth state
+        // If user data is returned, update auth state directly (don't reload page)
+        // This prevents the old Firebase Google user from being re-detected
         if (response.data?.user) {
-          // The user is now logged in, trigger any auth state updates
-          window.location.reload(); // Simple way to refresh and show logged-in state
+          const newUser = response.data.user;
+          console.log('[OTP Signup] Setting new user directly:', newUser.email);
+          
+          // Use updateUser from AuthContext to set the new user immediately
+          updateUser({
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            role: newUser.role || 'patient'
+          });
+          
+          // Close modal - user is now logged in
+          handleClose();
         } else {
           handleClose();
         }
