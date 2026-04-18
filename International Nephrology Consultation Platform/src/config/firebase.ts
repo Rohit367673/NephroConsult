@@ -1,5 +1,6 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, Auth, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
+import { isIOSSafari } from '../utils/safariCompat';
 
 // Check if Firebase credentials are available
 const hasFirebaseCredentials = !!(
@@ -27,9 +28,13 @@ if (hasFirebaseCredentials) {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     
-    // Set persistence to local storage so auth survives redirects
-    setPersistence(auth, browserLocalPersistence).then(() => {
-      console.log('✅ Firebase persistence set to browserLocalPersistence');
+    // Use session persistence for iOS Safari to avoid ITP blocking IndexedDB
+    // For other browsers, use local persistence for better UX
+    const persistence = isIOSSafari() ? browserSessionPersistence : browserLocalPersistence;
+    const persistenceName = isIOSSafari() ? 'browserSessionPersistence' : 'browserLocalPersistence';
+    
+    setPersistence(auth, persistence).then(() => {
+      console.log(`✅ Firebase persistence set to ${persistenceName} (iOS Safari: ${isIOSSafari()})`);
     }).catch((err) => {
       console.error('❌ Failed to set Firebase persistence:', err);
     });
