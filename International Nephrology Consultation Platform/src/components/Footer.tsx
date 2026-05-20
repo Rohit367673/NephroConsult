@@ -151,7 +151,7 @@ export default function Footer() {
                     { icon: Facebook, label: 'Facebook', href: '#' },
                     { icon: Twitter, label: 'Twitter', href: '#' },
                     { icon: Instagram, label: 'Instagram', href: 'https://www.instagram.com/nephroconsult?igsh=MWVwa3Nhc2Y4MnplNA%3D%3D&utm_source=qr' },
-                    { icon: Linkedin, label: 'LinkedIn', href: '#' }
+                    { icon: Linkedin, label: 'LinkedIn', href: 'https://www.linkedin.com/in/llango-suyamprakasam-65609624' }
                   ].map(({ icon: Icon, label, href }) => (
                     <motion.a
                       key={label}
