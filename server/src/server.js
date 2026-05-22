@@ -291,6 +291,7 @@ app.use((err, req, res, next) => {
   if (process.env.NODE_ENV !== 'test') {
     // brief log
     console.error('[ERR]', status, message);
+    
   }
   res.status(status).json({ error: message });
 });

@@ -118,7 +118,7 @@ export const BookingSection: React.FC = () => {
                   }`}
                 >
                   Book {consultation.type}
-                </Button>
+                </Button>         
               </CardContent>
             </Card>
           ))}

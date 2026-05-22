@@ -878,6 +878,47 @@ export default function BookingPage() {
     }));
   }, []);
 
+  // Validate single field on blur
+  const handleFieldBlur = useCallback((field: string) => {
+    const fieldValidations: {[key: string]: () => {isValid: boolean, error?: string}} = {
+      name: () => {
+        const validation = validateName(bookingData.patientInfo.name);
+        return { isValid: validation.isValid, error: validation.isValid ? '' : validation.errors[0] };
+      },
+      email: () => {
+        const validation = validateEmail(bookingData.patientInfo.email);
+        return { isValid: validation.isValid, error: validation.isValid ? '' : validation.errors[0] };
+      },
+      phone: () => {
+        const validation = validatePhoneNumber(bookingData.patientInfo.phone);
+        return { isValid: validation.isValid, error: validation.isValid ? '' : validation.errors[0] };
+      },
+      age: () => {
+        const validation = validateAge(bookingData.patientInfo.age);
+        return { isValid: validation.isValid, error: validation.isValid ? '' : validation.errors[0] };
+      },
+      gender: () => {
+        const isValid = bookingData.patientInfo.gender.trim() !== '';
+        return { isValid, error: isValid ? '' : 'Please select your gender' };
+      },
+      medicalHistory: () => {
+        const validation = validateMedicalHistory(bookingData.patientInfo.medicalHistory);
+        return { isValid: validation.isValid, error: validation.isValid ? '' : validation.errors[0] };
+      }
+    };
+
+    const validator = fieldValidations[field];
+    if (validator) {
+      const result = validator();
+      if (!result.isValid) {
+        setValidationErrors(prev => ({
+          ...prev,
+          [field]: result.error || 'Invalid value'
+        }));
+      }
+    }
+  }, [bookingData.patientInfo]);
+
   // Enhanced step validation (pure function - no state updates)
   const isStepValid = () => {
     switch (step) {
@@ -886,13 +927,9 @@ export default function BookingPage() {
       case 2:
         return bookingData.date !== '' && bookingData.time !== '';
       case 3:
-        // Use basic field checks to avoid triggering validation during render
-        return bookingData.patientInfo.name.trim() !== '' &&
-               bookingData.patientInfo.email.trim() !== '' &&
-               bookingData.patientInfo.phone.trim() !== '' &&
-               bookingData.patientInfo.age.trim() !== '' &&
-               bookingData.patientInfo.gender.trim() !== '' &&
-               bookingData.patientInfo.medicalHistory.trim().length >= 10;
+        // Actually validate patient info fields before allowing navigation
+        const validation = validatePatientInfo(bookingData.patientInfo);
+        return validation.isValid;
       case 4:
         return true; // Payment step
       default:
@@ -1554,7 +1591,8 @@ export default function BookingPage() {
                   <Input
                     value={bookingData.patientInfo.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="p-4"
+                    onBlur={() => handleFieldBlur('name')}
+                    className={`p-4 ${validationErrors.name ? 'border-red-500 focus:border-red-500' : ''}`}
                     required
                     placeholder="Enter your full name"
                   />
@@ -1571,7 +1609,8 @@ export default function BookingPage() {
                     type="email"
                     value={bookingData.patientInfo.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="p-4"
+                    onBlur={() => handleFieldBlur('email')}
+                    className={`p-4 ${validationErrors.email ? 'border-red-500 focus:border-red-500' : ''}`}
                     required
                     placeholder="Enter your email address"
                   />
@@ -1591,7 +1630,8 @@ export default function BookingPage() {
                     type="tel"
                     value={bookingData.patientInfo.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className="p-4"
+                    onBlur={() => handleFieldBlur('phone')}
+                    className={`p-4 ${validationErrors.phone ? 'border-red-500 focus:border-red-500' : ''}`}
                     required
                     placeholder="Enter your phone number (7-15 digits)"
                   />
@@ -1611,7 +1651,8 @@ export default function BookingPage() {
                     type="number"
                     value={bookingData.patientInfo.age}
                     onChange={(e) => handleInputChange('age', e.target.value)}
-                    className="p-4"
+                    onBlur={() => handleFieldBlur('age')}
+                    className={`p-4 ${validationErrors.age ? 'border-red-500 focus:border-red-500' : ''}`}
                     required
                     placeholder="Enter your age"
                     min="1"
@@ -1636,9 +1677,14 @@ export default function BookingPage() {
                       // Clear gender validation error when selected
                       setValidationErrors(prev => ({ ...prev, gender: '' }));
                     }}
+                    onOpenChange={(open) => {
+                      if (!open && bookingData.patientInfo.gender) {
+                        handleFieldBlur('gender');
+                      }
+                    }}
                     required
                   >
-                    <SelectTrigger className={`p-4 ${validationErrors.gender ? 'border-red-300' : ''}`}>
+                    <SelectTrigger className={`p-4 ${validationErrors.gender ? 'border-red-500 focus:border-red-500' : ''}`}>
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1662,8 +1708,9 @@ export default function BookingPage() {
                 <Textarea
                   value={bookingData.patientInfo.medicalHistory}
                   onChange={(e) => handleInputChange('medicalHistory', e.target.value)}
+                  onBlur={() => handleFieldBlur('medicalHistory')}
                   placeholder="Please describe your current symptoms, relevant medical history, and any concerns you'd like to discuss (minimum 10 characters)..."
-                  className="min-h-32 p-4"
+                  className={`min-h-32 p-4 ${validationErrors.medicalHistory ? 'border-red-500 focus:border-red-500' : ''}`}
                   required
                 />
                 {validationErrors.medicalHistory && (
