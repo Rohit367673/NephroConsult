@@ -18,7 +18,7 @@ export function MainNavigation({ onLoginOpen, onSignupOpen }: Props) {
   const location = useLocation();
 
   const handleNavigation = (path: string) => {
-    if (!user && (path === '/booking' || path === '/profile' || path.includes('dashboard'))) {
+    if (!user && (path === '/booking' || path === '/profile' || path === '/ai-doctor' || path.includes('dashboard'))) {
       if (onLoginOpen) {
         onLoginOpen();
         toast.info('🔐 Please log in to access this feature');
@@ -39,7 +39,7 @@ export function MainNavigation({ onLoginOpen, onSignupOpen }: Props) {
       animate={{ y: 0 }}
       className="bg-white/95 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40"
     >
-      <div className="container-medical">
+      <div className="w-full px-4 md:px-8">
         <div className="flex items-center justify-between h-16">
           <motion.div
             className="flex items-center space-x-3 cursor-pointer shrink-0"
@@ -52,7 +52,7 @@ export function MainNavigation({ onLoginOpen, onSignupOpen }: Props) {
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900">NephroConsult</h1>
-              <p className="text-xs text-[#006f6f]">International Kidney Care</p>
+              <p className="text-xs text-[#006f6f] whitespace-nowrap">International Kidney Care</p>
             </div>
           </motion.div>
 

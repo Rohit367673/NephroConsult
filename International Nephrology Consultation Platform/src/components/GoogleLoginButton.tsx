@@ -123,12 +123,18 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
           body: JSON.stringify(firebaseLoginData)
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Firebase login failed');
+        const text = await response.text();
+        let loginResult: any = {};
+        try {
+          loginResult = text ? JSON.parse(text) : {};
+        } catch (e) {
+          loginResult = {};
         }
 
-        const loginResult = await response.json();
+        if (!response.ok) {
+          throw new Error(loginResult.error || 'Firebase login failed');
+        }
+
         console.log('Firebase login result:', loginResult);
 
         if (loginResult.user) {

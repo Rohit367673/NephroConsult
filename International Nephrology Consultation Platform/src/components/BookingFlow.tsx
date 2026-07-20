@@ -38,7 +38,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
       icon: Video,
       name: 'Initial Consultation',
       duration: '45 minutes',
-      price: 49, // $49 USD
+      price: 29, // $29 USD
       description: 'First-time comprehensive nephrology consultation'
     },
     {
@@ -46,7 +46,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
       icon: Video,
       name: 'Follow-up Consultation',
       duration: '30 minutes',
-      price: 39, // $39 USD
+      price: 19, // $19 USD
       description: 'Follow-up appointment for existing patients'
     },
     {
@@ -54,7 +54,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({ onClose }) => {
       icon: Video,
       name: 'Urgent Consultation',
       duration: '45 minutes',
-      price: 99, // $99 USD
+      price: 49, // $49 USD
       description: 'Priority consultation for urgent kidney concerns'
     }
   ];

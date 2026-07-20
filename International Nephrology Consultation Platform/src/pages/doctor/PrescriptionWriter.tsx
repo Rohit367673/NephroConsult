@@ -74,7 +74,8 @@ export function PrescriptionWriter() {
     try {
       const res = await fetch(`/api/appointments/${appointmentId}`, { credentials: 'include' });
       if (res.ok) {
-        const data = await res.json();
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : {};
         setAppointment(data.appointment);
         setPrescription(prev => ({
           ...prev,

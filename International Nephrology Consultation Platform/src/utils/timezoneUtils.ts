@@ -21,53 +21,53 @@ export const getUserTimezone = (): string => {
   return tz;
 };
 
-// Region-based pricing (in USD)
+// Region-based pricing (updated with new pricing)
 export const REGION_PRICING = {
   // North America
-  'America/New_York': { initial: 150, followup: 105, currency: 'USD', symbol: '$' },
-  'America/Chicago': { initial: 150, followup: 105, currency: 'USD', symbol: '$' },
-  'America/Denver': { initial: 150, followup: 105, currency: 'USD', symbol: '$' },
-  'America/Los_Angeles': { initial: 150, followup: 105, currency: 'USD', symbol: '$' },
-  'America/Toronto': { initial: 180, followup: 125, currency: 'CAD', symbol: 'CA$' },
-  
+  'America/New_York': { initial: 29, followup: 19, currency: 'USD', symbol: '$' },
+  'America/Chicago': { initial: 29, followup: 19, currency: 'USD', symbol: '$' },
+  'America/Denver': { initial: 29, followup: 19, currency: 'USD', symbol: '$' },
+  'America/Los_Angeles': { initial: 29, followup: 19, currency: 'USD', symbol: '$' },
+  'America/Toronto': { initial: 39, followup: 26, currency: 'CAD', symbol: 'CA$' },
+
   // Europe
-  'Europe/London': { initial: 120, followup: 85, currency: 'GBP', symbol: '£' },
-  'Europe/Paris': { initial: 130, followup: 90, currency: 'EUR', symbol: '€' },
-  'Europe/Berlin': { initial: 130, followup: 90, currency: 'EUR', symbol: '€' },
-  'Europe/Madrid': { initial: 130, followup: 90, currency: 'EUR', symbol: '€' },
-  'Europe/Rome': { initial: 130, followup: 90, currency: 'EUR', symbol: '€' },
-  
+  'Europe/London': { initial: 23, followup: 15, currency: 'GBP', symbol: '£' },
+  'Europe/Paris': { initial: 27, followup: 18, currency: 'EUR', symbol: '€' },
+  'Europe/Berlin': { initial: 27, followup: 18, currency: 'EUR', symbol: '€' },
+  'Europe/Madrid': { initial: 27, followup: 18, currency: 'EUR', symbol: '€' },
+  'Europe/Rome': { initial: 27, followup: 18, currency: 'EUR', symbol: '€' },
+
   // Middle East
-  'Asia/Dubai': { initial: 140, followup: 95, currency: 'AED', symbol: 'AED' },
-  'Asia/Riyadh': { initial: 140, followup: 95, currency: 'SAR', symbol: 'SAR' },
-  'Asia/Jerusalem': { initial: 140, followup: 95, currency: 'ILS', symbol: '₪' },
-  
+  'Asia/Dubai': { initial: 106, followup: 70, currency: 'AED', symbol: 'AED' },
+  'Asia/Riyadh': { initial: 109, followup: 71, currency: 'SAR', symbol: 'SAR' },
+  'Asia/Jerusalem': { initial: 105, followup: 69, currency: 'ILS', symbol: '₪' },
+
   // Asia Pacific
-  'Asia/Singapore': { initial: 120, followup: 85, currency: 'SGD', symbol: 'S$' },
-  'Asia/Hong_Kong': { initial: 120, followup: 85, currency: 'HKD', symbol: 'HK$' },
-  'Asia/Tokyo': { initial: 125, followup: 90, currency: 'JPY', symbol: '¥' },
-  'Asia/Shanghai': { initial: 100, followup: 70, currency: 'CNY', symbol: '¥' },
-  'Asia/Kolkata': { initial: 599, followup: 499, currency: 'INR', symbol: '₹' },
-  'Asia/Calcutta': { initial: 599, followup: 499, currency: 'INR', symbol: '₹' }, // Old name for Kolkata
-  'Asia/Mumbai': { initial: 599, followup: 499, currency: 'INR', symbol: '₹' },
-  'Asia/Delhi': { initial: 599, followup: 499, currency: 'INR', symbol: '₹' },
-  'Asia/Chennai': { initial: 599, followup: 499, currency: 'INR', symbol: '₹' },
-  'Asia/Bangalore': { initial: 599, followup: 499, currency: 'INR', symbol: '₹' },
-  
+  'Asia/Singapore': { initial: 39, followup: 26, currency: 'SGD', symbol: 'S$' },
+  'Asia/Hong_Kong': { initial: 226, followup: 148, currency: 'HKD', symbol: 'HK$' },
+  'Asia/Tokyo': { initial: 4600, followup: 3000, currency: 'JPY', symbol: '¥' },
+  'Asia/Shanghai': { initial: 210, followup: 138, currency: 'CNY', symbol: '¥' },
+  'Asia/Kolkata': { initial: 499, followup: 399, currency: 'INR', symbol: '₹' },
+  'Asia/Calcutta': { initial: 499, followup: 399, currency: 'INR', symbol: '₹' }, // Old name for Kolkata
+  'Asia/Mumbai': { initial: 499, followup: 399, currency: 'INR', symbol: '₹' },
+  'Asia/Delhi': { initial: 499, followup: 399, currency: 'INR', symbol: '₹' },
+  'Asia/Chennai': { initial: 499, followup: 399, currency: 'INR', symbol: '₹' },
+  'Asia/Bangalore': { initial: 499, followup: 399, currency: 'INR', symbol: '₹' },
+
   // Australia & NZ
-  'Australia/Sydney': { initial: 180, followup: 125, currency: 'AUD', symbol: 'AU$' },
-  'Australia/Melbourne': { initial: 180, followup: 125, currency: 'AUD', symbol: 'AU$' },
-  'Pacific/Auckland': { initial: 190, followup: 135, currency: 'NZD', symbol: 'NZ$' },
-  
+  'Australia/Sydney': { initial: 45, followup: 30, currency: 'AUD', symbol: 'AU$' },
+  'Australia/Melbourne': { initial: 45, followup: 30, currency: 'AUD', symbol: 'AU$' },
+  'Pacific/Auckland': { initial: 47, followup: 31, currency: 'NZD', symbol: 'NZ$' },
+
   // Africa
-  'Africa/Johannesburg': { initial: 100, followup: 70, currency: 'ZAR', symbol: 'R' },
-  'Africa/Cairo': { initial: 90, followup: 65, currency: 'EGP', symbol: 'E£' },
-  'Africa/Lagos': { initial: 85, followup: 60, currency: 'NGN', symbol: '₦' },
-  
+  'Africa/Johannesburg': { initial: 530, followup: 350, currency: 'ZAR', symbol: 'R' },
+  'Africa/Cairo': { initial: 1400, followup: 920, currency: 'EGP', symbol: 'E£' },
+  'Africa/Lagos': { initial: 44000, followup: 29000, currency: 'NGN', symbol: '₦' },
+
   // South America
-  'America/Sao_Paulo': { initial: 100, followup: 70, currency: 'BRL', symbol: 'R$' },
-  'America/Buenos_Aires': { initial: 95, followup: 65, currency: 'ARS', symbol: 'AR$' },
-  'America/Mexico_City': { initial: 110, followup: 75, currency: 'MXN', symbol: 'MX$' }
+  'America/Sao_Paulo': { initial: 145, followup: 95, currency: 'BRL', symbol: 'R$' },
+  'America/Buenos_Aires': { initial: 29000, followup: 19000, currency: 'ARS', symbol: 'AR$' },
+  'America/Mexico_City': { initial: 580, followup: 380, currency: 'MXN', symbol: 'MX$' }
 };
 
 // Get pricing for a timezone (with fallback)
@@ -86,12 +86,12 @@ export const getPricingForTimezone = (timezone: string) => {
   }
   
   // Special handling for India - check if timezone contains India/Kolkata/Calcutta
-  if (timezone.includes('Asia') && (timezone.includes('Kolkata') || timezone.includes('Calcutta') || 
-      timezone.includes('Mumbai') || timezone.includes('Delhi') || 
+  if (timezone.includes('Asia') && (timezone.includes('Kolkata') || timezone.includes('Calcutta') ||
+      timezone.includes('Mumbai') || timezone.includes('Delhi') ||
       timezone.includes('Chennai') || timezone.includes('Bangalore') ||
       timezone === 'Asia/Colombo')) { // Sri Lanka also uses similar pricing
     console.log('Detected Indian region, returning INR pricing');
-    return { initial: 599, followup: 499, currency: 'INR', symbol: '₹' };
+    return { initial: 499, followup: 399, currency: 'INR', symbol: '₹' };
   }
   
   // Try to match by region/city
@@ -108,8 +108,8 @@ export const getPricingForTimezone = (timezone: string) => {
     return REGION_PRICING[similarTz as keyof typeof REGION_PRICING];
   }
   
-  // Default pricing (USD)
-  return { initial: 150, followup: 105, currency: 'USD', symbol: '$' };
+  // Default pricing (USD) - updated
+  return { initial: 29, followup: 19, currency: 'USD', symbol: '$' };
 };
 
 // Convert IST time slots to user's local time

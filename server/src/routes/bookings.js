@@ -477,6 +477,16 @@ router.post('/appointments', requireAuth, async (req, res) => {
     const existing = await Appointment.findOne({ date, timeSlot, status: { $ne: 'cancelled' } });
     if (existing) return res.status(409).json({ error: 'Time slot already booked' });
 
+    // Daily appointment limit check (max 2 appointments per day per user)
+    const userTodayAppointments = await Appointment.countDocuments({
+      date,
+      'patient.id': req.session.user.id,
+      status: { $ne: 'cancelled' }
+    });
+    if (userTodayAppointments >= 2) {
+      return res.status(409).json({ error: 'Maximum 2 appointments allowed per day per user. Please choose a different date.' });
+    }
+
     // Update user with phone/country if provided
     const updateData = {};
     if (extractedPhone && extractedPhone.trim()) updateData.phone = extractedPhone.trim();

@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { toast } from "sonner";
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
+import { Navigation } from '../components/Navigation';
 import Footer from '../components/Footer';
 
 interface ProfileData {
@@ -30,254 +31,7 @@ interface ProfileData {
   bloodType: string;
 }
 
-// Navigation Component (same as App.tsx)
-function Navigation() {
-  const { user, loading, logout } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
 
-  const handleNavigation = (path: string) => {
-    // Don't block navigation if still loading user data
-    if (loading) {
-      navigate(path);
-      setIsMenuOpen(false);
-      return;
-    }
-    
-    if (!user && (path === '/booking' || path === '/profile' || path.includes('dashboard'))) {
-      // For ProfilePage, we should not block since user should already be authenticated
-      // But if somehow not authenticated, redirect to home
-      if (path === '/profile') {
-        navigate('/');
-        setIsMenuOpen(false);
-        return;
-      }
-    }
-    navigate(path);
-    setIsMenuOpen(false);
-  };
-
-  return (
-    <motion.header 
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      className="bg-white/95 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40"
-    >
-      <div className="container-medical">
-        <div className="flex items-center justify-between h-16">
-          <motion.div 
-            className="flex items-center space-x-3 cursor-pointer" 
-            onClick={() => navigate('/')}
-          >
-            <div className="w-10 h-10 bg-gradient-to-br from-[#006f6f] to-[#004f4f] rounded-lg flex items-center justify-center">
-              <Heart className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">NephroConsult</h1>
-              <p className="text-xs text-gray-500">International Platform</p>
-            </div>
-          </motion.div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Button
-              variant="ghost"
-              onClick={() => handleNavigation('/')}
-              className={location.pathname === '/' ? 'text-[#006f6f]' : ''}
-            >
-              Home
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => handleNavigation('/about')}
-              className={location.pathname === '/about' ? 'text-[#006f6f]' : ''}
-            >
-              About
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => handleNavigation('/booking')}
-              className="text-[#006f6f] hover:text-[#005555]"
-            >
-              Book Appointment
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => handleNavigation('/contact')}
-              className={location.pathname === '/contact' ? 'text-[#006f6f]' : ''}
-            >
-              Contact
-            </Button>
-            
-            {user ? (
-              <>
-                <Button
-                  variant="ghost"
-                  onClick={() => handleNavigation('/profile')}
-                  className={location.pathname === '/profile' ? 'text-[#006f6f]' : ''}
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Profile
-                </Button>
-                <Button variant="outline" onClick={logout}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline">
-                  Login
-                </Button>
-                <Button className="bg-[#006f6f] hover:bg-[#005555]">
-                  Sign Up
-                </Button>
-              </>
-            )}
-          </nav>
-
-          {/* Mobile menu and profile */}
-          <div className="flex items-center space-x-3 md:hidden">
-            {/* Profile Photo for Mobile */}
-            {user && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {}} // Already on profile page
-              >
-                <div className="w-8 h-8 rounded-full overflow-hidden relative">
-                  {(user as any).photoURL || user.avatar ? (
-                    <>
-                      <img 
-                        src={(user as any).photoURL || user.avatar} 
-                        alt={user.name}
-                        className="w-full h-full object-cover absolute inset-0"
-                        crossOrigin="anonymous"
-                        referrerPolicy="no-referrer"
-                        onLoad={(e) => {
-                          // Hide fallback when image loads
-                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (fallback) fallback.style.display = 'none';
-                        }}
-                        onError={(e) => {
-                          console.log('Mobile nav image failed to load, trying fallback methods');
-                          
-                          // Try alternative Google image URL
-                          const currentSrc = e.currentTarget.src;
-                          if (currentSrc.includes('googleusercontent.com') && !currentSrc.includes('proxy')) {
-                            const newSrc = `https://images.weserv.nl/?url=${encodeURIComponent(currentSrc)}&w=200&h=200&fit=cover&mask=circle`;
-                            e.currentTarget.src = newSrc;
-                            return;
-                          }
-                          
-                          // If all methods fail, hide image and show fallback
-                          e.currentTarget.style.display = 'none';
-                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (fallback) fallback.style.display = 'flex';
-                        }}
-                      />
-                      <div 
-                        className="w-full h-full bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center absolute inset-0"
-                        style={{ display: 'flex' }}
-                      >
-                        <span className="text-white text-xs font-semibold">
-                          {user.name?.charAt(0)?.toUpperCase() || 'U'}
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center">
-                      <span className="text-white text-xs font-semibold">
-                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </motion.button>
-            )}
-            
-            {/* Mobile menu button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation */}
-        <AnimatePresence>
-          {isMenuOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="md:hidden border-t border-gray-200 py-4 space-y-2 overflow-hidden"
-            >
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleNavigation('/')}
-              >
-                Home
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleNavigation('/about')}
-              >
-                About
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-[#006f6f]"
-                onClick={() => handleNavigation('/booking')}
-              >
-                Book Appointment
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleNavigation('/contact')}
-              >
-                Contact
-              </Button>
-              
-              {user ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => handleNavigation('/profile')}
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    Profile
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start" onClick={logout}>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="outline" className="w-full justify-start">
-                    Login
-                  </Button>
-                  <Button className="w-full justify-start bg-[#006f6f] hover:bg-[#005555]">
-                    Sign Up
-                  </Button>
-                </>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.header>
-  );
-}
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
@@ -424,7 +178,8 @@ export default function ProfilePage() {
       });
       
       if (response.ok) {
-        const data = await response.json();
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
         console.log('📋 API Response:', data);
         console.log('📋 Appointments array:', data.appointments);
         if (data.appointments && data.appointments.length > 0) {
@@ -456,7 +211,8 @@ export default function ProfilePage() {
       });
       
       if (response.ok) {
-        const data = await response.json();
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
         console.log('📋 Doctor appointments:', data);
         setDoctorAppointments(data.appointments || []);
         

@@ -202,7 +202,8 @@ export default function AdminPanel() {
   const fetchRefundRequests = async () => {
     try {
       const response = await fetch('/api/refunds');
-      const data = await response.json();
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
 
       if (data.success && data.refunds) {
         setRefundRequests(data.refunds);

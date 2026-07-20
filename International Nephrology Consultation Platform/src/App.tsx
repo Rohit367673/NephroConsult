@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './components/ui/button';
@@ -10,12 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from './components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './components/ui/dialog';
 import { Toaster, toast } from 'sonner';
-import { 
-  Heart, Shield, Calendar, Clock, Video, Phone, FileText, User, 
-  Mail, MapPin, Star, Award, Stethoscope, Globe, Menu, X, 
-  Eye, EyeOff, LogOut, Linkedin, Twitter, ChevronDown, 
+import {
+  Heart, Shield, Calendar, Clock, Video, Phone, FileText, User,
+  Mail, MapPin, Star, Award, Stethoscope, Globe, Menu, X,
+  Eye, EyeOff, LogOut, Linkedin, Twitter, ChevronDown,
   CheckCircle2, Users, TrendingUp, ArrowRight, PlayCircle,
-  MessageCircle, Upload
+  MessageCircle, Upload, Bot, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { GoogleLoginButton } from './components/GoogleLoginButton';
@@ -26,6 +26,7 @@ import ProfilePage from './pages/ProfilePage';
 import { PaymentPage } from './pages/PaymentPage';
 import PaymentSuccess from './pages/PaymentSuccess';
 import BookingPage from './pages/BookingPage';
+import AIDoctorPage from './pages/AIDoctorPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import SEOHead from './components/SEOHead';
@@ -435,7 +436,7 @@ function Navigation({ onLoginOpen, onSignupOpen }: {
     const hasValidSession = user && user.email;
     
     // Only block navigation for protected routes if no valid session
-    if (!hasValidSession && (path === '/booking' || path === '/profile' || path.includes('dashboard'))) {
+    if (!hasValidSession && (path === '/booking' || path === '/profile' || path === '/ai-doctor' || path.includes('dashboard'))) {
       console.log('No valid session, blocking navigation to:', path);
       if (onLoginOpen) onLoginOpen();
       return;
@@ -452,10 +453,10 @@ function Navigation({ onLoginOpen, onSignupOpen }: {
       animate={{ y: 0 }}
       className="bg-white/95 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40"
     >
-      <div className="container-medical">
+      <div className="w-full px-4 md:px-8">
         <div className="flex items-center justify-between h-16">
           <motion.div 
-            className="flex items-center space-x-3 cursor-pointer" 
+            className="flex items-center space-x-3 cursor-pointer shrink-0" 
             onClick={() => navigate('/')}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -465,12 +466,12 @@ function Navigation({ onLoginOpen, onSignupOpen }: {
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900">NephroConsult</h1>
-              <p className="text-xs text-[#0d9488]">International Kidney Care</p>
+              <p className="text-xs text-[#0d9488] whitespace-nowrap">International Kidney Care</p>
             </div>
           </motion.div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-8 ml-8">
             <Button
               variant="ghost"
               onClick={() => handleNavigation('/')}
@@ -500,7 +501,18 @@ function Navigation({ onLoginOpen, onSignupOpen }: {
             >
               Contact
             </Button>
-            
+
+            {/* AI Doctor Link */}
+            <Button
+              variant="ghost"
+              onClick={() => handleNavigation('/ai-doctor')}
+              className={location.pathname === '/ai-doctor' ? 'text-[#006f6f]' : 'text-[#006f6f] hover:text-[#005555] transition-colors duration-200 font-medium whitespace-nowrap flex items-center gap-1'}
+            >
+              <Bot className="w-4 h-4" />
+              <span>AI Doctor</span>
+              <span className="text-xs bg-[#006f6f]/10 text-[#006f6f] px-2 py-0.5 rounded-full">New</span>
+            </Button>
+
             {user ? (
               <>
                 {user.role === 'admin' && (
@@ -603,7 +615,7 @@ function Navigation({ onLoginOpen, onSignupOpen }: {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="md:hidden border-t border-gray-200 py-4 space-y-2 overflow-hidden"
+              className="md:hidden border-t border-gray-200 py-4 px-4 space-y-2 overflow-hidden bg-white shadow-lg"
             >
               <Button
                 variant="ghost"
@@ -634,7 +646,21 @@ function Navigation({ onLoginOpen, onSignupOpen }: {
               >
                 Contact
               </Button>
-              
+
+              {/* AI Doctor Link - Mobile */}
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-[#006f6f] hover:text-[#005555] transition-colors duration-200 font-medium py-2 flex items-center gap-2"
+                onClick={() => {
+                  handleNavigation('/ai-doctor');
+                  setIsMenuOpen(false);
+                }}
+              >
+                <Bot className="w-4 h-4" />
+                <span>AI Doctor</span>
+                <span className="text-xs bg-[#006f6f]/10 text-[#006f6f] px-2 py-0.5 rounded-full">New</span>
+              </Button>
+
               {user ? (
                 <>
                   {user.role === 'admin' && (
@@ -746,6 +772,85 @@ function HomePage() {
   // Use user's country if logged in, otherwise detect from timezone
   const userCountry = user?.country || getUserCountry();
   const pricing = regionalPricing[userCountry] || regionalPricing.default;
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') === 'login') {
+      setIsLoginOpen(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (params.get('action') === 'signup') {
+      setIsSignupOpen(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  // --- Mobile slider state for AI Doctor cards ---
+  const [aiActiveSlide, setAiActiveSlide] = useState(0);
+  const aiCardCount = 4;
+  const [aiTouchStart, setAiTouchStart] = useState(0);
+  const [aiTouchEnd, setAiTouchEnd] = useState(0);
+
+  const handleAiTouchStart = (e: React.TouchEvent) => {
+    setAiTouchStart(e.targetTouches[0].clientX);
+    setAiTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleAiTouchMove = (e: React.TouchEvent) => {
+    setAiTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleAiTouchEnd = () => {
+    if (aiTouchStart - aiTouchEnd > 50) {
+      // swipe left -> next slide
+      setAiActiveSlide((prev) => (prev + 1) % aiCardCount);
+    } else if (aiTouchStart - aiTouchEnd < -50) {
+      // swipe right -> prev slide
+      setAiActiveSlide((prev) => (prev - 1 + aiCardCount) % aiCardCount);
+    }
+  };
+
+  // --- Mobile slider state for Nephrology Care cards ---
+  const [careActiveSlide, setCareActiveSlide] = useState(0);
+  const careCardCount = 3;
+  const [careTouchStart, setCareTouchStart] = useState(0);
+  const [careTouchEnd, setCareTouchEnd] = useState(0);
+
+  const handleCareTouchStart = (e: React.TouchEvent) => {
+    setCareTouchStart(e.targetTouches[0].clientX);
+    setCareTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleCareTouchMove = (e: React.TouchEvent) => {
+    setCareTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleCareTouchEnd = () => {
+    if (careTouchStart - careTouchEnd > 50) {
+      // swipe left -> next slide
+      setCareActiveSlide((prev) => (prev + 1) % careCardCount);
+    } else if (careTouchStart - careTouchEnd < -50) {
+      // swipe right -> prev slide
+      setCareActiveSlide((prev) => (prev - 1 + careCardCount) % careCardCount);
+    }
+  };
+
+  // Autoplay for AI Doctor features slider (only on mobile)
+  useEffect(() => {
+    if (window.innerWidth >= 640) return;
+    const interval = setInterval(() => {
+      setAiActiveSlide((prev) => (prev + 1) % aiCardCount);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [aiCardCount]);
+
+  // Autoplay for Nephrology Care features slider (only on mobile)
+  useEffect(() => {
+    if (window.innerWidth >= 640) return;
+    const interval = setInterval(() => {
+      setCareActiveSlide((prev) => (prev + 1) % careCardCount);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [careCardCount]);
 
 
   return (
@@ -901,6 +1006,22 @@ function HomePage() {
                   variant="outline"
                   size="lg"
                   className="w-full sm:w-auto px-5 sm:px-7 md:px-10 py-4 sm:py-5 md:py-6 border-2 border-[#006f6f]/30 text-[#006f6f] hover:bg-[#006f6f] hover:text-white backdrop-blur-sm bg-white/70 rounded-xl shadow-lg text-[13px] sm:text-sm md:text-base lg:text-lg font-semibold transition-all duration-300 min-h-[48px] sm:min-h-[52px]"
+                  onClick={() => navigate('/ai-doctor')}
+                >
+                  <Video className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 flex-shrink-0" />
+                  <span className="font-semibold">Consult AI Doctor</span>
+                </Button>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                className="relative group w-full sm:w-auto"
+              >
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto px-5 sm:px-7 md:px-10 py-4 sm:py-5 md:py-6 border-2 border-[#006f6f]/30 text-[#006f6f] hover:bg-[#006f6f] hover:text-white backdrop-blur-sm bg-white/70 rounded-xl shadow-lg text-[13px] sm:text-sm md:text-base lg:text-lg font-semibold transition-all duration-300 min-h-[48px] sm:min-h-[52px]"
                   onClick={() => navigate('/contact')}
                 >
                   <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 flex-shrink-0" />
@@ -945,6 +1066,205 @@ function HomePage() {
         </div>
       </section>
 
+      {/* AI Assistant Section */}
+      <section className="py-10 sm:py-14 md:py-20 lg:py-24 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden">
+        {/* Animated background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#006f6f]/5 via-purple-500/5 to-[#006f6f]/5">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,111,111,0.1),transparent_70%)]" />
+        </div>
+
+        {/* Glowing Ambient Blobs */}
+        <div className="absolute top-1/4 left-[10%] w-72 h-72 sm:w-96 sm:h-96 bg-[#006f6f]/10 rounded-full blur-3xl -z-10 pointer-events-none" />
+        <div className="absolute bottom-1/4 right-[10%] w-72 h-72 sm:w-96 sm:h-96 bg-purple-500/10 rounded-full blur-3xl -z-10 pointer-events-none" />
+
+        <div className="container-medical relative z-10">
+          <motion.div
+            initial={{ y: 60, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-8 sm:mb-12 md:mb-16 lg:mb-20"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+            >
+              <Badge className="mb-3 sm:mb-4 md:mb-6 px-3 md:px-4 py-1 sm:py-1.5 md:py-2 bg-gradient-to-r from-purple-500/10 to-[#006f6f]/10 text-[#006f6f] border-[#006f6f]/20 text-[10px] sm:text-xs md:text-sm shadow-sm hover:shadow-md transition-shadow">
+                <Bot className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 mr-1.5 inline animate-pulse" />
+                AI-Powered Healthcare
+              </Badge>
+            </motion.div>
+            <h2 className="text-xl leading-tight sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6">
+              <span className="bg-gradient-to-r from-gray-900 via-[#006f6f] to-purple-600 bg-clip-text text-transparent">
+                Meet Your AI Doctor Assistant
+              </span>
+            </h2>
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed px-2">
+              Get instant medical guidance, schedule appointments, and receive personalized health recommendations
+              with our advanced AI-powered healthcare assistant.
+            </p>
+          </motion.div>
+
+          {/* Mobile Slider + Desktop Grid for AI Features */}
+          {(() => {
+            const aiFeatures = [
+              {
+                icon: Bot,
+                title: "24/7 Availability",
+                description: "Get instant responses to your health queries anytime, anywhere.",
+                fromColor: "#7c3aed",
+                toColor: "#006f6f",
+                accentGrad: "from-purple-500 to-[#006f6f]",
+                hoverBorder: "group-hover:border-purple-500/30",
+                hoverShadow: "group-hover:shadow-purple-500/10"
+              },
+              {
+                icon: Video,
+                title: "Voice Conversations",
+                description: "Speak naturally with our AI using advanced voice recognition.",
+                fromColor: "#2563eb",
+                toColor: "#006f6f",
+                accentGrad: "from-blue-500 to-[#006f6f]",
+                hoverBorder: "group-hover:border-blue-500/30",
+                hoverShadow: "group-hover:shadow-blue-500/10"
+              },
+              {
+                icon: Clock,
+                title: "Instant Scheduling",
+                description: "Book appointments quickly with AI-powered scheduling assistance.",
+                fromColor: "#059669",
+                toColor: "#006f6f",
+                accentGrad: "from-emerald-500 to-[#006f6f]",
+                hoverBorder: "group-hover:border-emerald-500/30",
+                hoverShadow: "group-hover:shadow-emerald-500/10"
+              },
+              {
+                icon: Shield,
+                title: "Privacy First",
+                description: "Your health data is encrypted and never shared with third parties.",
+                fromColor: "#ea580c",
+                toColor: "#006f6f",
+                accentGrad: "from-orange-500 to-[#006f6f]",
+                hoverBorder: "group-hover:border-orange-500/30",
+                hoverShadow: "group-hover:shadow-orange-500/10"
+              }
+            ];
+
+            const renderCard = (feature: typeof aiFeatures[0], index: number, isMobile: boolean) => (
+              <motion.div
+                key={feature.title}
+                initial={{ y: 80, opacity: 0 }}
+                whileInView={{ y: 0, opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: isMobile ? 0 : index * 0.15, duration: 0.8 }}
+                whileHover={isMobile ? undefined : { y: -10, scale: 1.02 }}
+                className={`group relative ${isMobile ? 'flex-shrink-0' : ''}`}
+                style={{ width: isMobile ? '80vw' : undefined }}
+              >
+                <div className={`relative h-full pt-10 pb-6 px-5 sm:px-6 md:px-8 rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-md border border-[#006f6f]/10 shadow-lg hover:shadow-2xl ${feature.hoverBorder} ${feature.hoverShadow} transition-all duration-500 overflow-hidden`}>
+                  {/* Accent Top Gradient Line */}
+                  <div className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r ${feature.accentGrad}`} />
+
+                  {/* Icon with Glowing Halo */}
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 flex items-center justify-center">
+                    <div
+                      className="absolute inset-0 rounded-full opacity-10 group-hover:scale-125 transition-transform duration-500"
+                      style={{
+                        background: `radial-gradient(circle, ${feature.fromColor} 0%, transparent 70%)`
+                      }}
+                    />
+                    <motion.div
+                      className="relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-md"
+                      style={{
+                        background: `linear-gradient(135deg, ${feature.fromColor}, ${feature.toColor})`
+                      }}
+                      whileHover={{ scale: 1.1, rotate: 5, y: -5 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <feature.icon className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
+                    </motion.div>
+                  </div>
+
+                  <div className="text-center">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-2 sm:mb-3">
+                      {feature.title}
+                    </h3>
+                    <p className="text-[11px] sm:text-xs md:text-sm text-gray-600 leading-relaxed">
+                      {feature.description}
+                    </p>
+
+                    {/* Interactive Bottom Accent */}
+                    <div className="mt-4 flex items-center justify-center text-xs font-semibold text-[#006f6f] opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span>Explore</span>
+                      <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            );
+
+            return (
+              <>
+                {/* Mobile: Horizontal swipeable slider */}
+                <div 
+                  className="ai-slider-mobile relative overflow-hidden -mx-4 min-[375px]:-mx-5 py-4"
+                  onTouchStart={handleAiTouchStart}
+                  onTouchMove={handleAiTouchMove}
+                  onTouchEnd={handleAiTouchEnd}
+                >
+                  <div
+                    className="flex gap-4 transition-transform duration-500 ease-out"
+                    style={{ 
+                      transform: `translateX(calc(10vw - ${aiActiveSlide} * (80vw + 16px)))` 
+                    }}
+                  >
+                    {aiFeatures.map((feature, index) => renderCard(feature, index, true))}
+                  </div>
+                  {/* Dot indicators */}
+                  <div className="flex justify-center gap-2 mt-6">
+                    {aiFeatures.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setAiActiveSlide(i)}
+                        className={`h-2 rounded-full transition-all duration-300 ${aiActiveSlide === i ? 'w-6 bg-[#006f6f]' : 'w-2 bg-gray-400'}`}
+                        aria-label={`Go to slide ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Desktop: Normal grid */}
+                <div className="ai-grid-desktop" style={{ gap: '1.25rem' }}>
+                  {aiFeatures.map((feature, index) => renderCard(feature, index, false))}
+                </div>
+              </>
+            );
+          })()}
+
+          {/* AI Assistant CTA */}
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.8, duration: 0.8 }}
+            className="text-center mt-10 sm:mt-12 md:mt-16"
+          >
+            <Button
+              size="lg"
+              className="relative group overflow-hidden px-6 sm:px-8 md:px-12 py-4 sm:py-5 md:py-6 bg-gradient-to-r from-[#006f6f] to-purple-600 hover:from-[#005555] hover:to-purple-700 text-white border-0 rounded-xl shadow-xl text-sm sm:text-base md:text-lg font-semibold transition-all duration-300 hover:scale-105"
+              onClick={() => navigate('/ai-doctor')}
+            >
+              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+              <Bot className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 mr-2 relative z-10" />
+              <span className="relative z-10">Start Talking to AI Doctor</span>
+              <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 ml-2 relative z-10 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Enhanced Features Section */}
       <section className="py-10 sm:py-14 md:py-20 lg:py-24 bg-gradient-to-b from-white to-gray-50 relative overflow-hidden">
         {/* Subtle background pattern */}
@@ -984,6 +1304,7 @@ function HomePage() {
             </p>
           </motion.div>
 
+          {/* Desktop & Mobile: Grid layout for Care Features */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 md:gap-8">
             {[
               {
@@ -2066,8 +2387,8 @@ export default function App() {
   function ConditionalChatbot() {
     const location = useLocation();
 
-    // Don't show chatbot on admin pages
-    if (location.pathname.includes('/admin')) {
+    // Don't show chatbot on admin pages or the AI doctor page
+    if (location.pathname.includes('/admin') || location.pathname === '/ai-doctor') {
       return null;
     }
 
@@ -2105,6 +2426,17 @@ export default function App() {
               }}>
                 <ContactPage />
               </PageWrapper>
+            } />
+            <Route path="/ai-doctor" element={
+              <ProtectedRoute allowedRoles={["patient", "doctor", "admin"]}>
+                <PageWrapper seoProps={{
+                  title: "AI Doctor Assistant | NephroConsult - Intelligent Healthcare Companion",
+                  description: "Meet your AI Doctor Assistant at NephroConsult. Get instant medical guidance, schedule appointments, and receive personalized health recommendations with our advanced AI-powered healthcare assistant. Available 24/7 for your kidney health queries.",
+                  keywords: "AI doctor assistant, medical AI chatbot, healthcare AI, kidney health AI, AI nephrology consultation, intelligent health assistant, AI medical guidance, automated health advice"
+                }}>
+                  <AIDoctorPage />
+                </PageWrapper>
+              </ProtectedRoute>
             } />
             <Route path="/terms" element={
               <PageWrapper seoProps={{

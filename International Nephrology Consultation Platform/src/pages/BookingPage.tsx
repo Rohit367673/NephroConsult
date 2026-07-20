@@ -23,6 +23,7 @@ import {
   validateMedicalHistory,
   formatPhoneNumber
 } from '../utils/formValidation';
+import { Navigation } from '../components/Navigation';
 import Footer from '../components/Footer';
 
 // Type definitions
@@ -66,18 +67,18 @@ const getCountryPriceMultiplier = (country: string): number => {
 
 const getBasePricesINR = () => {
   return {
-    'Initial Consultation': 599,
-    'Follow-up Consultation': 499,
-    'Urgent Consultation': 1499
+    'Initial Consultation': 499,
+    'Follow-up Consultation': 399,
+    'Urgent Consultation': 999
   };
 };
 
 const getConsultationPrice = (type: string, country: string, currency: string) => {
-  // Fixed pricing per client decision
-  // Cheap countries (IN and similar): INR 599/499/1499
-  // High-income countries: USD $49/$39/$99
-  const inrPrices = { initial: 599, followup: 499, urgent: 1499 } as const;
-  const usdPrices = { initial: 49, followup: 39, urgent: 99 } as const;
+  // Updated pricing per client decision
+  // Cheap countries (IN and similar): INR 499/399/999
+  // High-income countries: USD $29/$19/$49
+  const inrPrices = { initial: 499, followup: 399, urgent: 999 } as const;
+  const usdPrices = { initial: 29, followup: 19, urgent: 49 } as const;
 
   const key = (type === 'followup' || type === 'urgent') ? type : 'initial';
 
@@ -135,21 +136,22 @@ const loginRedirectState = { state: { showLogin: true } };
 interface CalendarComponentProps {
   selectedDate: string;
   onDateSelect: (date: string) => void;
+  consultationType?: string;
 }
 
-function CalendarComponent({ selectedDate, onDateSelect }: CalendarComponentProps) {
+function CalendarComponent({ selectedDate, onDateSelect, consultationType }: CalendarComponentProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  
+
   const today = new Date();
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
-  
+
   // Get first day of month and number of days
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const daysInMonth = lastDay.getDate();
   const startingDayOfWeek = firstDay.getDay();
-  
+
   const formatDate = (day: number) => {
     // Fix: Create date string directly to avoid timezone issues
     const monthStr = (month + 1).toString().padStart(2, '0'); // month is 0-indexed
@@ -158,11 +160,21 @@ function CalendarComponent({ selectedDate, onDateSelect }: CalendarComponentProp
     console.log(`📅 Calendar: Formatting day ${day} of month ${month + 1}/${year} -> ${dateString}`);
     return dateString;
   };
-  
+
   const isDateDisabled = (day: number) => {
     const date = new Date(year, month, day);
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    return date < todayStart;
+
+    // Disable past dates
+    if (date < todayStart) return true;
+
+    // Same-day booking restriction: only urgent consultations can book for today
+    const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+    if (isToday && consultationType !== 'urgent') {
+      return true;
+    }
+
+    return false;
   };
   
   const isDateSelected = (day: number) => {
@@ -279,238 +291,7 @@ function CalendarComponent({ selectedDate, onDateSelect }: CalendarComponentProp
   );
 }
 
-// Navigation Component (same as App.tsx)
-function Navigation() {
-  const { user, logout } = useContext(AuthContext);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
 
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    setIsMenuOpen(false);
-  };
-
-  return (
-    <motion.header 
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      className="bg-white/95 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40"
-    >
-      <div className="container-medical">
-        <div className="flex items-center justify-between h-16">
-          <motion.div 
-            className="flex items-center space-x-3 cursor-pointer" 
-            onClick={() => navigate('/')}
-          >
-            <div className="w-10 h-10 bg-gradient-to-br from-[#006f6f] to-[#004f4f] rounded-lg flex items-center justify-center">
-              <Heart className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">NephroConsult</h1>
-              <p className="text-xs text-gray-500">International Platform</p>
-            </div>
-          </motion.div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Button
-              variant="ghost"
-              onClick={() => handleNavigation('/')}
-              className={location.pathname === '/' ? 'text-[#006f6f]' : ''}
-            >
-              Home
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => handleNavigation('/about')}
-              className={location.pathname === '/about' ? 'text-[#006f6f]' : ''}
-            >
-              About
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => handleNavigation('/booking')}
-              className="text-[#006f6f] hover:text-[#005555]"
-            >
-              Book Appointment
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => handleNavigation('/contact')}
-              className={location.pathname === '/contact' ? 'text-[#006f6f]' : ''}
-            >
-              Contact
-            </Button>
-            
-            {user ? (
-              <>
-                <Button
-                  variant="ghost"
-                  onClick={() => handleNavigation('/profile')}
-                  className={location.pathname === '/profile' ? 'text-[#006f6f]' : ''}
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Profile
-                </Button>
-                <Button variant="outline" onClick={logout}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline">
-                  Login
-                </Button>
-                <Button className="bg-[#006f6f] hover:bg-[#005555]">
-                  Sign Up
-                </Button>
-              </>
-            )}
-          </nav>
-
-          {/* Mobile menu and profile */}
-          <div className="flex items-center space-x-3 md:hidden">
-            {/* Profile Photo for Mobile */}
-            {user && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate('/profile')}
-              >
-                <div className="w-8 h-8 rounded-full overflow-hidden relative">
-                  {user.avatar ? (
-                    <>
-                      <img 
-                        src={user.avatar} 
-                        alt={user.name}
-                        className="w-full h-full object-cover absolute inset-0"
-                        crossOrigin="anonymous"
-                        referrerPolicy="no-referrer"
-                        onLoad={(e) => {
-                          // Hide fallback when image loads
-                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (fallback) fallback.style.display = 'none';
-                        }}
-                        onError={(e) => {
-                          console.log('BookingPage nav image failed to load, trying fallback methods');
-                          
-                          // Try alternative Google image URL
-                          const currentSrc = e.currentTarget.src;
-                          if (currentSrc.includes('googleusercontent.com') && !currentSrc.includes('proxy')) {
-                            const newSrc = `https://images.weserv.nl/?url=${encodeURIComponent(currentSrc)}&w=200&h=200&fit=cover&mask=circle`;
-                            e.currentTarget.src = newSrc;
-                            return;
-                          }
-                          
-                          // If all methods fail, hide image and show fallback
-                          e.currentTarget.style.display = 'none';
-                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (fallback) fallback.style.display = 'flex';
-                        }}
-                      />
-                      <div 
-                        className="w-full h-full bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center absolute inset-0"
-                        style={{ display: 'flex' }}
-                      >
-                        <span className="text-white text-xs font-semibold">
-                          {user.name?.charAt(0)?.toUpperCase() || 'U'}
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center">
-                      <span className="text-white text-xs font-semibold">
-                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </motion.button>
-            )}
-            
-            {/* Mobile menu button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation */}
-        <AnimatePresence>
-          {isMenuOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="md:hidden border-t border-gray-200 py-4 space-y-2 overflow-hidden"
-            >
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleNavigation('/')}
-              >
-                Home
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleNavigation('/about')}
-              >
-                About
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-[#006f6f]"
-                onClick={() => handleNavigation('/booking')}
-              >
-                Book Appointment
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleNavigation('/contact')}
-              >
-                Contact
-              </Button>
-              
-              {user ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => handleNavigation('/profile')}
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    Profile
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start" onClick={logout}>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="outline" className="w-full justify-start">
-                    Login
-                  </Button>
-                  <Button className="w-full justify-start bg-[#006f6f] hover:bg-[#005555]">
-                    Sign Up
-                  </Button>
-                </>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.header>
-  );
-}
 
 export default function BookingPage() {
   // Get user context and enforce authentication
@@ -963,15 +744,15 @@ export default function BookingPage() {
       icon: FileText,
       features: ['Treatment progress review', 'Medication adjustments', 'Lab results discussion', 'Next steps planning']
     },
-    { 
-      id: 'urgent', 
-      name: 'Urgent Consultation', 
+    {
+      id: 'urgent',
+      name: 'Urgent Consultation',
       price: getConsultationPrice('urgent', bookingData.country || userCountry, pricing.currency),
       formattedPrice: getFormattedPrice(getConsultationPrice('urgent', bookingData.country || userCountry, pricing.currency), pricing.currency),
       duration: '45 min',
       description: 'Priority consultation for urgent kidney health concerns (10 AM - 10 PM IST)',
       icon: Clock,
-      features: ['Same-day availability', 'Priority scheduling (10 AM - 10 PM IST)', 'Urgent symptom evaluation', 'Immediate treatment plan']
+      features: ['Connect within 1 hour', 'Priority scheduling (10 AM - 10 PM IST)', 'Urgent symptom evaluation', 'Immediate treatment plan']
     }
   ], [bookingData.country, userCountry, pricing.currency]);
 
@@ -1443,15 +1224,24 @@ export default function BookingPage() {
               {/* Calendar Section */}
               <motion.div variants={itemVariants} className="space-y-4">
                 <Label className="text-lg font-semibold">Select Date</Label>
+                {bookingData.consultationType !== 'urgent' && (
+                  <Alert className="bg-amber-50 border-amber-200">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800 text-sm">
+                      Same-day booking is only available for Urgent Consultations. Please select a future date or upgrade to Urgent Consultation.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                   {/* Calendar Component */}
-                  <CalendarComponent 
+                  <CalendarComponent
                     selectedDate={bookingData.date}
-                    onDateSelect={(date) => setBookingData(prev => ({ 
-                      ...prev, 
-                      date, 
-                      time: '', 
-                      istTime: '' 
+                    consultationType={bookingData.consultationType}
+                    onDateSelect={(date) => setBookingData(prev => ({
+                      ...prev,
+                      date,
+                      time: '',
+                      istTime: ''
                     }))}
                   />
                   

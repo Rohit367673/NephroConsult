@@ -14,6 +14,50 @@ import { telegramService } from '../services/telegramService.js';
 
 const router = express.Router();
 
+// Phone validation function matching Cashfree requirements
+const validatePhoneNumber = (phone) => {
+  if (!phone) {
+    return { isValid: false, error: 'Phone number is required' };
+  }
+
+  const digitsOnly = phone.replace(/\D/g, '');
+  
+  // Cashfree requires:
+  // Indian: 10 digits (e.g., 9090407368) or 12 digits with country code (e.g., +919090407368)
+  // International: 12 digits with country code (e.g., +16014635923)
+  
+  const validPatterns = [
+    /^\+91[6-9]\d{9}$/, // Indian mobile with country code (12 digits total)
+    /^[6-9]\d{9}$/, // Indian mobile without country code (10 digits)
+    /^\+\d{11,14}$/, // International with country code (12-15 digits total)
+  ];
+
+  const cleanedPhone = phone.replace(/[\s\-\(\)]/g, '');
+  const isValidFormat = validPatterns.some(pattern => pattern.test(cleanedPhone));
+  
+  if (!isValidFormat) {
+    if (digitsOnly.length === 10 && /^[6-9]/.test(digitsOnly)) {
+      // Valid Indian format
+    } else if (digitsOnly.length >= 11 && digitsOnly.length <= 14 && phone.startsWith('+')) {
+      // Valid international format
+    } else {
+      return { 
+        isValid: false, 
+        error: 'Invalid phone number format. Indian: 10 digits (e.g., 9090407368) or +91 followed by 10 digits. International: country code followed by 10-12 digits (e.g., +16014635923)' 
+      };
+    }
+  }
+
+  // Additional length check
+  if (digitsOnly.length < 10) {
+    return { isValid: false, error: 'Phone number must be at least 10 digits' };
+  } else if (digitsOnly.length > 15) {
+    return { isValid: false, error: 'Phone number cannot exceed 15 digits' };
+  }
+
+  return { isValid: true, error: null };
+};
+
 // Create Cashfree order
 router.post('/create-order', requireAuth, async (req, res) => {
   try {
@@ -57,6 +101,16 @@ router.post('/create-order', requireAuth, async (req, res) => {
     }
 
     console.log('💳 Creating order with service...');
+    
+    // Validate phone number before sending to Cashfree
+    const phoneValidation = validatePhoneNumber(req.body.patientPhone);
+    if (!phoneValidation.isValid) {
+      console.error('❌ Phone number validation failed:', phoneValidation.error);
+      return res.status(400).json({
+        error: 'Invalid phone number',
+        message: phoneValidation.error
+      });
+    }
     
     // Create order using the service
     const result = await cashfreeService.createOrder(req.body, req.session.user.id);

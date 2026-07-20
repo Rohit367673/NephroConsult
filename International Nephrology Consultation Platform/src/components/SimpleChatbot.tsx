@@ -47,14 +47,14 @@ const knowledgeBase = [
     keywords: ['book', 'appointment', 'schedule', 'consult', 'booking', 'how to book'],
     response: () => {
       const { pricing, country } = getDynamicPricing();
-      return `TO BOOK A CONSULTATION:\n\n1️⃣ Visit our 'Book Appointment' page\n2️⃣ Choose consultation type:\n   • Initial: ${pricing.symbol}${pricing.initial} ${pricing.currency} (comprehensive assessment)\n   • Follow-up: ${pricing.symbol}${pricing.followup} ${pricing.currency} (ongoing care)\n3️⃣ Select your preferred date and time\n4️⃣ Upload lab reports (recommended)\n5️⃣ Choose payment method\n6️⃣ Confirm booking and receive secure meeting link\n\n🌍 Regional pricing for ${country}\n📞 Available globally with flexible scheduling!`;
+      return `TO BOOK A CONSULTATION:\n\n1️⃣ Visit our 'Book Appointment' page\n2️⃣ Choose consultation type:\n   • Initial: ${pricing.symbol}${pricing.initial} ${pricing.currency} (comprehensive assessment)\n   • Follow-up: ${pricing.symbol}${pricing.followup} ${pricing.currency} (ongoing care)\n   • Urgent: ${pricing.symbol}${pricing.initial + 500} ${pricing.currency} (same-day, connect within 1 hour)\n3️⃣ Select your preferred date and time\n4️⃣ Upload lab reports (recommended)\n5️⃣ Choose payment method\n6️⃣ Confirm booking and receive secure meeting link\n\n🌍 Regional pricing for ${country}\n📞 Available globally with flexible scheduling!`;
     }
   },
   {
     keywords: ['fee', 'cost', 'price', 'charge', 'pricing', 'money', 'how much'],
     response: () => {
       const { pricing, country } = getDynamicPricing();
-      return `CONSULTATION PRICING FOR ${country.toUpperCase()}:\n\n💰 Initial Consultation: ${pricing.symbol}${pricing.initial} ${pricing.currency}\n   • Comprehensive kidney health assessment\n   • Medical history review\n   • Treatment plan development\n\n💰 Follow-up Consultation: ${pricing.symbol}${pricing.followup} ${pricing.currency}\n   • Ongoing care and monitoring\n   • Progress evaluation\n   • Treatment adjustments\n\n🌍 Regional pricing tailored for ${country}\n⏰ All consultations: 6-10 PM IST (India Time)\n💳 Multiple payment options accepted`;
+      return `CONSULTATION PRICING FOR ${country.toUpperCase()}:\n\n💰 Initial Consultation: ${pricing.symbol}${pricing.initial} ${pricing.currency}\n   • Comprehensive kidney health assessment\n   • Medical history review\n   • Treatment plan development\n\n💰 Follow-up Consultation: ${pricing.symbol}${pricing.followup} ${pricing.currency}\n   • Ongoing care and monitoring\n   • Progress evaluation\n   • Treatment adjustments\n\n🚨 Urgent Consultation: ${pricing.symbol}${pricing.initial + 500} ${pricing.currency}\n   • Same-day availability\n   • Connect within 1 hour\n   • Priority scheduling\n\n🌍 Regional pricing tailored for ${country}\n⏰ All consultations: 6-10 PM IST (India Time)\n💳 Multiple payment options accepted`;
     }
   },
   {
@@ -96,7 +96,7 @@ const knowledgeBase = [
     keywords: ['refund', 'cancel', 'money back', 'payment issue', 'not satisfied', 'problem', 'complaint'],
     response: () => {
       const { pricing, country } = getDynamicPricing();
-      return `REFUND REQUEST PROCESS:\n\n💰 REFUND POLICY:\n• 24-hour refund window for paid consultations\n• Full refund if appointment not created within 1 hour\n• Partial refund for technical issues during consultation\n• No refund for completed consultations\n\n📋 YOUR REGION (${country.toUpperCase()}) PRICING:\n• Initial Consultation: ${pricing.symbol}${pricing.initial} ${pricing.currency}\n• Follow-up Consultation: ${pricing.symbol}${pricing.followup} ${pricing.currency}\n\n📋 REFUND REQUEST:\nTo request a refund, please provide:\n• Your email address\n• Booking/appointment ID (if available)\n• Reason for refund request\n• Payment method used\n• Amount paid\n\nOur team will review your request within 2-3 business days and process eligible refunds via email.\n\n🔗 Click 'Request Refund' below to submit your refund request with full details.`;
+      return `REFUND REQUEST PROCESS:\n\n💰 REFUND POLICY:\n• 24-hour refund window for paid consultations\n• Full refund if appointment not created within 1 hour\n• Partial refund for technical issues during consultation\n• No refund for completed consultations\n\n📋 YOUR REGION (${country.toUpperCase()}) PRICING:\n• Initial Consultation: ${pricing.symbol}${pricing.initial} ${pricing.currency}\n• Follow-up Consultation: ${pricing.symbol}${pricing.followup} ${pricing.currency}\n• Urgent Consultation: ${pricing.symbol}${pricing.initial + 500} ${pricing.currency}\n\n📋 REFUND REQUEST:\nTo request a refund, please provide:\n• Your email address\n• Booking/appointment ID (if available)\n• Reason for refund request\n• Payment method used\n• Amount paid\n\nOur team will review your request within 2-3 business days and process eligible refunds via email.\n\n🔗 Click 'Request Refund' below to submit your refund request with full details.`;
     }
   }
 ];
@@ -192,7 +192,8 @@ export function SimpleChatbot() {
         body: JSON.stringify(refundRequest)
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
 
       if (data.success) {
         return {
@@ -275,7 +276,8 @@ export function SimpleChatbot() {
             })
           });
 
-          const verifyData = await verifyResponse.json();
+          const verifyText = await verifyResponse.text();
+          const verifyData = verifyText ? JSON.parse(verifyText) : {};
 
           if (verifyData.verified && verifyData.user && verifyData.appointment) {
             setRefundData(prev => ({
@@ -417,7 +419,8 @@ export function SimpleChatbot() {
         })
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
 
       if (data.ok) {
         const botMessage: Message = {

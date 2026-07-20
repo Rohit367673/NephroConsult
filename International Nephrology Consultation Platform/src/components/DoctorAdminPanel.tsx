@@ -112,7 +112,8 @@ export default function DoctorAdminPanel() {
           }
         );
         if (refreshResponse.ok) {
-          const refreshData = await refreshResponse.json();
+          const refreshText = await refreshResponse.text();
+          const refreshData = refreshText ? JSON.parse(refreshText) : {};
           console.log('🔄 Session refreshed:', refreshData);
         }
       } catch (refreshError) {
@@ -139,7 +140,8 @@ export default function DoctorAdminPanel() {
           { credentials: 'include' }
         );
         if (debugResponse.ok) {
-          const debugData = await debugResponse.json();
+          const debugText = await debugResponse.text();
+          const debugData = debugText ? JSON.parse(debugText) : {};
           console.log('🐛 DEBUG: Raw appointment data from debug endpoint:', debugData);
           if (debugData.appointments && debugData.appointments[0]) {
             console.log('🐛 DEBUG: First appointment intake:', debugData.appointments[0].intake);
@@ -152,7 +154,8 @@ export default function DoctorAdminPanel() {
       console.log('📋 Doctor API Response Headers:', Object.fromEntries(response.headers.entries()));
       
       if (response.ok) {
-        const data = await response.json();
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
         console.log('📋 Doctor appointments data:', data);
         
         // Transform API data to match component interface

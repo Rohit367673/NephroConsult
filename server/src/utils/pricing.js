@@ -1,18 +1,18 @@
 // Dynamic pricing system with live exchange rates and tier-based multipliers
 
-// Base configuration (INR)
+// Base configuration (INR) - Updated pricing
 const BASE_PRICES = {
-  initial: 599,     // Initial consultation (Tier A / India & cheap countries)
-  followup: 499,    // Follow-up consultation (Tier A)
-  urgent: 1499      // Urgent consultation (Tier A)
+  initial: 499,     // Initial consultation (Tier A / India & cheap countries)
+  followup: 399,    // Follow-up consultation (Tier A)
+  urgent: 999       // Urgent consultation (Tier A)
 };
 
 const FIRST_TIME_DISCOUNT = 0.20; // 20% off
 const TIER_B_MULTIPLIER = 1.8;    // Middle-income countries
 const HIGH_INCOME_TARGET_USD = {
-  initial: 49,    // Target $49 USD for high-income countries
-  followup: 39,   // Target $39 USD for high-income countries
-  urgent: 99      // Target $99 USD for high-income countries
+  initial: 29,    // Target $29 USD for high-income countries
+  followup: 19,   // Target $19 USD for high-income countries
+  urgent: 49      // Target $49 USD for high-income countries
 };
 
 // High-income countries (Tier C)

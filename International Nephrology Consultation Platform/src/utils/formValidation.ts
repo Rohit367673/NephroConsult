@@ -15,7 +15,7 @@ export interface PatientInfo {
   currentMedications: string;
 }
 
-// Phone number validation
+// Phone number validation (matching Cashfree requirements)
 export const validatePhoneNumber = (phone: string): ValidationResult => {
   const errors: string[] = [];
   
@@ -27,26 +27,35 @@ export const validatePhoneNumber = (phone: string): ValidationResult => {
   // Remove all non-digit characters for validation
   const digitsOnly = phone.replace(/\D/g, '');
   
-  // Check length
-  if (digitsOnly.length < 7) {
-    errors.push('Phone number must be at least 7 digits');
-  } else if (digitsOnly.length > 15) {
-    errors.push('Phone number cannot exceed 15 digits');
-  }
-
-  // Check for valid patterns
+  // Cashfree requires:
+  // Indian: 10 digits (e.g., 9090407368) or 12 digits with country code (e.g., +919090407368)
+  // International: 12 digits with country code (e.g., +16014635923)
+  
+  // Check for valid patterns matching Cashfree requirements
   const validPatterns = [
-    /^\+?[1-9]\d{6,14}$/, // International format
-    /^[6-9]\d{9}$/, // Indian mobile (10 digits starting with 6-9)
-    /^\+91[6-9]\d{9}$/, // Indian mobile with country code
-    /^\d{7,12}$/, // General landline/mobile
+    /^\+91[6-9]\d{9}$/, // Indian mobile with country code (12 digits total)
+    /^[6-9]\d{9}$/, // Indian mobile without country code (10 digits)
+    /^\+\d{11,14}$/, // International with country code (12-15 digits total)
   ];
 
-  const isValidFormat = validPatterns.some(pattern => pattern.test(phone.replace(/[\s\-\(\)]/g, '')));
+  const cleanedPhone = phone.replace(/[\s\-\(\)]/g, '');
+  const isValidFormat = validPatterns.some(pattern => pattern.test(cleanedPhone));
   
-  if (!isValidFormat && digitsOnly.length >= 7 && digitsOnly.length <= 15) {
-    // If length is ok but format is questionable, just warn but allow
-    console.warn('Phone number format may be unusual but is within acceptable range');
+  if (!isValidFormat) {
+    if (digitsOnly.length === 10 && /^[6-9]/.test(digitsOnly)) {
+      // Valid Indian format
+    } else if (digitsOnly.length >= 11 && digitsOnly.length <= 14 && phone.startsWith('+')) {
+      // Valid international format
+    } else {
+      errors.push('Invalid phone number format. Indian: 10 digits (e.g., 9090407368) or +91 followed by 10 digits. International: country code followed by 10-12 digits (e.g., +16014635923)');
+    }
+  }
+
+  // Additional length check
+  if (digitsOnly.length < 10) {
+    errors.push('Phone number must be at least 10 digits');
+  } else if (digitsOnly.length > 15) {
+    errors.push('Phone number cannot exceed 15 digits');
   }
 
   return { isValid: errors.length === 0, errors };

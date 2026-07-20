@@ -89,7 +89,8 @@ class AdminService {
           console.warn('⚠️ Falling back to doctor-debug endpoint due to API error');
           const fallback = await safariCompatibleFetch(debugEndpoint, { method: 'GET' });
           if (fallback.ok) {
-            const fbData = await fallback.json();
+            const fbText = await fallback.text();
+            const fbData = fbText ? JSON.parse(fbText) : {};
             console.log('📋 Fallback (doctor-debug) appointments:', fbData.appointments?.length || 0);
             const consultations: Consultation[] = (fbData.appointments || []).map((apt: any) => ({
               id: apt._id,
@@ -127,7 +128,8 @@ class AdminService {
         throw new Error(`Failed to fetch consultations: ${response.status} ${response.statusText}`);
       }
       
-      const data = await response.json();
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
       console.log('📋 Raw appointments from API:', data.appointments);
       console.log('📋 Number of appointments:', data.appointments?.length || 0);
       

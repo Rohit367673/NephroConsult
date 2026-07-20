@@ -13,7 +13,9 @@ export const BookingSection: React.FC = () => {
       icon: Video,
       type: 'Initial Consultation',
       duration: '45 minutes',
-      price: '$49',
+      price: '$29',
+      originalPrice: '$49',
+      discount: '40% OFF',
       description: 'First-time comprehensive nephrology consultation',
       features: ['Complete medical assessment', 'Treatment planning', 'Prescription management', 'Follow-up recommendations'],
       recommended: true
@@ -22,7 +24,9 @@ export const BookingSection: React.FC = () => {
       icon: Video,
       type: 'Follow-up Consultation',
       duration: '30 minutes',
-      price: '$39',
+      price: '$19',
+      originalPrice: '$39',
+      discount: '50% OFF',
       description: 'Follow-up appointment for existing patients',
       features: ['Progress review', 'Treatment adjustments', 'Medication management', 'Ongoing care planning'],
       recommended: false
@@ -31,18 +35,21 @@ export const BookingSection: React.FC = () => {
       icon: Video,
       type: 'Urgent Consultation',
       duration: '45 minutes',
-      price: '$99',
+      price: '$49',
+      originalPrice: '$99',
+      discount: '50% OFF',
       description: 'Priority consultation for urgent kidney concerns',
-      features: ['Immediate assessment', 'Emergency protocols', 'Rapid response', 'Specialist referral if needed'],
-      recommended: false
+      features: ['Connect within 1 hour', 'Emergency protocols', 'Rapid response', 'Specialist referral if needed'],
+      recommended: false,
+      urgent: true
     }
   ];
 
   const quickStats = [
     { icon: Calendar, label: 'Same Day', value: 'Available' },
-    { icon: Clock, label: 'Response Time', value: '< 2 hours' },
+    { icon: Clock, label: 'Response Time', value: '< 1 hour' },
     { icon: Users, label: 'Patients Served', value: '5,000+' },
-    { icon: DollarSign, label: 'Starting From', value: '$39' }
+    { icon: DollarSign, label: 'Starting From', value: '$19' }
   ];
 
   return (
@@ -93,10 +100,18 @@ export const BookingSection: React.FC = () => {
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">{consultation.type}</h3>
                   <p className="text-gray-600 text-sm mb-4">{consultation.description}</p>
-                  
-                  <div className="flex items-center justify-center space-x-4 mb-4">
-                    <span className="text-2xl font-bold text-[#006f6f]">{consultation.price}</span>
-                    <span className="text-gray-500">({consultation.duration})</span>
+
+                  <div className="flex flex-col items-center mb-2">
+                    <div className="flex items-center justify-center space-x-2">
+                      <span className="text-2xl font-bold text-[#006f6f]">{consultation.price}</span>
+                      {consultation.originalPrice && (
+                        <>
+                          <span className="text-sm text-gray-400 line-through">{consultation.originalPrice}</span>
+                          <Badge className="bg-red-500 text-white text-xs h-5">{consultation.discount}</Badge>
+                        </>
+                      )}
+                    </div>
+                    <span className="text-gray-500 text-sm mt-1">({consultation.duration})</span>
                   </div>
                 </div>
 
