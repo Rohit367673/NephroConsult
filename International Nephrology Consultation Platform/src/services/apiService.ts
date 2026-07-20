@@ -56,7 +56,13 @@ class ApiService {
         ...options,
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (e) {
+        data = {};
+      }
 
       if (!response.ok) {
         return {

@@ -222,7 +222,8 @@ class AuthService {
         throw new Error('Failed to sync with backend');
       }
 
-      const data = await response.json();
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
       console.log('🔗 [FRONTEND] Backend sync successful:', data);
     } catch (error) {
       console.error('🔗 [FRONTEND] Backend sync error:', error);
