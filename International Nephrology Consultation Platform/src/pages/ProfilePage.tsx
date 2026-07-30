@@ -178,7 +178,7 @@ export default function ProfilePage() {
       });
       
       if (response.ok) {
-        const text = await response.text();
+        const text = await response.text().catch(() => '');
         const data = text ? JSON.parse(text) : {};
         console.log('📋 API Response:', data);
         console.log('📋 Appointments array:', data.appointments);
@@ -211,7 +211,7 @@ export default function ProfilePage() {
       });
       
       if (response.ok) {
-        const text = await response.text();
+        const text = await response.text().catch(() => '');
         const data = text ? JSON.parse(text) : {};
         console.log('📋 Doctor appointments:', data);
         setDoctorAppointments(data.appointments || []);

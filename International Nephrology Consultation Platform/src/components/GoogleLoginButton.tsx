@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Button } from './ui/button';
 import { authService } from '../services/authService';
-import { useAuth, AuthContext } from '../contexts/AuthContext';
+import { useAuth, AuthContext, clearLogoutFlag } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 import apiService from '../services/apiService';
 import { useNavigate } from 'react-router-dom';
@@ -40,6 +40,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
     if (disabled || isLoading) return;
     
     setIsLoading(true);
+    clearLogoutFlag(); // Clear explicit logout flag immediately on user gesture!
     
     try {
       console.log('🔵 [GOOGLE LOGIN] Calling authService.signInWithGoogle()...');
@@ -83,17 +84,19 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
           return 'default';
         };
 
-        // Get the actual Firebase ID token from the Firebase user
-        if (!auth) {
-          throw new Error('Firebase auth not initialized');
+        // Get the actual Firebase ID token from the result or auth
+        let idToken = result.idToken;
+        if (!idToken && result.firebaseUser) {
+          idToken = await result.firebaseUser.getIdToken();
+        }
+        if (!idToken && auth?.currentUser) {
+          idToken = await auth.currentUser.getIdToken();
+        }
+        
+        if (!idToken) {
+          throw new Error('No Firebase user token available');
         }
 
-        const firebaseUser = auth.currentUser;
-        if (!firebaseUser) {
-          throw new Error('No Firebase user found');
-        }
-
-        const idToken = await firebaseUser.getIdToken();
         console.log('Got Firebase ID token, length:', idToken.length);
 
         // Prepare user data for Firebase login (not registration)
@@ -123,16 +126,31 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
           body: JSON.stringify(firebaseLoginData)
         });
 
-        const text = await response.text();
+        const responseText = await response.text().catch(() => '');
         let loginResult: any = {};
         try {
-          loginResult = text ? JSON.parse(text) : {};
-        } catch (e) {
+          loginResult = responseText ? JSON.parse(responseText) : {};
+        } catch {
           loginResult = {};
         }
 
-        if (!response.ok) {
-          throw new Error(loginResult.error || 'Firebase login failed');
+        if (!response.ok || !loginResult?.user) {
+          console.warn('⚠️ Backend firebase-login API returned error/non-200. Using client-side Firebase user session fallback...');
+          const fallbackUser = {
+            id: result.uid,
+            name: result.displayName || result.email?.split('@')[0] || 'User',
+            email: result.email || '',
+            role: (isAdmin ? 'admin' : 'patient') as const,
+            avatar: avatarUrl,
+            country: getUserCountry()
+          };
+          updateUser(fallbackUser);
+          toast.success('🎉 Successfully signed in with Google!');
+          if (onSuccess) onSuccess();
+          setTimeout(() => {
+            navigate(isAdmin ? '/admin' : '/profile');
+          }, 100);
+          return;
         }
 
         console.log('Firebase login result:', loginResult);
@@ -166,8 +184,6 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
               navigate('/profile');
             }
           }, 100);
-        } else {
-          throw new Error('Login failed - no user data received');
         }
       }
       

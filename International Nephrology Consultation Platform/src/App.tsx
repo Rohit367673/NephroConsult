@@ -1096,10 +1096,8 @@ function HomePage() {
                 AI-Powered Healthcare
               </Badge>
             </motion.div>
-            <h2 className="text-xl leading-tight sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6">
-              <span className="bg-gradient-to-r from-gray-900 via-[#006f6f] to-purple-600 bg-clip-text text-transparent">
-                Meet Your AI Doctor Assistant
-              </span>
+            <h2 className="text-xl leading-tight sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-extrabold text-gray-900 mb-3 sm:mb-4 md:mb-6">
+              Meet Your AI Doctor Assistant
             </h2>
             <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed px-2">
               Get instant medical guidance, schedule appointments, and receive personalized health recommendations
@@ -1160,10 +1158,10 @@ function HomePage() {
                 viewport={{ once: true }}
                 transition={{ delay: isMobile ? 0 : index * 0.15, duration: 0.8 }}
                 whileHover={isMobile ? undefined : { y: -10, scale: 1.02 }}
-                className={`group relative ${isMobile ? 'flex-shrink-0' : ''}`}
-                style={{ width: isMobile ? '80vw' : undefined }}
+                className={`group relative ${isMobile ? 'flex-shrink-0' : 'w-full'}`}
+                style={{ width: isMobile ? '82vw' : undefined }}
               >
-                <div className={`relative h-full pt-10 pb-6 px-5 sm:px-6 md:px-8 rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-md border border-[#006f6f]/10 shadow-lg hover:shadow-2xl ${feature.hoverBorder} ${feature.hoverShadow} transition-all duration-500 overflow-hidden`}>
+                <div className={`relative h-full pt-8 pb-6 px-5 sm:px-6 rounded-xl sm:rounded-2xl bg-white border border-gray-200/80 shadow-md hover:shadow-xl ${feature.hoverBorder} transition-all duration-300 overflow-hidden`}>
                   {/* Accent Top Gradient Line */}
                   <div className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r ${feature.accentGrad}`} />
 
@@ -1217,7 +1215,7 @@ function HomePage() {
                   <div
                     className="flex gap-4 transition-transform duration-500 ease-out"
                     style={{ 
-                      transform: `translateX(calc(10vw - ${aiActiveSlide} * (80vw + 16px)))` 
+                      transform: `translateX(calc(9vw - ${aiActiveSlide} * (82vw + 16px)))` 
                     }}
                   >
                     {aiFeatures.map((feature, index) => renderCard(feature, index, true))}
@@ -1236,7 +1234,7 @@ function HomePage() {
                 </div>
 
                 {/* Desktop: Normal grid */}
-                <div className="ai-grid-desktop" style={{ gap: '1.25rem' }}>
+                <div className="ai-grid-desktop max-w-6xl mx-auto px-4" style={{ gap: '1.5rem' }}>
                   {aiFeatures.map((feature, index) => renderCard(feature, index, false))}
                 </div>
               </>
@@ -1249,17 +1247,16 @@ function HomePage() {
             whileInView={{ y: 0, opacity: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.8, duration: 0.8 }}
-            className="text-center mt-10 sm:mt-12 md:mt-16"
+            className="text-center mt-8 sm:mt-12 md:mt-16 px-4"
           >
             <Button
               size="lg"
-              className="relative group overflow-hidden px-6 sm:px-8 md:px-12 py-4 sm:py-5 md:py-6 bg-gradient-to-r from-[#006f6f] to-purple-600 hover:from-[#005555] hover:to-purple-700 text-white border-0 rounded-xl shadow-xl text-sm sm:text-base md:text-lg font-semibold transition-all duration-300 hover:scale-105"
+              className="w-full max-w-md sm:w-auto inline-flex items-center justify-center px-6 sm:px-10 py-3.5 sm:py-4 bg-[#006f6f] hover:bg-[#005555] text-white border border-[#005555] rounded-xl shadow-xl hover:shadow-2xl text-sm sm:text-base md:text-lg font-bold transition-all duration-300 hover:scale-105"
               onClick={() => navigate('/ai-doctor')}
             >
-              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
-              <Bot className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 mr-2 relative z-10" />
-              <span className="relative z-10">Start Talking to AI Doctor</span>
-              <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 ml-2 relative z-10 group-hover:translate-x-1 transition-transform" />
+              <Bot className="w-5 h-5 sm:w-6 sm:h-6 mr-2 flex-shrink-0 text-white" />
+              <span className="text-white">Start Talking to AI Doctor</span>
+              <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 ml-2 flex-shrink-0 text-white group-hover:translate-x-1 transition-transform" />
             </Button>
           </motion.div>
         </div>

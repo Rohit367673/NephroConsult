@@ -56,18 +56,18 @@ class ApiService {
         ...options,
       });
 
-      const text = await response.text();
+      const text = await response.text().catch(() => '');
       let data: any = {};
       try {
         data = text ? JSON.parse(text) : {};
-      } catch (e) {
+      } catch {
         data = {};
       }
 
       if (!response.ok) {
         return {
           success: false,
-          error: data.error || `HTTP ${response.status}`,
+          error: data.error || (text && text.length < 100 ? text : `HTTP ${response.status}`),
         };
       }
 

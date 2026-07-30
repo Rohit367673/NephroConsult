@@ -122,8 +122,7 @@ export const initiateCashfreePayment = async (
       throw new Error(`Failed to create payment order: ${response.status}`);
     }
 
-    const orderText = await response.text();
-    const orderResponse = orderText ? JSON.parse(orderText) : {};
+    const orderResponse = await response.json();
     console.log('✅ Order created successfully:', orderResponse);
 
     if (!orderResponse.success || !orderResponse.order) {
@@ -378,18 +377,13 @@ export const verifyCashfreePayment = async (
       }),
     });
 
-    const text = await response.text();
-    let data: any = {};
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch (e) {
-      data = {};
-    }
-
     if (!response.ok) {
-      console.error('Payment verification failed:', data);
+      const errorData = await response.json();
+      console.error('Payment verification failed:', errorData);
       return false;
     }
+
+    const data = await response.json();
     console.log('Payment verified successfully:', data);
     
     // Clear stored booking details after successful verification

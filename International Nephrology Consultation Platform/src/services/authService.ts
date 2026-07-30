@@ -16,6 +16,8 @@ export interface AuthUser {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
+  idToken?: string;
+  firebaseUser?: User;
 }
 
 class AuthService {
@@ -41,18 +43,20 @@ class AuthService {
         console.warn('⚠️ Backend sync failed, continuing with client-only auth:', backendError);
       }
 
+      const idToken = await user.getIdToken();
+
       return {
         uid: user.uid,
         email: user.email,
         displayName: user.displayName,
-        photoURL: user.photoURL
+        photoURL: user.photoURL,
+        idToken,
+        firebaseUser: user
       };
     } catch (error: any) {
       console.error('❌ Google popup sign in error:', error.code || error.message);
 
       // Fall back to redirect for ANY popup error (Safari/mobile block popups differently)
-      // Common error codes: auth/popup-blocked, auth/popup-closed-by-user, auth/network-request-failed
-      // Safari often throws generic errors without specific codes
       console.log('🔄 Popup failed, trying redirect method...');
 
       // Wait a bit before trying redirect to avoid rapid successive calls
@@ -92,11 +96,15 @@ class AuthService {
           console.warn('⚠️ Backend sync failed, continuing with client-only auth:', backendError);
         }
 
+        const idToken = await user.getIdToken();
+
         return {
           uid: user.uid,
           email: user.email,
           displayName: user.displayName,
-          photoURL: user.photoURL
+          photoURL: user.photoURL,
+          idToken,
+          firebaseUser: user
         };
       } else {
         console.log('🚀 Initiating Google redirect flow...');
@@ -222,8 +230,7 @@ class AuthService {
         throw new Error('Failed to sync with backend');
       }
 
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
+      const data = await response.json();
       console.log('🔗 [FRONTEND] Backend sync successful:', data);
     } catch (error) {
       console.error('🔗 [FRONTEND] Backend sync error:', error);

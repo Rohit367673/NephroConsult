@@ -192,8 +192,7 @@ export function SimpleChatbot() {
         body: JSON.stringify(refundRequest)
       });
 
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
+      const data = await response.json();
 
       if (data.success) {
         return {
@@ -276,8 +275,7 @@ export function SimpleChatbot() {
             })
           });
 
-          const verifyText = await verifyResponse.text();
-          const verifyData = verifyText ? JSON.parse(verifyText) : {};
+          const verifyData = await verifyResponse.json();
 
           if (verifyData.verified && verifyData.user && verifyData.appointment) {
             setRefundData(prev => ({
@@ -419,8 +417,7 @@ export function SimpleChatbot() {
         })
       });
 
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
+      const data = await response.json();
 
       if (data.ok) {
         const botMessage: Message = {

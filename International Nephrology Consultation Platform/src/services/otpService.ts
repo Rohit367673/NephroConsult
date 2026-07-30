@@ -18,8 +18,7 @@ class OTPService {
         body: JSON.stringify({ email }),
       });
 
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to send OTP');
@@ -49,8 +48,7 @@ class OTPService {
         body: JSON.stringify({ email, otp }),
       });
 
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || 'Invalid OTP');

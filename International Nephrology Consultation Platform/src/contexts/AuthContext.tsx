@@ -62,7 +62,7 @@ const setLogoutFlag = () => {
   } catch {}
 };
 
-const clearLogoutFlag = () => {
+export const clearLogoutFlag = () => {
   try {
     localStorage.removeItem(LOGOUT_FLAG_KEY);
   } catch {}
@@ -133,7 +133,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       if (firebaseUser) {
-        // User is signed in via Firebase
+        // If user explicitly logged out, do NOT automatically log back in on page refresh!
+        if (hasLogoutFlag()) {
+          debugLog('onAuthStateChanged_ignored', 'logout flag present, signing out Firebase');
+          if (auth) {
+            signOut(auth).catch(() => {});
+          }
+          setUser(null);
+          deleteCookie('nephro_user');
+          setLoading(false);
+          return;
+        }
+
+        // User is signed in via Firebase and did not explicitly log out
         clearLogoutFlag();
         
         try {
@@ -206,8 +218,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const loadUser = async () => {
       debugLog('loadUser_start', { hasAuth: !!auth });
       
+      // If user explicitly logged out, clear any stored cookies/tokens immediately
+      if (hasLogoutFlag()) {
+        deleteCookie('nephro_user');
+        if (auth?.currentUser) {
+          signOut(auth).catch(() => {});
+        }
+        setUser(null);
+        debugLog('logout_flag_detected', 'skipping auto login');
+        setLoading(false);
+        return;
+      }
+
       try {
-        // Check for Firebase redirect result first
+        // Check for Firebase redirect result
         if (auth) {
           try {
             debugLog('checking_redirect_result', 'calling getRedirectResult');
@@ -318,14 +342,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
         }
 
-        if (hasLogoutFlag()) {
-          deleteCookie('nephro_user');
-          debugLog('logout_flag_detected', 'skipping auto login');
-          setLoading(false);
-          return;
-        }
-
-        // First, try to load from cookie immediately for faster UX
+        // Try to load from cookie immediately for faster UX
         const savedUser = getCookie('nephro_user');
         console.log('AuthContext: Checking for saved user cookie:', !!savedUser);
         
@@ -338,14 +355,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
             if (userData && userData.email && userData.name) {
               setUser(userData);
               console.log('Loaded user from cookie (immediate):', userData);
-              
-              // For admin users, skip backend verification to prevent logout issues
-              const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
-              if (adminEmails.includes(userData.email)) {
-                console.log('🔐 Admin user detected - skipping backend verification to prevent logout');
-                setLoading(false);
-                return;
-              }
               
               // Verify session with backend
               try {
@@ -364,16 +373,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     setCookie('nephro_user', encodeURIComponent(JSON.stringify(backendUser)), 7);
                   }
                 } else {
-                  console.log('Session verification failed. Response:', response);
-                  // For admin/doctor users, be more lenient to prevent false logouts
-                  if (userData.role === 'admin' || userData.role === 'doctor') {
-                    console.log('Admin/Doctor user - keeping session despite backend verification failure');
-                    // Don't clear admin sessions - they should persist through network issues
-                  } else {
-                    console.log('Regular user - clearing session');
-                    setUser(null);
-                    deleteCookie('nephro_user');
-                  }
+                  console.log('Session verification failed or session destroyed on backend. Response:', response);
+                  setUser(null);
+                  deleteCookie('nephro_user');
                 }
               } catch (error) {
                 console.error('Error verifying session with backend:', error);
@@ -416,10 +418,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (response.success && response.data?.user) {
         const userData = response.data.user as User;
+        clearLogoutFlag();
         setUser(userData);
         // Save to cookie as backup
         setCookie('nephro_user', encodeURIComponent(JSON.stringify(userData)), 7);
-        clearLogoutFlag();
         console.log('User logged in successfully:', userData);
         return true;
       } else {
@@ -433,14 +435,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const logout = async () => {
+    // Set logout flag immediately to prevent background listeners from re-authenticating
+    setLogoutFlag();
+    setUser(null);
+    deleteCookie('nephro_user');
+
     try {
       await apiService.logout();
     } catch (error) {
       console.error('Logout error:', error);
     }
     
-    // CRITICAL: Also sign out from Firebase Auth to prevent old Google account
-    // from persisting in browser storage and taking over on page refresh
+    // Sign out from Firebase Auth
     if (auth) {
       try {
         await signOut(auth);
@@ -450,9 +456,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     }
     
-    setUser(null);
-    deleteCookie('nephro_user');
-    setLogoutFlag();
     console.log('User logged out, Firebase cleared, cookie removed');
   };
 
