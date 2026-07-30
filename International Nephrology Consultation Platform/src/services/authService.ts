@@ -10,6 +10,7 @@ import {
 import { UserCredential, User } from 'firebase/auth';
 import { auth, googleProvider, hasFirebaseCredentials } from '../config/firebase';
 import { getApiBaseUrl } from './apiService';
+import { isMobile } from '../utils/safariCompat';
 
 export interface AuthUser {
   uid: string;
@@ -27,7 +28,14 @@ class AuthService {
       throw new Error('Google authentication is not available. Firebase credentials are missing.');
     }
 
-    // Try popup first, fall back to redirect for ANY error (Safari/mobile have strict popup blocking)
+    // On mobile devices (iOS / Android), popup windows are restricted or cause popup-blocked errors.
+    // Jump straight to redirect on mobile for a seamless experience.
+    if (isMobile()) {
+      console.log('📱 Mobile device detected — using Google redirect sign in directly');
+      return this.signInWithGoogleRedirect();
+    }
+
+    // Try popup first on desktop
     try {
       console.log('🔐 Attempting Google sign in with popup...');
       const result: UserCredential = await signInWithPopup(auth, googleProvider);
@@ -35,7 +43,6 @@ class AuthService {
 
       console.log('✅ Google popup sign in successful:', user.email);
 
-      // Send user data to backend (optional)
       try {
         await this.syncUserWithBackend(user);
         console.log('✅ Backend sync successful');
@@ -56,12 +63,13 @@ class AuthService {
     } catch (error: any) {
       console.error('❌ Google popup sign in error:', error.code || error.message);
 
-      // Fall back to redirect for ANY popup error (Safari/mobile block popups differently)
+      // If domain not authorized, don't attempt redirect retry — throw actionable error message immediately
+      if (error.code === 'auth/unauthorized-domain') {
+        throw new Error(this.getErrorMessage(error.code));
+      }
+
       console.log('🔄 Popup failed, trying redirect method...');
-
-      // Wait a bit before trying redirect to avoid rapid successive calls
-      await new Promise(resolve => setTimeout(resolve, 500));
-
+      await new Promise(resolve => setTimeout(resolve, 300));
       return this.signInWithGoogleRedirect();
     }
   }
@@ -246,6 +254,10 @@ class AuthService {
   // Get error message
   private getErrorMessage(errorCode: string): string {
     switch (errorCode) {
+      case 'auth/unauthorized-domain':
+        return 'This domain is not authorized for Google Sign-In. Please add this domain under Firebase Console > Auth > Settings > Authorized Domains.';
+      case 'auth/auth-domain-config-required':
+        return 'Firebase Auth Domain configuration required.';
       case 'auth/user-not-found':
         return 'No account found with this email address';
       case 'auth/wrong-password':
@@ -261,9 +273,9 @@ class AuthService {
       case 'auth/popup-closed-by-user':
         return 'Sign in was cancelled. Please try again';
       case 'auth/popup-blocked':
-        return 'Popup was blocked by browser. Please allow popups for this site and try again';
+        return 'Popup was blocked by browser. Directing to Google login...';
       case 'auth/operation-not-allowed':
-        return 'This sign-in method is not enabled. Please contact support';
+        return 'Google sign-in is not enabled in Firebase Console. Please contact support';
       case 'auth/account-exists-with-different-credential':
         return 'An account already exists with this email using a different sign-in method';
       case 'auth/invalid-credential':
@@ -275,7 +287,7 @@ class AuthService {
       case 'auth/web-storage-unsupported':
         return 'Web storage is not supported in this browser';
       default:
-        return 'An error occurred during authentication. Please try again';
+        return 'Authentication failed. Please try again or check Firebase authorized domains.';
     }
   }
 }

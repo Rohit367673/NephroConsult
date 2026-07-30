@@ -15,6 +15,14 @@ export const isIOSSafari = () => {
   return isIOS() && isSafari();
 };
 
+// Detect any mobile device (Android, iOS, iPadOS, etc.)
+export const isMobile = () => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || 
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
+
 // Clear all storage for iOS Safari to fix auth issues
 export const clearIOSStorage = async () => {
   if (!isIOS()) return;
