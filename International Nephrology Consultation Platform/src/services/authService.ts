@@ -28,14 +28,7 @@ class AuthService {
       throw new Error('Google authentication is not available. Firebase credentials are missing.');
     }
 
-    // On mobile devices (iOS / Android), popup windows are restricted or cause popup-blocked errors.
-    // Jump straight to redirect on mobile for a seamless experience.
-    if (isMobile()) {
-      console.log('📱 Mobile device detected — using Google redirect sign in directly');
-      return this.signInWithGoogleRedirect();
-    }
-
-    // Try popup first on desktop
+    // Try popup first (works cleanly on desktop and many mobile browsers)
     try {
       console.log('🔐 Attempting Google sign in with popup...');
       const result: UserCredential = await signInWithPopup(auth, googleProvider);
@@ -63,12 +56,18 @@ class AuthService {
     } catch (error: any) {
       console.error('❌ Google popup sign in error:', error.code || error.message);
 
-      // If domain not authorized, don't attempt redirect retry — throw actionable error message immediately
-      if (error.code === 'auth/unauthorized-domain') {
-        throw new Error(this.getErrorMessage(error.code));
+      // User intentionally closed popup - don't force a redirect or show scary error
+      if (error.code === 'auth/popup-closed-by-user') {
+        throw new Error('Sign in was cancelled. Please try again.');
       }
 
-      console.log('🔄 Popup failed, trying redirect method...');
+      // If domain not authorized in Firebase, throw friendly error
+      if (error.code === 'auth/unauthorized-domain') {
+        throw new Error('This domain is not authorized in Firebase Console. Please add this domain under Firebase Console > Auth > Settings > Authorized Domains.');
+      }
+
+      // Fall back to redirect if popup was blocked (e.g. mobile Safari / Chrome)
+      console.log('🔄 Popup failed or blocked, falling back to redirect method...');
       await new Promise(resolve => setTimeout(resolve, 300));
       return this.signInWithGoogleRedirect();
     }
