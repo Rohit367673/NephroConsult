@@ -61,9 +61,10 @@ class AuthService {
         throw new Error('Sign in was cancelled. Please try again.');
       }
 
-      // If domain not authorized in Firebase, throw friendly error
+      // If domain not authorized in Firebase, throw friendly error with current domain
       if (error.code === 'auth/unauthorized-domain') {
-        throw new Error('This domain is not authorized in Firebase Console. Please add this domain under Firebase Console > Auth > Settings > Authorized Domains.');
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+        throw new Error(`Domain "${domain}" is not authorized for Google Sign-In. Please add "${domain}" in Firebase Console > Auth > Settings > Authorized Domains.`);
       }
 
       // Fall back to redirect if popup was blocked (e.g. mobile Safari / Chrome)
@@ -253,8 +254,10 @@ class AuthService {
   // Get error message
   private getErrorMessage(errorCode: string): string {
     switch (errorCode) {
-      case 'auth/unauthorized-domain':
-        return 'This domain is not authorized for Google Sign-In. Please add this domain under Firebase Console > Auth > Settings > Authorized Domains.';
+      case 'auth/unauthorized-domain': {
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+        return `Domain "${domain}" is not authorized for Google Sign-In. Please add "${domain}" in Firebase Console > Auth > Settings > Authorized Domains.`;
+      }
       case 'auth/auth-domain-config-required':
         return 'Firebase Auth Domain configuration required.';
       case 'auth/user-not-found':
