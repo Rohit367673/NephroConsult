@@ -175,8 +175,8 @@ const mockUsers = [
 export default function AdminPanel() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [consultations, setConsultations] = useState(mockConsultations);
-  const [users, setUsers] = useState(mockUsers);
+  const [consultations, setConsultations] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>(mockUsers);
   const [refundRequests, setRefundRequests] = useState<RefundRequest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -189,15 +189,60 @@ export default function AdminPanel() {
     followUpDate: ''
   });
 
-  // Redirect if not admin
-  if (!user || user.role !== 'admin') {
-    return <Navigate to="/" replace />;
-  }
-
-  // Fetch refund requests on component mount
+  // Bug 19 fix: ALL hooks must be declared BEFORE early returns
+  // Bug 18 fix: Fetch real database appointments & refund requests
   useEffect(() => {
     fetchRefundRequests();
+    fetchRealConsultations();
   }, []);
+
+  const fetchRealConsultations = async () => {
+    try {
+      const response = await fetch('/api/appointments/doctor', { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.appointments && data.appointments.length > 0) {
+          const mapped = data.appointments.map((apt: any) => ({
+            id: String(apt._id),
+            patientName: apt.patient?.name || 'Unknown Patient',
+            patientEmail: apt.patient?.email || 'No email',
+            patientPhone: apt.patient?.phone || 'No phone',
+            patientAge: apt.patient?.age || 35,
+            patientAddress: apt.patient?.address || apt.intake?.address || 'N/A',
+            consultationType: apt.type || 'initial',
+            date: apt.date,
+            time: apt.timeSlot,
+            istTime: apt.timeSlot,
+            status: apt.status || 'scheduled',
+            urgency: apt.type === 'Urgent Consultation' ? 'urgent' : 'normal',
+            timezone: 'Asia/Kolkata',
+            country: apt.patient?.country || 'IN',
+            price: apt.price?.amount || 2500,
+            currency: apt.price?.currency || 'INR',
+            meetLink: apt.meetLink || '',
+            medicalHistory: apt.intake?.description || 'No medical history provided',
+            currentMedications: apt.intake?.address || 'No medications provided',
+            labReports: Array.isArray(apt.intake?.documents) 
+              ? apt.intake.documents.map((doc: string, idx: number) => ({
+                  name: doc.split('|')[0] || `Report ${idx + 1}`,
+                  date: apt.date,
+                  url: doc.split('|')[1] || '#'
+                }))
+              : [],
+            queries: apt.intake?.description || ''
+          }));
+          setConsultations(mapped);
+        } else {
+          setConsultations(mockConsultations);
+        }
+      } else {
+        setConsultations(mockConsultations);
+      }
+    } catch (err) {
+      console.warn('Could not fetch real admin consultations, using fallback:', err);
+      setConsultations(mockConsultations);
+    }
+  };
 
   const fetchRefundRequests = async () => {
     try {
@@ -211,6 +256,11 @@ export default function AdminPanel() {
       console.error('Error fetching refund requests:', error);
     }
   };
+
+  // Bug 19 fix: Early return placed AFTER all hooks
+  if (!user || user.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
 
   const handleRefundAction = async (refundId: string, action: 'approved' | 'rejected') => {
     try {

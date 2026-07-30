@@ -32,10 +32,10 @@ export default function AIDoctorPage() {
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       // Only process from our trusted AI assistant iframe origin
+      // Bug 16 fix: Restrict localhost origins to DEV builds only
       const trustedOrigins = [
         'https://ai-assistant-frontend-lilac.vercel.app',
-        'http://localhost:3000',
-        'http://localhost:5173'
+        ...(import.meta.env.DEV ? ['http://localhost:3000', 'http://localhost:5173'] : [])
       ];
       if (!trustedOrigins.includes(event.origin) && event.origin !== window.location.origin) return;
       if (!event.data || event.data.type !== 'INITIATE_CASHFREE_PAYMENT') return;
@@ -59,6 +59,11 @@ export default function AIDoctorPage() {
           : 'patient@nephroconsult.com';
         const safePhone = bookingDetails.patientInfo?.phone || '9999999999';
 
+        // Bug 17 fix: Require explicit payment amount; do not silently undercharge with 499 fallback
+        if (!bookingDetails.amount || typeof bookingDetails.amount !== 'number' || bookingDetails.amount <= 0) {
+          throw new Error('Invalid or missing consultation fee amount.');
+        }
+
         // Persist booking details so PaymentSuccess.tsx can retrieve them after redirect
         const persistPayload = {
           consultationType: safeConsultationType,
@@ -73,7 +78,7 @@ export default function AIDoctorPage() {
             medicalHistory: bookingDetails.patientInfo?.medicalHistory || 'Consultation via AI Doctor',
             currentMedications: bookingDetails.patientInfo?.currentMedications || ''
           },
-          amount: bookingDetails.amount || 499,
+          amount: bookingDetails.amount,
           currency: bookingDetails.currency || 'INR',
           documents: bookingDetails.documents || []
         };

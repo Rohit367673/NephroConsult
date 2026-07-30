@@ -117,6 +117,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const isRedirectProcessing = React.useRef(false);
 
   // Listen to Firebase auth state changes - this works even when getRedirectResult fails
   useEffect(() => {
@@ -126,6 +127,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      debugLog('onAuthStateChanged', { hasUser: !!firebaseUser, email: firebaseUser?.email });
+      
+      // Bug 7 fix: If getRedirectResult is currently handling the user sync, skip to avoid race condition
+      if (isRedirectProcessing.current) {
+        debugLog('onAuthStateChanged', 'skipped because redirect processing is in progress');
+        return;
+      }
+
       debugLog('firebase_auth_state_changed', { 
         hasUser: !!firebaseUser, 
         email: firebaseUser?.email,
@@ -243,6 +252,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             });
             
             if (redirectResult && redirectResult.user) {
+              isRedirectProcessing.current = true;
               clearLogoutFlag();
               debugLog('redirect_user_found', redirectResult.user.email);
 

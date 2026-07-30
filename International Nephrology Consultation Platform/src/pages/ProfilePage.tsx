@@ -35,51 +35,93 @@ interface ProfileData {
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
-  
-  // Helper function to get correct currency display
-  const getCorrectCurrency = (appointment: any) => {
-    const userCountry = user?.country || 'US';
-    
-    console.log('💰 Currency function called with:', {
-      appointment_price: appointment.price,
-      user_country: userCountry,
-      api_currency: appointment.price?.currency
-    });
-    
-    // Override API currency based on user's country (API has wrong currency)
-    if (userCountry === 'IN' || userCountry === 'India') {
-      // Convert USD to INR or use appropriate Indian pricing
-      let amount = appointment.price?.amount || 2500;
-      
-      // If API returned USD but user is Indian, convert or use appropriate INR amount
-      if (appointment.price?.currency === 'USD' && appointment.price?.amount) {
-        // Convert: $120 → ₹2500 (rough conversion for consultation pricing)
-        amount = appointment.price.amount <= 150 ? 2500 : 1800; // Initial vs followup
-      }
-      
-      console.log('💰 Using Indian currency (converted):', `₹${amount}`);
-      return `₹${amount}`;
-    } else {
-      // For non-Indian users, use API data as-is
-      if (appointment.price?.symbol && appointment.price?.amount) {
-        console.log('💰 Using API currency:', `${appointment.price.symbol}${appointment.price.amount}`);
-        return `${appointment.price.symbol}${appointment.price.amount}`;
-      }
-      const amount = appointment.price?.amount || 150;
-      console.log('💰 Using USD fallback:', `$${amount}`);
-      return `$${amount}`;
-    }
-  };
   const navigate = useNavigate();
+
+  // Bug 13 fix: ALL hooks must be declared BEFORE any early returns/navigate() calls
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState(user?.role === 'doctor' ? 'doctor-dashboard' : 'dashboard');
   const [expandedPrescriptions, setExpandedPrescriptions] = useState<Set<number>>(new Set());
 
-  // Debug user data for reload issues
-  console.log('ProfilePage - User data:', user);
-  console.log('ProfilePage - User avatar:', user?.avatar);
-  console.log('ProfilePage - Loading state:', loading);
-  console.log('ProfilePage - Current activeTab:', activeTab);
+  // Bug 15 fix: Use empty string defaults instead of fake placeholder data
+  const [profileData, setProfileData] = useState<ProfileData>({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: (user as any)?.phone || '',
+    age: (user as any)?.age || '',
+    gender: (user as any)?.gender || '',
+    country: user?.country === 'IN' ? 'India' : 
+             user?.country === 'US' ? 'United States' :
+             user?.country === 'GB' ? 'United Kingdom' :
+             user?.country === 'EU' ? 'Europe' :
+             user?.country || '',
+    address: (user as any)?.address || '',
+    emergencyContact: (user as any)?.emergencyContact || '',
+    medicalHistory: (user as any)?.medicalHistory || '',
+    allergies: (user as any)?.allergies || '',
+    currentMedications: (user as any)?.currentMedications || '',
+    bloodType: (user as any)?.bloodType || ''
+  });
+
+  // Fetch real appointments from API
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [doctorAppointments, setDoctorAppointments] = useState<any[]>([]);
+  const [doctorStats, setDoctorStats] = useState({
+    todayAppointments: 0,
+    totalPatients: 0,
+    upcomingConsultations: 0,
+    completedToday: 0
+  });
+  const [doctorFilter, setDoctorFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
+  
+  // Update profileData when user changes (Bug 15 fix: empty string defaults)
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: (user as any)?.phone || '',
+        age: (user as any)?.age || '',
+        gender: (user as any)?.gender || '',
+        country: user?.country === 'IN' ? 'India' : 
+                 user?.country === 'US' ? 'United States' :
+                 user?.country === 'GB' ? 'United Kingdom' :
+                 user?.country === 'EU' ? 'Europe' :
+                 user?.country || '',
+        address: (user as any)?.address || '',
+        emergencyContact: (user as any)?.emergencyContact || '',
+        medicalHistory: (user as any)?.medicalHistory || '',
+        allergies: (user as any)?.allergies || '',
+        currentMedications: (user as any)?.currentMedications || '',
+        bloodType: (user as any)?.bloodType || ''
+      });
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.role === 'patient') {
+      fetchAppointments();
+    } else if (user?.role === 'doctor' || user?.role === 'admin') {
+      fetchDoctorAppointments();
+    }
+  }, [user?.role]);
+
+  // Bug 14 fix: Use actual DB currency/amount; only override if currency is genuinely missing
+  const getCorrectCurrency = (appointment: any) => {
+    const price = appointment.price;
+    // If DB has a valid non-zero amount and a currency symbol, trust it
+    if (price?.symbol && price?.amount && price?.currency) {
+      return `${price.symbol}${price.amount}`;
+    }
+    // Fallback: derive from user country
+    const userCountry = user?.country || 'US';
+    if (userCountry === 'IN' || userCountry === 'India') {
+      return `₹${price?.amount || 2500}`;
+    }
+    if (userCountry === 'GB') return `£${price?.amount || 90}`;
+    if (userCountry === 'AU') return `A$${price?.amount || 130}`;
+    return `$${price?.amount || 120}`;
+  };
 
   // Show loading state while user data is being loaded
   if (loading) {
@@ -93,80 +135,16 @@ export default function ProfilePage() {
     );
   }
 
-  // Redirect to home if no user after loading
+  // Bug 13 fix: Early returns placed AFTER all hooks
   if (!loading && !user) {
     navigate('/');
     return null;
   }
-  // Redirect admins to dedicated admin panel instead of showing admin content inside Profile
   if (!loading && user?.role === 'admin') {
     navigate('/admin');
     return null;
   }
-  const [profileData, setProfileData] = useState<ProfileData>({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: (user as any)?.phone || '+1 (555) 123-4567',
-    age: (user as any)?.age || '35',
-    gender: (user as any)?.gender || 'Male',
-    country: user?.country === 'IN' ? 'India' : 
-             user?.country === 'US' ? 'United States' :
-             user?.country === 'GB' ? 'United Kingdom' :
-             user?.country === 'EU' ? 'Europe' :
-             user?.country || 'United States',
-    address: (user as any)?.address || '123 Main St, New York, NY 10001',
-    emergencyContact: (user as any)?.emergencyContact || '+1 (555) 987-6543',
-    medicalHistory: (user as any)?.medicalHistory || 'Hypertension since 2018, managed with medication. Family history of kidney disease.',
-    allergies: (user as any)?.allergies || 'Penicillin, Shellfish',
-    currentMedications: (user as any)?.currentMedications || 'Lisinopril 10mg daily, Metformin 500mg twice daily',
-    bloodType: (user as any)?.bloodType || 'A+'
-  });
 
-  // Mock appointments data with enhanced fields
-  // Fetch real appointments from API
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
-  const [doctorAppointments, setDoctorAppointments] = useState<any[]>([]);
-  const [doctorStats, setDoctorStats] = useState({
-    todayAppointments: 0,
-    totalPatients: 0,
-    upcomingConsultations: 0,
-    completedToday: 0
-  });
-  const [doctorFilter, setDoctorFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
-  
-  // Update profileData when user changes
-  useEffect(() => {
-    if (user) {
-      setProfileData({
-        name: user?.name || '',
-        email: user?.email || '',
-        phone: (user as any)?.phone || '+1 (555) 123-4567',
-        age: (user as any)?.age || '35',
-        gender: (user as any)?.gender || 'Male',
-        country: user?.country === 'IN' ? 'India' : 
-                 user?.country === 'US' ? 'United States' :
-                 user?.country === 'GB' ? 'United Kingdom' :
-                 user?.country === 'EU' ? 'Europe' :
-                 user?.country || 'United States',
-        address: (user as any)?.address || '123 Main St, New York, NY 10001',
-        emergencyContact: (user as any)?.emergencyContact || '+1 (555) 987-6543',
-        medicalHistory: (user as any)?.medicalHistory || 'Hypertension since 2018, managed with medication. Family history of kidney disease.',
-        allergies: (user as any)?.allergies || 'Penicillin, Shellfish',
-        currentMedications: (user as any)?.currentMedications || 'Lisinopril 10mg daily, Metformin 500mg twice daily',
-        bloodType: (user as any)?.bloodType || 'A+'
-      });
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user?.role === 'patient') {
-      fetchAppointments();
-    } else if (user?.role === 'doctor' || user?.role === 'admin') {
-      fetchDoctorAppointments();
-    }
-  }, [user?.role]);
-  
   const fetchAppointments = async () => {
     try {
       setAppointmentsLoading(true);

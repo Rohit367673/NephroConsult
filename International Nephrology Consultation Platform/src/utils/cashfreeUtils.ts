@@ -183,7 +183,8 @@ export const initiateCashfreePayment = async (
     const mode = orderResponse.environment === 'production' ? 'production' : 'sandbox';
     const cashfree = new window.Cashfree({ mode });
 
-    await cashfree.checkout({ paymentSessionId: order.paymentSessionId });
+    // Bug 11 fix: Use _modal redirect target to prevent full-page redirect (consistent with AIDoctorPage)
+    await cashfree.checkout({ paymentSessionId: order.paymentSessionId, redirectTarget: '_modal' });
 
   } catch (error) {
     console.error('Error initiating Cashfree payment:', error);

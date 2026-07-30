@@ -160,72 +160,10 @@ const PaymentSuccess: React.FC = () => {
         if (verified) {
           setMessage('Payment verified! Finalizing your appointment...');
 
-          // Fallback: explicitly create appointment if not already created by server
-          try {
-            // Re-resolve latest booking details from storage if missing
-            if (!bookingDetails) {
-              const sessionAgain = sessionStorage.getItem('cashfree_payment_details');
-              if (sessionAgain) {
-                const parsed = JSON.parse(sessionAgain);
-                bookingDetails = parsed?.bookingDetails;
-              } else {
-                const localStr = localStorage.getItem('cashfree_booking_details');
-                if (localStr) bookingDetails = JSON.parse(localStr);
-              }
-            }
-
-            if (bookingDetails) {
-              const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-              const endpoint = apiBaseUrl ? `${apiBaseUrl}/api/appointments` : '/api/appointments';
-
-              const countryCode = bookingDetails.country
-                || (bookingDetails.currency === 'INR' ? 'IN' : bookingDetails.currency === 'USD' ? 'US' : bookingDetails.currency === 'EUR' ? 'EU' : bookingDetails.currency === 'GBP' ? 'GB' : 'default');
-
-              const createResp = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                  date: bookingDetails.date,
-                  timeSlot: bookingDetails.time,
-                  typeId: bookingDetails.consultationType,
-                  paymentMethod: 'card',
-                  patientPhone: bookingDetails.patientInfo?.phone,
-                  patientCountry: countryCode,
-                  intake: bookingDetails.patientInfo ? {
-                    description: bookingDetails.patientInfo.medicalHistory,
-                    address: bookingDetails.patientInfo.currentMedications,
-                    documents: Array.isArray((bookingDetails as any)?.documents) ? (bookingDetails as any).documents : undefined,
-                  } : undefined,
-                })
-              });
-
-              if (!createResp.ok) {
-                // If time slot already booked, treat as success (likely created by server)
-                if (createResp.status === 409) {
-                  setPaymentStatus('success');
-                  setMessage('Payment successful! Your appointment has been booked.');
-                } else {
-                  const err = await createResp.json().catch(() => ({}));
-                  console.error('Fallback appointment creation failed:', createResp.status, err);
-                  setPaymentStatus('success');
-                  setMessage('Payment successful!');
-                }
-              } else {
-                const data = await createResp.json().catch(() => ({}));
-                console.log('✅ Fallback appointment created:', data);
-                setPaymentStatus('success');
-                setMessage('Payment successful! Your appointment has been booked.');
-              }
-            } else {
-              setPaymentStatus('success');
-              setMessage('Payment successful!');
-            }
-          } catch (fallbackErr) {
-            console.error('Fallback create appointment error:', fallbackErr);
-            setPaymentStatus('success');
-            setMessage('Payment successful!');
-          }
+          // Bug 12 fix: Backend's verify-payment already creates the appointment reliably.
+          // Do NOT create it again here to avoid duplicate appointments in MongoDB.
+          setPaymentStatus('success');
+          setMessage('Payment successful! Your appointment has been booked.');
 
           try { sessionStorage.removeItem('cashfree_payment_details'); } catch {}
           toast.success('Appointment created successfully! 🎉', {

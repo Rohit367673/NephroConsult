@@ -515,7 +515,8 @@ export default function BookingPage() {
                 };
                 reader.onerror = () => {
                   console.error(`❌ Failed to process file: ${file.name}`);
-                  resolve(`${file.name}|error`);
+                  // Bug 9 fix: Reject on error so the Promise.all catches it rather than storing corrupt data
+                  reject(new Error(`Failed to read file: ${file.name}`));
                 };
                 reader.readAsDataURL(file);
               }))
@@ -566,14 +567,8 @@ export default function BookingPage() {
     setUserCountry(country);
     setPricing(getPricingForTimezone(tz));
     
-    // Initialize with some mock booked appointments for demonstration
-    const mockBookedAppointments = [
-      { date: '2025-10-05', time: '10:00 AM', patientName: 'John Doe' },
-      { date: '2025-10-05', time: '2:30 PM', patientName: 'Jane Smith' },
-      { date: '2025-10-06', time: '11:00 AM', patientName: 'Mike Johnson' },
-      { date: '2025-10-07', time: '3:00 PM', patientName: 'Sarah Wilson' },
-    ];
-    setBookedAppointments(mockBookedAppointments);
+    // Bug 8 fix: Don't use hardcoded 2025 mock data — start with empty, real slots fetched on date change
+    setBookedAppointments([]);
   }, []);
 
   // Set country only once when userCountry is available
@@ -707,10 +702,11 @@ export default function BookingPage() {
         return bookingData.consultationType !== '';
       case 2:
         return bookingData.date !== '' && bookingData.time !== '';
-      case 3:
+      case 3: {
         // Actually validate patient info fields before allowing navigation
         const validation = validatePatientInfo(bookingData.patientInfo);
         return validation.isValid;
+      }
       case 4:
         return true; // Payment step
       default:
@@ -718,11 +714,7 @@ export default function BookingPage() {
     }
   };
 
-  // Early return if not authenticated (now safe after all hooks are declared)
-  if (!user && !loading) {
-    return null;
-  }
-
+  // Bug 1 fix: useMemo and useCallback must be declared BEFORE any early return
   const consultationTypes = useMemo(() => [
     { 
       id: 'initial', 
@@ -778,6 +770,11 @@ export default function BookingPage() {
       setStep(prevStep);
     }
   }, [step]);
+
+  // Early return if not authenticated — placed AFTER all hooks
+  if (!user && !loading) {
+    return null;
+  }
 
   const handleSlotSelection = (slot: { time: string, istTime: string, available: boolean, isBooked?: boolean }) => {
     if (!slot.available) {
@@ -883,6 +880,13 @@ export default function BookingPage() {
         country: bookingData.country || userCountry
       };
       
+      // Bug 10 fix: Validate BEFORE writing to localStorage to avoid storing incomplete/corrupt data
+      if (!bookingDetails.patientInfo.name || !bookingDetails.patientInfo.email || !bookingDetails.patientInfo.phone || !bookingDetails.patientInfo.age || !bookingDetails.patientInfo.gender || !bookingDetails.patientInfo.medicalHistory) {
+        toast.error('Please fill in all required patient information');
+        setIsProcessingPayment(false);
+        return;
+      }
+
       console.log('💾 About to store extendedBookingDetails:', extendedBookingDetails);
       console.log('📋 Storing booking details for payment verification:', {
         consultationType: extendedBookingDetails.consultationType,
@@ -903,13 +907,6 @@ export default function BookingPage() {
         bookingDetails: extendedBookingDetails
       }));
       console.log('✅ Stored in sessionStorage:', sessionStorage.getItem('cashfree_payment_details') ? 'Success' : 'Failed');
-
-      // Validate required fields
-      if (!bookingDetails.patientInfo.name || !bookingDetails.patientInfo.email || !bookingDetails.patientInfo.phone || !bookingDetails.patientInfo.age || !bookingDetails.patientInfo.gender || !bookingDetails.patientInfo.medicalHistory) {
-        toast.error('Please fill in all required patient information');
-        setIsProcessingPayment(false);
-        return;
-      }
 
       // Initiate Cashfree payment with extended booking details
       await initiateCashfreePayment(

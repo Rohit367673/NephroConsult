@@ -256,9 +256,12 @@ router.get('/appointments/test', async (req, res) => {
   }
 });
 
-// SIMPLE cleanup endpoint via GET (easier to test)
-router.get('/appointments/force-cleanup', async (req, res) => {
+// Cleanup endpoints disabled in production (Bug 5 fix)
+router.get('/appointments/force-cleanup', requireRole('admin'), async (req, res) => {
   try {
+    if (env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Endpoint not found' });
+    }
     console.log('🧹 FORCE CLEANUP: Starting...');
     const result = await Appointment.deleteMany({});
     console.log('🧹 FORCE CLEANUP: Done -', result.deletedCount, 'deleted');
@@ -270,8 +273,11 @@ router.get('/appointments/force-cleanup', async (req, res) => {
 });
 
 // CLEANUP endpoint to remove all appointments (TESTING ONLY)
-router.delete('/appointments/cleanup', async (req, res) => {
+router.delete('/appointments/cleanup', requireRole('admin'), async (req, res) => {
   try {
+    if (env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Endpoint not found' });
+    }
     console.log('🧹 CLEANUP: Starting cleanup process...');
     
     // First check how many appointments exist
@@ -301,19 +307,19 @@ router.delete('/appointments/cleanup', async (req, res) => {
   }
 });
 
-// Temporary debug endpoint without authentication (REMOVE AFTER FIXING)
-router.get('/appointments/doctor-debug', async (req, res) => {
+// Temporary debug endpoint without authentication (disabled in production)
+router.get('/appointments/doctor-debug', requireRole('doctor', 'admin'), async (req, res) => {
   try {
-    console.log('📋 DEBUG: Doctor appointments endpoint called (NO AUTH)');
+    if (env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Endpoint not found' });
+    }
+    console.log('📋 DEBUG: Doctor appointments endpoint called');
     
     // Fetch all appointments
     const appointments = await Appointment.find({})
       .sort({ date: 1, timeSlot: 1 })
       .limit(100)
       .lean();
-    
-    console.log(`📋 DEBUG: Found ${appointments.length} appointments in database`);
-    console.log('📋 DEBUG: Sample appointment:', appointments[0]);
     
     return res.json({ 
       appointments,

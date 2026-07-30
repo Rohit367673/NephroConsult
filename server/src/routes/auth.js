@@ -11,19 +11,7 @@ import { env } from '../config.js';
 
 const router = express.Router();
 
-// Get current user session
-router.get('/me', (req, res) => {
-  console.log('🔍 Auth check - Session exists:', !!req.session);
-  console.log('🔍 Auth check - Session user:', req.session?.user);
-  console.log('🔍 Auth check - Session ID:', req.sessionID);
-  console.log('🔍 Auth check - Cookie header:', req.headers.cookie);
-  
-  if (req.session && req.session.user) {
-    res.json({ user: req.session.user });
-  } else {
-    res.json({ user: null });
-  }
-});
+// Duplicate /me route removed (Bug 2 fix). The primary MongoDB-backed /me route is mounted below.
 
 // Debug endpoint to check configuration  
 router.get('/debug', (req, res) => {
@@ -39,10 +27,14 @@ router.get('/debug', (req, res) => {
 });
 
 // Fix admin role for specific users
-router.get('/fix-admin-role', async (req, res) => {
+// Fix admin role for specific users (Bug 3 fix: added requireAuth + admin authorization guard)
+router.get('/fix-admin-role', requireAuth, async (req, res) => {
   try {
     const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
-    
+    if (!req.session?.user?.email || !adminEmails.includes(req.session.user.email)) {
+      return res.status(403).json({ error: 'Unauthorized: Admin access required' });
+    }
+
     const updateResults = await Promise.all(
       adminEmails.map(async (email) => {
         const user = await User.findOne({ email });
@@ -137,14 +129,14 @@ router.post('/send-otp', async (req, res) => {
       console.log(`📧 Email result:`, emailResult);
       
       // Check if email failed but we have fallback
+      // Check if email failed (Bug 6 fix: only expose OTP in non-production environments)
       if (emailResult.fallback || !emailResult.ok) {
-        console.log(`⚠️ Email service unavailable for ${email}, showing OTP: ${otp}`);
+        console.log(`⚠️ Email service unavailable for ${email}`);
         
         return res.json({ 
-          message: 'Email service temporarily unavailable. Your verification code is displayed below.',
+          message: 'Email service temporarily unavailable. Please check your inbox or try again shortly.',
           success: true,
-          otp: otp,
-          fallback: true
+          ...(process.env.NODE_ENV !== 'production' ? { otp, fallback: true } : {})
         });
       }
       
@@ -159,15 +151,10 @@ router.post('/send-otp', async (req, res) => {
       console.error('❌ EMAIL SEND ERROR:', emailError.message);
       console.error('❌ FULL ERROR:', emailError);
       
-      // If email completely fails, show OTP in response for better UX
-      console.log(`⚠️ Email completely failed for ${email}, showing OTP: ${otp}`);
-      
       return res.json({ 
-        message: 'Email service error. Your verification code is displayed below.',
+        message: 'Email service error. Please try again.',
         success: true,
-        otp: otp,
-        fallback: true,
-        error: emailError.message
+        ...(process.env.NODE_ENV !== 'production' ? { otp, fallback: true, error: emailError.message } : {})
       });
     }
   } catch (error) {

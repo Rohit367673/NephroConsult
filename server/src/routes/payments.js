@@ -385,26 +385,29 @@ router.post('/verify-payment', async (req, res) => {
         });
         }
 
-        console.log('💾 Appointment saved with intake data:', {
-          appointmentId: createdAppointment._id,
-          intakeData: createdAppointment.intake,
-          intakeDescription: createdAppointment.intake?.description?.substring(0, 100) + '...',
-          intakeDocumentsCount: createdAppointment.intake?.documents?.length || 0,
-          patientPhone: createdAppointment.patient?.phone,
-        });
-
-        // Verify the appointment was saved correctly
-        const savedAppointment = await Appointment.findById(createdAppointment._id).lean();
-        if (savedAppointment) {
-          console.log('✅ Appointment verified in database:', {
-            id: savedAppointment._id,
-            hasIntake: !!savedAppointment.intake,
-            intakeDocuments: savedAppointment.intake?.documents?.length || 0,
-            intakeDescription: savedAppointment.intake?.description?.substring(0, 50) + '...',
-            patientPhone: savedAppointment.patient?.phone,
+        // Bug 21 fix: Only log and verify if createdAppointment was actually created (not null)
+        if (createdAppointment) {
+          console.log('💾 Appointment saved with intake data:', {
+            appointmentId: createdAppointment._id,
+            intakeData: createdAppointment.intake,
+            intakeDescription: createdAppointment.intake?.description?.substring(0, 100) + '...',
+            intakeDocumentsCount: createdAppointment.intake?.documents?.length || 0,
+            patientPhone: createdAppointment.patient?.phone,
           });
-        } else {
-          console.error('❌ Appointment not found in database after creation!');
+
+          // Verify the appointment was saved correctly
+          const savedAppointment = await Appointment.findById(createdAppointment._id).lean();
+          if (savedAppointment) {
+            console.log('✅ Appointment verified in database:', {
+              id: savedAppointment._id,
+              hasIntake: !!savedAppointment.intake,
+              intakeDocuments: savedAppointment.intake?.documents?.length || 0,
+              intakeDescription: savedAppointment.intake?.description?.substring(0, 50) + '...',
+              patientPhone: savedAppointment.patient?.phone,
+            });
+          } else {
+            console.error('❌ Appointment not found in database after creation!');
+          }
         }
 
         // Schedule reminder and send Telegram notification (non-blocking)
@@ -488,16 +491,22 @@ router.post('/verify-payment', async (req, res) => {
 // Cashfree webhook handler
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
-    const webhookBody = req.body;
+    const webhookBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
     const webhookSignature = req.headers['x-cashfree-signature'];
+    const webhookTimestamp = req.headers['x-cashfree-timestamp'] || '';
 
-    // Verify webhook signature
-    const expectedSignature = crypto
+    // Bug 20 fix: Cashfree SDK v3 webhooks send signature over (timestamp + rawBody) in Base64
+    const payloadToSign = webhookTimestamp ? `${webhookTimestamp}${webhookBody}` : webhookBody;
+    const expectedBase64 = crypto
       .createHmac('sha256', env.CASHFREE_SECRET_KEY)
-      .update(webhookBody)
+      .update(payloadToSign)
+      .digest('base64');
+    const expectedHex = crypto
+      .createHmac('sha256', env.CASHFREE_SECRET_KEY)
+      .update(payloadToSign)
       .digest('hex');
 
-    if (webhookSignature !== expectedSignature) {
+    if (webhookSignature !== expectedBase64 && webhookSignature !== expectedHex) {
       console.error('Invalid webhook signature');
       return res.status(400).json({ error: 'Invalid signature' });
     }
@@ -726,9 +735,13 @@ router.get('/health', async (req, res) => {
   }
 });
 
-// Temporary endpoint without auth for debugging (will remove after fixing)
+// Debug endpoint for development/testing only (Bug 4 fix: disabled in production)
 router.post('/create-order-debug', async (req, res) => {
   try {
+    if (env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Endpoint not found' });
+    }
+
     console.log('💳 DEBUG: Payment order request without auth');
     console.log('💳 DEBUG: Request body:', req.body);
     
