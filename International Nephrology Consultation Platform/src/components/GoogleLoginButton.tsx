@@ -188,10 +188,13 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
       }
       
     } catch (error: any) {
-      // Handle redirect in progress - this is expected behavior, not an error
+      // Handle redirect in progress or user cancellation without error toast
       if (error.message === 'redirect_in_progress') {
         console.log('Google redirect in progress, page will reload...');
-        // Don't show error, just keep loading state until redirect completes
+        return;
+      }
+      if (error.message?.includes('cancelled') || error.message?.includes('canceled')) {
+        console.log('Google login cancelled by user');
         return;
       }
       console.error('Google login error:', error);
