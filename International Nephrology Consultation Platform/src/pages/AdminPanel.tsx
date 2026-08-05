@@ -242,11 +242,6 @@ export default function AdminPanel() {
       console.warn('Could not fetch real admin consultations, using fallback:', err);
     }
   };
-    } catch (err) {
-      console.warn('Could not fetch real admin consultations, using fallback:', err);
-      setConsultations(mockConsultations);
-    }
-  };
 
   const fetchRefundRequests = async () => {
     try {
