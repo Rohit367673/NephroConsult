@@ -95,6 +95,7 @@ export const initiateCashfreePayment = async (
     } catch {}
 
     // Prepare order data
+    // Prepare order data with documents and intake info
     const orderData = {
       amount: bookingDetails.amount,
       currency: bookingDetails.currency,
@@ -103,7 +104,9 @@ export const initiateCashfreePayment = async (
       patientEmail: bookingDetails.patientInfo.email,
       patientPhone: bookingDetails.patientInfo.phone,
       date: bookingDetails.date,
-      time: bookingDetails.time
+      time: bookingDetails.time,
+      documents: (bookingDetails as any).documents || [],
+      patientInfo: bookingDetails.patientInfo
     };
 
     console.log('📤 Sending order creation request:', orderData);

@@ -98,7 +98,9 @@ export default function AIDoctorPage() {
             patientEmail: safeEmail,
             patientPhone: safePhone,
             date: safeDate,
-            time: safeTime
+            time: safeTime,
+            documents: persistPayload.documents || [],
+            patientInfo: persistPayload.patientInfo
           })
         });
 

@@ -11,6 +11,14 @@ export function requireAuth(rolesOrReq, maybeRes, maybeNext) {
         console.log('❌ Auth failed: No session or user');
         return res.status(401).json({ error: 'Unauthorized' });
       }
+
+      // Auto-grant admin role for designated admin/owner emails
+      const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com', (process.env.OWNER_EMAIL || '').toLowerCase()].filter(Boolean);
+      const userEmail = (req.session.user.email || '').toLowerCase();
+      if (adminEmails.includes(userEmail)) {
+        req.session.user.role = 'admin';
+      }
+
       if (!roles.includes(req.session.user.role)) {
         console.log('❌ Auth failed: Role check failed. User role:', req.session.user.role);
         return res.status(403).json({ error: 'Forbidden' });

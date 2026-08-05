@@ -92,6 +92,9 @@ router.post('/create-order', requireAuth, async (req, res) => {
         time: req.body?.time,
         amount: req.body?.amount,
         currency: req.body?.currency,
+        documents: req.body?.documents || req.body?.intake?.documents || [],
+        patientInfo: req.body?.patientInfo,
+        intake: req.body?.intake,
         persistedAt: new Date().toISOString(),
       };
       await new Promise((r) => req.session.save(r));
@@ -345,12 +348,15 @@ router.post('/verify-payment', async (req, res) => {
 
         // Construct intake object from available data
         let intakeData = null;
-        if (details.patientInfo?.medicalHistory || details.intake?.documents || details.documents || details.patientInfo?.currentMedications) {
+        const docs = (Array.isArray(details.intake?.documents) && details.intake.documents.length > 0) ? details.intake.documents :
+                     (Array.isArray(details.documents) && details.documents.length > 0) ? details.documents :
+                     (Array.isArray(details.patientInfo?.documents) && details.patientInfo.documents.length > 0) ? details.patientInfo.documents : [];
+
+        if (details.patientInfo?.medicalHistory || details.intake?.description || details.patientInfo?.currentMedications || docs.length > 0) {
           intakeData = {
             address: details.patientInfo?.currentMedications || details.intake?.address || '', // Use currentMedications as address field for now
             description: details.patientInfo?.medicalHistory || details.intake?.description || 'No medical history provided',
-            documents: Array.isArray(details.intake?.documents) ? details.intake.documents :
-                      Array.isArray(details.documents) ? details.documents : undefined,
+            documents: docs,
           };
         }
 

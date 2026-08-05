@@ -201,43 +201,47 @@ export default function AdminPanel() {
       const response = await fetch('/api/appointments/doctor', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
-        if (data.appointments && data.appointments.length > 0) {
-          const mapped = data.appointments.map((apt: any) => ({
-            id: String(apt._id),
-            patientName: apt.patient?.name || 'Unknown Patient',
-            patientEmail: apt.patient?.email || 'No email',
-            patientPhone: apt.patient?.phone || 'No phone',
-            patientAge: apt.patient?.age || 35,
-            patientAddress: apt.patient?.address || apt.intake?.address || 'N/A',
-            consultationType: apt.type || 'initial',
-            date: apt.date,
-            time: apt.timeSlot,
-            istTime: apt.timeSlot,
-            status: apt.status || 'scheduled',
-            urgency: apt.type === 'Urgent Consultation' ? 'urgent' : 'normal',
-            timezone: 'Asia/Kolkata',
-            country: apt.patient?.country || 'IN',
-            price: apt.price?.amount || 2500,
-            currency: apt.price?.currency || 'INR',
-            meetLink: apt.meetLink || '',
-            medicalHistory: apt.intake?.description || 'No medical history provided',
-            currentMedications: apt.intake?.address || 'No medications provided',
-            labReports: Array.isArray(apt.intake?.documents) 
-              ? apt.intake.documents.map((doc: string, idx: number) => ({
-                  name: doc.split('|')[0] || `Report ${idx + 1}`,
+        if (Array.isArray(data.appointments)) {
+          const mapped = data.appointments.map((apt: any) => {
+            const rawDocs = Array.isArray(apt.intake?.documents) ? apt.intake.documents : (Array.isArray(apt.files) ? apt.files : []);
+            return {
+              id: String(apt._id),
+              patientName: apt.patient?.name || 'Unknown Patient',
+              patientEmail: apt.patient?.email || 'No email',
+              patientPhone: apt.patient?.phone || 'No phone',
+              patientAge: apt.patient?.age || 35,
+              patientAddress: apt.patient?.address || apt.intake?.address || 'N/A',
+              consultationType: apt.type || 'initial',
+              date: apt.date,
+              time: apt.timeSlot,
+              istTime: apt.timeSlot,
+              status: apt.status || 'scheduled',
+              urgency: (apt.type || '').toLowerCase().includes('urgent') ? 'urgent' : 'normal',
+              timezone: 'Asia/Kolkata',
+              country: apt.patient?.country || 'IN',
+              price: apt.price?.amount || 2500,
+              currency: apt.price?.currency || 'INR',
+              meetLink: apt.meetLink || '',
+              medicalHistory: apt.intake?.description || 'No medical history provided',
+              currentMedications: apt.intake?.address || 'No medications provided',
+              labReports: rawDocs.map((doc: string, idx: number) => {
+                const parts = typeof doc === 'string' ? doc.split('|') : [];
+                return {
+                  name: parts.length > 1 ? parts[0] : `Lab Report ${idx + 1}`,
                   date: apt.date,
-                  url: doc.split('|')[1] || '#'
-                }))
-              : [],
-            queries: apt.intake?.description || ''
-          }));
+                  url: parts.length > 1 ? parts[1] : doc
+                };
+              }),
+              queries: apt.intake?.description || ''
+            };
+          });
           setConsultations(mapped);
-        } else {
-          setConsultations(mockConsultations);
         }
-      } else {
-        setConsultations(mockConsultations);
       }
+    } catch (err) {
+      console.warn('Could not fetch real admin consultations, using fallback:', err);
+    }
+  };
     } catch (err) {
       console.warn('Could not fetch real admin consultations, using fallback:', err);
       setConsultations(mockConsultations);
