@@ -224,13 +224,17 @@ export default function AdminPanel() {
               meetLink: apt.meetLink || '',
               medicalHistory: apt.intake?.description || 'No medical history provided',
               currentMedications: apt.intake?.address || 'No medications provided',
-              labReports: rawDocs.map((doc: string, idx: number) => {
-                const parts = typeof doc === 'string' ? doc.split('|') : [];
-                return {
-                  name: parts.length > 1 ? parts[0] : `Lab Report ${idx + 1}`,
-                  date: apt.date,
-                  url: parts.length > 1 ? parts[1] : doc
-                };
+              labReports: rawDocs.map((docStr: string, index: number) => {
+                if (typeof docStr !== 'string') return { name: `Lab Report ${index + 1}`, date: apt.date, url: '' };
+                if (docStr.includes('|')) {
+                  const [name, ...urlParts] = docStr.split('|');
+                  const url = urlParts.join('|'); // In case base64 has '|' ? Better safe
+                  return { name: name || `Lab Report ${index + 1}`, date: apt.date, url };
+                }
+                const isPdf = docStr.startsWith('data:application/pdf');
+                const isImage = docStr.startsWith('data:image/');
+                const ext = isPdf ? '.pdf' : isImage ? '.png' : '';
+                return { name: `Uploaded Report ${index + 1}${ext}`, date: apt.date, url: docStr };
               }),
               queries: apt.intake?.description || ''
             };
@@ -557,7 +561,7 @@ export default function AdminPanel() {
                           </td>
                           <td className="p-4">
                             <div className="flex space-x-2">
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(consultation)}>
                                 <Eye className="w-4 h-4" />
                               </Button>
                               <Button variant="ghost" size="sm">
@@ -790,6 +794,53 @@ export default function AdminPanel() {
             </Card>
           </motion.div>
         )}
+
+      {/* Patient Details Modal */}
+      {selectedPatient && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Consultation Details</h2>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)}>
+                <XCircle className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Patient</p>
+                  <p className="font-medium">{(selectedPatient as any).patientName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium">{(selectedPatient as any).patientEmail}</p>
+                </div>
+              </div>
+
+              {(selectedPatient as any).labReports && (selectedPatient as any).labReports.length > 0 && (
+                <div>
+                  <h3 className="font-medium mb-3">Documents & Reports</h3>
+                  <div className="space-y-2">
+                    {(selectedPatient as any).labReports.map((report: any, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center">
+                          <span className="text-sm font-medium">{report.name}</span>
+                        </div>
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={report.url} target="_blank" rel="noopener noreferrer" download={report.name}>
+                            View / Download
+                          </a>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       </div>
     </div>
   );

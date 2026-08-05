@@ -82,8 +82,8 @@ export default function AIDoctorPage() {
           currency: bookingDetails.currency || 'INR',
           documents: bookingDetails.documents || []
         };
-        localStorage.setItem('cashfree_booking_details', JSON.stringify(persistPayload));
-        sessionStorage.setItem('cashfree_payment_details', JSON.stringify({ bookingDetails: persistPayload }));
+        try { localStorage.setItem('cashfree_booking_details', JSON.stringify(persistPayload)); } catch(e) { localStorage.setItem('cashfree_booking_details', JSON.stringify({...persistPayload, documents: []})); }
+        try { sessionStorage.setItem('cashfree_payment_details', JSON.stringify({ bookingDetails: persistPayload })); } catch(e) { sessionStorage.setItem('cashfree_payment_details', JSON.stringify({ bookingDetails: {...persistPayload, documents: []} })); }
 
         // Create Cashfree order via NephroConsult backend
         const response = await fetch(`${API_BASE}/api/payments/create-order`, {
@@ -117,7 +117,7 @@ export default function AIDoctorPage() {
           cashfreeAppId: orderData.cashfree_app_id,
           bookingDetails: persistPayload
         };
-        sessionStorage.setItem('cashfree_payment_details', JSON.stringify(sessionPayload));
+        try { sessionStorage.setItem('cashfree_payment_details', JSON.stringify(sessionPayload)); } catch(e) { sessionStorage.setItem('cashfree_payment_details', JSON.stringify({...sessionPayload, bookingDetails: {...sessionPayload.bookingDetails, documents: []}})); }
         localStorage.setItem('cashfree_last_order_id', orderData.order.id);
 
         // Wait for Cashfree SDK to be available
