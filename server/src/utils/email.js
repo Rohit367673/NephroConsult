@@ -1,9 +1,23 @@
+import nodemailer from 'nodemailer';
 import { env, flags } from '../config.js';
 
-// Resend HTTP API configuration - no SMTP needed
+// Transporter for Nodemailer fallback (Gmail SMTP)
+let smtpTransporter = null;
+if (flags.emailEnabled && env.SMTP_PASS && !env.SMTP_PASS.startsWith('re_')) {
+  smtpTransporter = nodemailer.createTransport({
+    host: env.SMTP_HOST || 'smtp.gmail.com',
+    port: Number(env.SMTP_PORT) || 465,
+    secure: Number(env.SMTP_PORT) === 465 || !env.SMTP_PORT,
+    auth: {
+      user: env.SMTP_USER,
+      pass: env.SMTP_PASS,
+    },
+  });
+}
+
 if (flags.emailEnabled) {
-  console.log(`📧 Resend API configured for: ${env.SMTP_USER}`);
-  console.log(`🔑 API Key: ${env.SMTP_PASS?.substring(0, 8)}...`);
+  const method = env.SMTP_PASS?.startsWith('re_') ? 'Resend API' : 'Nodemailer SMTP (Gmail)';
+  console.log(`📧 Email service configured via ${method} for: ${env.SMTP_USER}`);
 }
 
 export async function sendEmail(to, subject, html, options = {}) {
@@ -20,10 +34,29 @@ export async function sendEmail(to, subject, html, options = {}) {
     return { ok: true, mock: true, category };
   }
   
+  // If SMTP_PASS is a Gmail App Password, send via Nodemailer SMTP
+  if (smtpTransporter) {
+    try {
+      console.log(`🚀 [${category}] Sending email to ${to} via Gmail SMTP`);
+      const info = await smtpTransporter.sendMail({
+        from: env.SMTP_FROM || `"NephroConsult" <${env.SMTP_USER}>`,
+        to,
+        subject,
+        html,
+      });
+      console.log(`✅ [${category}] Email sent via Gmail SMTP to ${to} (Message ID: ${info.messageId})`);
+      return { ok: true, id: info.messageId, category, method: 'gmail-smtp' };
+    } catch (smtpErr) {
+      console.error(`❌ [${category}] Gmail SMTP error:`, smtpErr.message);
+      if (critical) throw smtpErr;
+      return { ok: false, fallback: true, error: smtpErr.message, category };
+    }
+  }
+
   console.log(`🚀 [${category}] Sending email to ${to} via Resend API`);
   
   try {
-    // Use Resend HTTP API (bypasses SMTP blocking)
+    // Use Resend HTTP API (for re_... keys)
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -56,17 +89,6 @@ export async function sendEmail(to, subject, html, options = {}) {
       const errorText = await response.text();
       console.error(`❌ [${category}] Resend API failed: ${response.status} - ${errorText}`);
       
-      // Handle domain verification issues gracefully
-      if (errorText.includes('domain is not verified') || errorText.includes('testing emails')) {
-        console.log(`⚠️ [${category}] Domain verification required - using fallback`);
-        return { 
-          ok: false, 
-          fallback: true, 
-          error: 'Domain verification required for production emails', 
-          category 
-        };
-      }
-      
       if (critical) {
         throw new Error(`Resend API failed: ${response.status} - ${errorText}`);
       }
@@ -80,18 +102,8 @@ export async function sendEmail(to, subject, html, options = {}) {
     }
   } catch (error) {
     console.error(`❌ [${category}] Resend API error:`, error.message);
-    
-    if (critical) {
-      throw error;
-    }
-    
-    // Graceful fallback for any errors
-    return { 
-      ok: false, 
-      fallback: true, 
-      error: error.message, 
-      category 
-    };
+    if (critical) throw error;
+    return { ok: false, fallback: true, error: error.message, category };
   }
 }
 
