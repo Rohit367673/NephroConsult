@@ -18,13 +18,16 @@ export function MainNavigation({ onLoginOpen, onSignupOpen }: Props) {
   const location = useLocation();
 
   const handleNavigation = (path: string) => {
-    if (!user && (path === '/booking' || path === '/profile' || path.includes('dashboard'))) {
+    if (!user && (path === '/booking' || path === '/profile' || path === '/ai-doctor' || path.includes('dashboard'))) {
+      try {
+        sessionStorage.setItem('redirect_after_login', path);
+      } catch {}
       if (onLoginOpen) {
         onLoginOpen();
         toast.info('🔐 Please log in to access this feature');
       } else {
         toast.info('🔐 Please log in to access this feature');
-        navigate('/');
+        navigate('/?action=login');
       }
       setIsMenuOpen(false);
       return;

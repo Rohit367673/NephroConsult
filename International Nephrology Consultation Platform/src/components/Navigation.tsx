@@ -39,8 +39,11 @@ export function Navigation({ onLoginOpen, onSignupOpen }: NavigationProps) {
     const hasValidSession = user && user.email;
     
     // Only block navigation for protected routes if no valid session
-    if (!hasValidSession && (path === '/booking' || path === '/profile' || path.includes('dashboard'))) {
+    if (!hasValidSession && (path === '/booking' || path === '/profile' || path === '/ai-doctor' || path.includes('dashboard'))) {
       console.log('No valid session, blocking navigation to:', path);
+      try {
+        sessionStorage.setItem('redirect_after_login', path);
+      } catch {}
       if (onLoginOpen) onLoginOpen();
       return;
     }

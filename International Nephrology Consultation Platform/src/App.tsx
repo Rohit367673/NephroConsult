@@ -79,7 +79,13 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
     if (success) {
       onClose();
       toast.success('Welcome back!');
-      navigate('/profile');
+      const target = sessionStorage.getItem('redirect_after_login');
+      if (target) {
+        sessionStorage.removeItem('redirect_after_login');
+        navigate(target);
+      } else {
+        navigate('/profile');
+      }
     } else {
       toast.error('Invalid credentials. Please try again.');
     }
@@ -187,7 +193,14 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
                 </div>
                 <div className="mt-4">
                   <GoogleLoginButton 
-                    onSuccess={onClose}
+                    onSuccess={() => {
+                      onClose();
+                      const target = sessionStorage.getItem('redirect_after_login');
+                      if (target) {
+                        sessionStorage.removeItem('redirect_after_login');
+                        navigate(target);
+                      }
+                    }}
                     className="w-full"
                   />
                 </div>
@@ -254,7 +267,13 @@ function SignupModal({ isOpen, onClose, onLoginOpen }: {
     if (success) {
       onClose();
       toast.success('Account created successfully! Welcome to NephroConsult.');
-      navigate('/profile');
+      const target = sessionStorage.getItem('redirect_after_login');
+      if (target) {
+        sessionStorage.removeItem('redirect_after_login');
+        navigate(target);
+      } else {
+        navigate('/profile');
+      }
     } else {
       toast.error('Failed to create account. Please try again.');
     }
@@ -436,8 +455,11 @@ function Navigation({ onLoginOpen, onSignupOpen }: {
     const hasValidSession = user && user.email;
     
     // Only block navigation for protected routes if no valid session
-    if (!hasValidSession && (path === '/booking' || path === '/profile' || path.includes('dashboard'))) {
+    if (!hasValidSession && (path === '/booking' || path === '/profile' || path === '/ai-doctor' || path.includes('dashboard'))) {
       console.log('No valid session, blocking navigation to:', path);
+      try {
+        sessionStorage.setItem('redirect_after_login', path);
+      } catch {}
       if (onLoginOpen) onLoginOpen();
       return;
     }
@@ -1007,7 +1029,17 @@ function HomePage() {
                   variant="outline"
                   size="lg"
                   className="w-full sm:w-auto px-5 sm:px-7 md:px-10 py-4 sm:py-5 md:py-6 border-2 border-[#006f6f]/30 text-[#006f6f] hover:bg-[#006f6f] hover:text-white backdrop-blur-sm bg-white/70 rounded-xl shadow-lg text-[13px] sm:text-sm md:text-base lg:text-lg font-semibold transition-all duration-300 min-h-[48px] sm:min-h-[52px]"
-                  onClick={() => navigate('/ai-doctor')}
+                  onClick={() => {
+                    if (!user) {
+                      try {
+                        sessionStorage.setItem('redirect_after_login', '/ai-doctor');
+                      } catch {}
+                      setIsLoginOpen(true);
+                      toast.info('🔐 Please sign in to consult with the AI Doctor');
+                    } else {
+                      navigate('/ai-doctor');
+                    }
+                  }}
                 >
                   <Video className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 flex-shrink-0" />
                   <span className="font-semibold">Consult AI Doctor</span>
@@ -1253,7 +1285,17 @@ function HomePage() {
             <Button
               size="lg"
               className="w-full max-w-md sm:w-auto inline-flex items-center justify-center px-6 sm:px-10 py-3.5 sm:py-4 bg-[#006f6f] hover:bg-[#005555] text-white border border-[#005555] rounded-xl shadow-xl hover:shadow-2xl text-sm sm:text-base md:text-lg font-bold transition-all duration-300 hover:scale-105"
-              onClick={() => navigate('/ai-doctor')}
+              onClick={() => {
+                if (!user) {
+                  try {
+                    sessionStorage.setItem('redirect_after_login', '/ai-doctor');
+                  } catch {}
+                  setIsLoginOpen(true);
+                  toast.info('🔐 Please sign in to consult with the AI Doctor');
+                } else {
+                  navigate('/ai-doctor');
+                }
+              }}
             >
               <Bot className="w-5 h-5 sm:w-6 sm:h-6 mr-2 flex-shrink-0 text-white" />
               <span className="text-white">Start Talking to AI Doctor</span>
@@ -2179,8 +2221,11 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
   
   // Check for valid session (user with email)
   if (!user || !user.email) {
-    console.log('ProtectedRoute: No valid user session, redirecting to home');
-    return <Navigate to="/" replace state={{ showLogin: true }} />;
+    console.log('ProtectedRoute: No valid user session, redirecting to home with login modal');
+    try {
+      sessionStorage.setItem('redirect_after_login', window.location.pathname);
+    } catch {}
+    return <Navigate to="/?action=login" replace state={{ showLogin: true }} />;
   }
   
   if (!allowedRoles.includes(user.role)) {
@@ -2426,13 +2471,15 @@ export default function App() {
               </PageWrapper>
             } />
             <Route path="/ai-doctor" element={
-              <PageWrapper seoProps={{
-                title: "AI Doctor Assistant | NephroConsult - Intelligent Healthcare Companion",
-                description: "Meet your AI Doctor Assistant at NephroConsult. Get instant medical guidance, schedule appointments, and receive personalized health recommendations with our advanced AI-powered healthcare assistant. Available 24/7 for your kidney health queries.",
-                keywords: "AI doctor assistant, medical AI chatbot, healthcare AI, kidney health AI, AI nephrology consultation, intelligent health assistant, AI medical guidance, automated health advice"
-              }}>
-                <AIDoctorPage />
-              </PageWrapper>
+              <ProtectedRoute allowedRoles={["patient", "doctor", "admin"]}>
+                <PageWrapper seoProps={{
+                  title: "AI Doctor Assistant | NephroConsult - Intelligent Healthcare Companion",
+                  description: "Meet your AI Doctor Assistant at NephroConsult. Get instant medical guidance, schedule appointments, and receive personalized health recommendations with our advanced AI-powered healthcare assistant. Available 24/7 for your kidney health queries.",
+                  keywords: "AI doctor assistant, medical AI chatbot, healthcare AI, kidney health AI, AI nephrology consultation, intelligent health assistant, AI medical guidance, automated health advice"
+                }}>
+                  <AIDoctorPage />
+                </PageWrapper>
+              </ProtectedRoute>
             } />
             <Route path="/terms" element={
               <PageWrapper seoProps={{
