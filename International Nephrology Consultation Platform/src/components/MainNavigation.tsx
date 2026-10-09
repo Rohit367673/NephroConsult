@@ -18,7 +18,7 @@ export function MainNavigation({ onLoginOpen, onSignupOpen }: Props) {
   const location = useLocation();
 
   const handleNavigation = (path: string) => {
-    if (!user && (path === '/booking' || path === '/profile' || path === '/ai-doctor' || path.includes('dashboard'))) {
+    if (!user && (path === '/booking' || path === '/profile' || path.includes('dashboard'))) {
       if (onLoginOpen) {
         onLoginOpen();
         toast.info('🔐 Please log in to access this feature');

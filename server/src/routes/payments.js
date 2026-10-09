@@ -58,8 +58,13 @@ const validatePhoneNumber = (phone) => {
   return { isValid: true, error: null };
 };
 
-// Create Cashfree order
-router.post('/create-order', requireAuth, async (req, res) => {
+// Create Cashfree order (allows authenticated users OR AI doctor/guest bookings with patient contact info)
+router.post('/create-order', async (req, res, next) => {
+  if (req.session?.user || (req.body?.patientEmail && req.body?.patientName)) {
+    return next();
+  }
+  return requireAuth(req, res, next);
+}, async (req, res) => {
   try {
     console.log('💳 Payment order request received');
     console.log('💳 Session exists:', !!req.session);

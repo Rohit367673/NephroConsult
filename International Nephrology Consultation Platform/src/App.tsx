@@ -436,7 +436,7 @@ function Navigation({ onLoginOpen, onSignupOpen }: {
     const hasValidSession = user && user.email;
     
     // Only block navigation for protected routes if no valid session
-    if (!hasValidSession && (path === '/booking' || path === '/profile' || path === '/ai-doctor' || path.includes('dashboard'))) {
+    if (!hasValidSession && (path === '/booking' || path === '/profile' || path.includes('dashboard'))) {
       console.log('No valid session, blocking navigation to:', path);
       if (onLoginOpen) onLoginOpen();
       return;
@@ -768,6 +768,7 @@ function HomePage() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignupOpen, setIsSignupOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Use user's country if logged in, otherwise detect from timezone
   const userCountry = user?.country || getUserCountry();
@@ -775,14 +776,14 @@ function HomePage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('action') === 'login') {
+    if (params.get('action') === 'login' || (location.state as any)?.showLogin) {
       setIsLoginOpen(true);
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (params.get('action') === 'signup') {
       setIsSignupOpen(true);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, []);
+  }, [location.state]);
 
   // --- Mobile slider state for AI Doctor cards ---
   const [aiActiveSlide, setAiActiveSlide] = useState(0);
@@ -2425,15 +2426,13 @@ export default function App() {
               </PageWrapper>
             } />
             <Route path="/ai-doctor" element={
-              <ProtectedRoute allowedRoles={["patient", "doctor", "admin"]}>
-                <PageWrapper seoProps={{
-                  title: "AI Doctor Assistant | NephroConsult - Intelligent Healthcare Companion",
-                  description: "Meet your AI Doctor Assistant at NephroConsult. Get instant medical guidance, schedule appointments, and receive personalized health recommendations with our advanced AI-powered healthcare assistant. Available 24/7 for your kidney health queries.",
-                  keywords: "AI doctor assistant, medical AI chatbot, healthcare AI, kidney health AI, AI nephrology consultation, intelligent health assistant, AI medical guidance, automated health advice"
-                }}>
-                  <AIDoctorPage />
-                </PageWrapper>
-              </ProtectedRoute>
+              <PageWrapper seoProps={{
+                title: "AI Doctor Assistant | NephroConsult - Intelligent Healthcare Companion",
+                description: "Meet your AI Doctor Assistant at NephroConsult. Get instant medical guidance, schedule appointments, and receive personalized health recommendations with our advanced AI-powered healthcare assistant. Available 24/7 for your kidney health queries.",
+                keywords: "AI doctor assistant, medical AI chatbot, healthcare AI, kidney health AI, AI nephrology consultation, intelligent health assistant, AI medical guidance, automated health advice"
+              }}>
+                <AIDoctorPage />
+              </PageWrapper>
             } />
             <Route path="/terms" element={
               <PageWrapper seoProps={{
