@@ -398,6 +398,13 @@ router.post('/verify-payment', async (req, res) => {
 
         // Bug 21 fix: Only log and verify if createdAppointment was actually created (not null)
         if (createdAppointment) {
+          // Ensure user is marked as having had their first consultation
+          if (patientId) {
+            await User.findByIdAndUpdate(patientId, { $set: { hasUsedFreeConsultation: true } }).catch(() => {});
+          } else if (patientEmail) {
+            await User.findOneAndUpdate({ email: patientEmail.toLowerCase().trim() }, { $set: { hasUsedFreeConsultation: true } }).catch(() => {});
+          }
+
           console.log('💾 Appointment saved with intake data:', {
             appointmentId: createdAppointment._id,
             intakeData: createdAppointment.intake,

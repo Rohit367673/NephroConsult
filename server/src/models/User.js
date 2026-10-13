@@ -14,6 +14,7 @@ const UserSchema = new mongoose.Schema(
     photoURL: { type: String },
     isEmailVerified: { type: Boolean, default: false },
     authProvider: { type: String, enum: ['email', 'google'], default: 'email' },
+    hasUsedFreeConsultation: { type: Boolean, default: false, index: true },
   },
   { timestamps: true }
 );

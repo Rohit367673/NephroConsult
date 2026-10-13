@@ -310,6 +310,7 @@ export default function BookingPage() {
   const [bookedAppointments, setBookedAppointments] = useState<Array<{ date: string, time: string, patientName: string }>>([]);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [isValidating, setIsValidating] = useState(false);
+  const [isFreeEligible, setIsFreeEligible] = useState(false);
   const countrySetRef = useRef(false);
   const [bookingData, setBookingData] = useState({
     consultationType: '',
@@ -571,6 +572,31 @@ export default function BookingPage() {
     setBookedAppointments([]);
   }, []);
 
+  // Check if user is eligible for 1st free initial consultation
+  useEffect(() => {
+    if (!user) {
+      setIsFreeEligible(false);
+      return;
+    }
+    const checkEligibility = async () => {
+      try {
+        const res = await fetch('/api/appointments/free-eligibility', {
+          credentials: 'include'
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setIsFreeEligible(!!data.eligible);
+        } else {
+          setIsFreeEligible(false);
+        }
+      } catch (e) {
+        console.warn('Failed to check free consultation eligibility:', e);
+        setIsFreeEligible(false);
+      }
+    };
+    checkEligibility();
+  }, [user]);
+
   // Set country only once when userCountry is available
   useEffect(() => {
     if (userCountry && !countrySetRef.current) {
@@ -715,38 +741,50 @@ export default function BookingPage() {
   };
 
   // Bug 1 fix: useMemo and useCallback must be declared BEFORE any early return
-  const consultationTypes = useMemo(() => [
-    { 
-      id: 'initial', 
-      name: 'Initial Consultation', 
-      price: getConsultationPrice('initial', bookingData.country || userCountry, pricing.currency),
-      formattedPrice: getFormattedPrice(getConsultationPrice('initial', bookingData.country || userCountry, pricing.currency), pricing.currency),
-      duration: '45 min',
-      description: 'Comprehensive kidney health assessment with detailed medical history review',
-      icon: User,
-      features: ['Complete kidney function evaluation', 'Personalized treatment plan', 'Lab report analysis', 'Lifestyle recommendations']
-    },
-    { 
-      id: 'followup', 
-      name: 'Follow-up Consultation', 
-      price: getConsultationPrice('followup', bookingData.country || userCountry, pricing.currency),
-      formattedPrice: getFormattedPrice(getConsultationPrice('followup', bookingData.country || userCountry, pricing.currency), pricing.currency),
-      duration: '30 min',
-      description: 'Progress review and treatment adjustment for existing patients',
-      icon: FileText,
-      features: ['Treatment progress review', 'Medication adjustments', 'Lab results discussion', 'Next steps planning']
-    },
-    {
-      id: 'urgent',
-      name: 'Urgent Consultation',
-      price: getConsultationPrice('urgent', bookingData.country || userCountry, pricing.currency),
-      formattedPrice: getFormattedPrice(getConsultationPrice('urgent', bookingData.country || userCountry, pricing.currency), pricing.currency),
-      duration: '45 min',
-      description: 'Priority consultation for urgent kidney health concerns (10 AM - 10 PM IST)',
-      icon: Clock,
-      features: ['Connect within 1 hour', 'Priority scheduling (10 AM - 10 PM IST)', 'Urgent symptom evaluation', 'Immediate treatment plan']
-    }
-  ], [bookingData.country, userCountry, pricing.currency]);
+  const consultationTypes = useMemo(() => {
+    const initialRegularPrice = getConsultationPrice('initial', bookingData.country || userCountry, pricing.currency);
+    const followupPrice = getConsultationPrice('followup', bookingData.country || userCountry, pricing.currency);
+    const urgentPrice = getConsultationPrice('urgent', bookingData.country || userCountry, pricing.currency);
+
+    return [
+      { 
+        id: 'initial', 
+        name: 'Initial Consultation', 
+        price: isFreeEligible ? 0 : initialRegularPrice,
+        originalPrice: initialRegularPrice,
+        isFree: isFreeEligible,
+        formattedPrice: isFreeEligible ? 'FREE' : getFormattedPrice(initialRegularPrice, pricing.currency),
+        duration: '45 min',
+        description: 'Comprehensive kidney health assessment with detailed medical history review',
+        icon: User,
+        features: ['Complete kidney function evaluation', 'Personalized treatment plan', 'Lab report analysis', 'Lifestyle recommendations']
+      },
+      { 
+        id: 'followup', 
+        name: 'Follow-up Consultation', 
+        price: followupPrice,
+        originalPrice: followupPrice,
+        isFree: false,
+        formattedPrice: getFormattedPrice(followupPrice, pricing.currency),
+        duration: '30 min',
+        description: 'Progress review and treatment adjustment for existing patients',
+        icon: FileText,
+        features: ['Treatment progress review', 'Medication adjustments', 'Lab results discussion', 'Next steps planning']
+      },
+      {
+        id: 'urgent',
+        name: 'Urgent Consultation',
+        price: urgentPrice,
+        originalPrice: urgentPrice,
+        isFree: false,
+        formattedPrice: getFormattedPrice(urgentPrice, pricing.currency),
+        duration: '45 min',
+        description: 'Priority consultation for urgent kidney health concerns (10 AM - 10 PM IST)',
+        icon: Clock,
+        features: ['Connect within 1 hour', 'Priority scheduling (10 AM - 10 PM IST)', 'Urgent symptom evaluation', 'Immediate treatment plan']
+      }
+    ];
+  }, [bookingData.country, userCountry, pricing.currency, isFreeEligible]);
 
   const handleNext = useCallback(() => {
     console.log('🔄 handleNext called, current step:', step);
@@ -794,9 +832,84 @@ export default function BookingPage() {
     toast.success(`Time slot ${slot.time} selected successfully!`);
   };
 
+  const processFreeInitialBooking = async () => {
+    const { patientInfo } = bookingData;
+    if (!patientInfo.name || !patientInfo.email || !patientInfo.phone || !patientInfo.age || !patientInfo.gender || !patientInfo.medicalHistory) {
+      toast.error('Please fill in all required patient information');
+      return;
+    }
+
+    try {
+      setIsProcessingPayment(true);
+
+      let preProcessedDocuments: string[] = [];
+      try {
+        if (Array.isArray((bookingData as any).uploadedFiles) && (bookingData as any).uploadedFiles.length > 0) {
+          preProcessedDocuments = await Promise.all(
+            (bookingData as any).uploadedFiles.map((file: File) => new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(`${file.name}|${reader.result as string}`);
+              reader.onerror = () => resolve(`${file.name}|error`);
+              reader.readAsDataURL(file);
+            }))
+          );
+        }
+      } catch (e) {
+        console.warn('⚠️ Failed to process uploaded files:', e);
+      }
+
+      const response = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          date: bookingData.date,
+          time: bookingData.time,
+          istTime: bookingData.istTime,
+          type: 'initial',
+          patientInfo: bookingData.patientInfo,
+          documents: preProcessedDocuments,
+          country: bookingData.country || userCountry
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        if (response.status === 402) {
+          setIsFreeEligible(false);
+          toast.error(data.error || 'Your 1st free consultation has already been used. Please proceed with regular payment.');
+          return;
+        }
+        throw new Error(data.error || 'Failed to confirm booking');
+      }
+
+      setIsFreeEligible(false);
+      setPaymentCompleted(true);
+      try {
+        localStorage.removeItem('cashfree_booking_details');
+        sessionStorage.removeItem('cashfree_payment_details');
+      } catch {}
+
+      toast.success('🎉 Free 1st Initial Consultation confirmed! Check your email for the meeting link.');
+      navigate('/profile');
+    } catch (error: any) {
+      console.error('❌ Error in processFreeInitialBooking:', error);
+      toast.error(error?.message || 'Failed to confirm free booking. Please try again.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
   const handleBooking = async () => {
     console.log('🚀 handleBooking called with payment method:', bookingData.paymentMethod);
     console.log('🚀 Full bookingData:', bookingData);
+
+    // If eligible for 1st free Initial Consultation, bypass payment gateway and confirm directly on server
+    if (isFreeEligible && bookingData.consultationType === 'initial') {
+      await processFreeInitialBooking();
+      return;
+    }
     
     if (!bookingData.paymentMethod || bookingData.paymentMethod !== 'cashfree') {
       console.log('❌ Payment method check failed:', {
@@ -1159,9 +1272,14 @@ export default function BookingPage() {
                               <IconComponent className="w-6 h-6" />
                             </div>
                             <div className="flex-1">
-                              <div className="flex items-center space-x-3 mb-2">
+                              <div className="flex items-center flex-wrap gap-2 mb-2">
                                 <h3 className="text-xl font-semibold text-gray-900">{type.name}</h3>
                                 <Badge variant="outline">{type.duration}</Badge>
+                                {(type as any).isFree && (
+                                  <Badge className="bg-green-600 hover:bg-green-700 text-white border-0">
+                                    🎁 1st Consultation FREE
+                                  </Badge>
+                                )}
                               </div>
                               <p className="text-gray-600 mb-4">{type.description}</p>
                               <div className="grid grid-cols-2 gap-2">
@@ -1175,10 +1293,24 @@ export default function BookingPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-2xl font-bold text-[#006f6f]">
-                              {pricing.symbol}{type.price}
-                            </div>
-                            <p className="text-sm text-gray-500">{pricing.currency}</p>
+                            {(type as any).isFree ? (
+                              <>
+                                <div className="text-sm text-gray-400 line-through">
+                                  {pricing.symbol}{(type as any).originalPrice}
+                                </div>
+                                <div className="text-2xl font-bold text-green-600">
+                                  FREE
+                                </div>
+                                <p className="text-xs text-green-700 font-medium">1st Visit Offer</p>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-2xl font-bold text-[#006f6f]">
+                                  {pricing.symbol}{type.price}
+                                </div>
+                                <p className="text-sm text-gray-500">{pricing.currency}</p>
+                              </>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -1563,8 +1695,10 @@ export default function BookingPage() {
           </motion.div>
         );
 
-      case 4:
+      case 4: {
         const selectedType = consultationTypes.find(t => t.id === bookingData.consultationType);
+        const isCurrentBookingFree = isFreeEligible && bookingData.consultationType === 'initial';
+        const regularAmount = getConsultationPrice(bookingData.consultationType, bookingData.country || userCountry, pricing.currency);
         return (
           <motion.div
             variants={stepVariants}
@@ -1574,8 +1708,14 @@ export default function BookingPage() {
             className="space-y-6"
           >
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Review & Payment</h2>
-              <p className="text-gray-600">Please review your booking details and complete payment</p>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                {isCurrentBookingFree ? 'Review & Confirm Free Booking' : 'Review & Payment'}
+              </h2>
+              <p className="text-gray-600">
+                {isCurrentBookingFree
+                  ? 'Your 1st Initial Consultation is completely free — review your details and confirm below'
+                  : 'Please review your booking details and complete payment'}
+              </p>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-8">
@@ -1617,15 +1757,33 @@ export default function BookingPage() {
                     <div className="border-t pt-4">
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-semibold">Total Amount:</span>
-                        <span className="text-2xl font-bold text-[#006f6f]">
-                          {getFormattedPrice(getConsultationPrice(bookingData.consultationType, bookingData.country || userCountry, pricing.currency), pricing.currency)}
-                        </span>
+                        {isCurrentBookingFree ? (
+                          <div className="text-right">
+                            <span className="text-sm text-gray-400 line-through mr-2">
+                              {getFormattedPrice(regularAmount, pricing.currency)}
+                            </span>
+                            <span className="text-2xl font-bold text-green-600">FREE</span>
+                          </div>
+                        ) : (
+                          <span className="text-2xl font-bold text-[#006f6f]">
+                            {getFormattedPrice(regularAmount, pricing.currency)}
+                          </span>
+                        )}
                       </div>
-                      {bookingData.paymentMethod === 'cashfree' && (
-                        <div className="mt-2 text-sm text-gray-600">
-                          <p>✓ Secure payment via Cashfree</p>
-                          <p>✓ Multiple payment options available</p>
+                      {isCurrentBookingFree ? (
+                        <div className="mt-2 text-sm text-green-700 font-medium">
+                          <p>✓ 1st Initial Consultation Free Offer Applied</p>
+                          <p className="text-xs text-gray-500 font-normal mt-1">
+                            Valid once per patient for your first Initial Consultation only.
+                          </p>
                         </div>
+                      ) : (
+                        bookingData.paymentMethod === 'cashfree' && (
+                          <div className="mt-2 text-sm text-gray-600">
+                            <p>✓ Secure payment via Cashfree</p>
+                            <p>✓ Multiple payment options available</p>
+                          </div>
+                        )
                       )}
                     </div>
                   </CardContent>
@@ -1635,42 +1793,64 @@ export default function BookingPage() {
               <motion.div variants={itemVariants}>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Payment Method</CardTitle>
+                    <CardTitle>{isCurrentBookingFree ? 'Free Consultation Offer' : 'Payment Method'}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <Button
-                      variant={bookingData.paymentMethod === 'cashfree' ? "default" : "outline"}
-                      className={`w-full justify-start p-4 h-auto ${
-                        bookingData.paymentMethod === 'cashfree' 
-                          ? 'bg-[#006f6f] hover:bg-[#005555]' 
-                          : ''
-                      }`}
-                      onClick={() => setBookingData(prev => ({ ...prev, paymentMethod: 'cashfree' }))}
-                    >
-                      <CreditCard className="w-5 h-5 mr-3" />
-                      <div className="text-left">
-                        <div className="font-medium">Cashfree</div>
-                        <div className="text-sm opacity-70">UPI, Cards, NetBanking & Wallets</div>
-                      </div>
-                    </Button>
-
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
-                      <div className="flex items-start space-x-3">
-                        <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
-                        <div>
-                          <p className="font-medium text-green-800">Secure Payment</p>
-                          <p className="text-sm text-green-600">
-                            Your payment is protected by bank-level security. We never store your payment information.
-                          </p>
+                    {isCurrentBookingFree ? (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-5 space-y-3">
+                        <div className="flex items-start space-x-3">
+                          <CheckCircle2 className="w-6 h-6 text-green-600 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-semibold text-green-900 text-base">
+                              1st Initial Consultation — 100% Free
+                            </p>
+                            <p className="text-sm text-green-700 mt-1">
+                              No payment is required today. Click <strong>Confirm Free Booking</strong> below to schedule your appointment and receive your Google Meet link via email.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-600 border-t border-green-200 pt-3">
+                          Note: This complimentary offer applies strictly to your very first Initial Consultation. Subsequent Initial Consultations, Follow-up Consultations, and Urgent Consultations are billed at standard rates.
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        <Button
+                          variant={bookingData.paymentMethod === 'cashfree' ? "default" : "outline"}
+                          className={`w-full justify-start p-4 h-auto ${
+                            bookingData.paymentMethod === 'cashfree' 
+                              ? 'bg-[#006f6f] hover:bg-[#005555]' 
+                              : ''
+                          }`}
+                          onClick={() => setBookingData(prev => ({ ...prev, paymentMethod: 'cashfree' }))}
+                        >
+                          <CreditCard className="w-5 h-5 mr-3" />
+                          <div className="text-left">
+                            <div className="font-medium">Cashfree</div>
+                            <div className="text-sm opacity-70">UPI, Cards, NetBanking & Wallets</div>
+                          </div>
+                        </Button>
+
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
+                          <div className="flex items-start space-x-3">
+                            <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
+                            <div>
+                              <p className="font-medium text-green-800">Secure Payment</p>
+                              <p className="text-sm text-green-600">
+                                Your payment is protected by bank-level security. We never store your payment information.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
             </div>
           </motion.div>
         );
+      }
 
       default:
         return null;
@@ -1776,8 +1956,18 @@ export default function BookingPage() {
                 className="bg-[#006f6f] hover:bg-[#005555] text-white flex items-center space-x-2"
                 disabled={!isStepValid() || (step === 4 && isProcessingPayment)}
               >
-                <span>{step === 4 ? (isProcessingPayment ? 'Processing...' : 'Pay Now') : 'Next'}</span>
-                {step === 4 ? <CreditCard className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                <span>
+                  {step === 4
+                    ? (isProcessingPayment
+                        ? 'Processing...'
+                        : (isFreeEligible && bookingData.consultationType === 'initial' ? 'Confirm Free Booking' : 'Pay Now'))
+                    : 'Next'}
+                </span>
+                {step === 4 ? (
+                  isFreeEligible && bookingData.consultationType === 'initial'
+                    ? <CheckCircle2 className="h-4 w-4" />
+                    : <CreditCard className="h-4 w-4" />
+                ) : <ChevronRight className="h-4 w-4" />}
               </Button>
             </div>
           </motion.div>

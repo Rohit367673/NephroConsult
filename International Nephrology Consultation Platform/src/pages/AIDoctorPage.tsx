@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Navigation } from '../components/Navigation';
 import Footer from '../components/Footer';
 
@@ -59,6 +60,51 @@ export default function AIDoctorPage() {
           : 'patient@nephroconsult.com';
         const safePhone = bookingDetails.patientInfo?.phone || '9999999999';
 
+        const patientInfoPayload = {
+          name: safeName,
+          email: safeEmail,
+          phone: safePhone,
+          age: bookingDetails.patientInfo?.age || '30',
+          gender: bookingDetails.patientInfo?.gender || 'Male',
+          medicalHistory: bookingDetails.patientInfo?.medicalHistory || 'Consultation via AI Doctor',
+          currentMedications: bookingDetails.patientInfo?.currentMedications || ''
+        };
+
+        // Check if this is an Initial Consultation (NOT Follow-up or Urgent) and if user is eligible for 1st Free Consultation
+        const lowerType = String(safeConsultationType).toLowerCase();
+        const isInitialType = lowerType === 'initial' || lowerType === 'initial consultation';
+        if (isInitialType) {
+          try {
+            const eligRes = await fetch(`${API_BASE}/api/appointments/free-eligibility`, {
+              credentials: 'include'
+            });
+            if (eligRes.ok) {
+              const eligData = await eligRes.json();
+              if (eligData.eligible) {
+                const freeBookRes = await fetch(`${API_BASE}/api/appointments`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    date: safeDate,
+                    time: safeTime,
+                    type: 'initial',
+                    patientInfo: patientInfoPayload,
+                    documents: bookingDetails.documents || []
+                  })
+                });
+                if (freeBookRes.ok) {
+                  toast.success('🎉 Free 1st Initial Consultation confirmed! Check your email for the meeting link.');
+                  navigate('/profile');
+                  return;
+                }
+              }
+            }
+          } catch (freeErr) {
+            console.warn('Free consultation check/booking fallback to paid:', freeErr);
+          }
+        }
+
         // Bug 17 fix: Require explicit payment amount; do not silently undercharge with 499 fallback
         if (!bookingDetails.amount || typeof bookingDetails.amount !== 'number' || bookingDetails.amount <= 0) {
           throw new Error('Invalid or missing consultation fee amount.');
@@ -69,15 +115,7 @@ export default function AIDoctorPage() {
           consultationType: safeConsultationType,
           date: safeDate,
           time: safeTime,
-          patientInfo: {
-            name: safeName,
-            email: safeEmail,
-            phone: safePhone,
-            age: bookingDetails.patientInfo?.age || '30',
-            gender: bookingDetails.patientInfo?.gender || 'Male',
-            medicalHistory: bookingDetails.patientInfo?.medicalHistory || 'Consultation via AI Doctor',
-            currentMedications: bookingDetails.patientInfo?.currentMedications || ''
-          },
+          patientInfo: patientInfoPayload,
           amount: bookingDetails.amount,
           currency: bookingDetails.currency || 'INR',
           documents: bookingDetails.documents || []

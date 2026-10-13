@@ -13,6 +13,78 @@ import { z } from 'zod';
 
 const router = express.Router();
 
+// Server-side helper to securely verify if a user is eligible for their 1st FREE Initial Consultation
+export async function checkFreeConsultationEligibility({ userId, email, phone }) {
+  try {
+    if (userId) {
+      const userDoc = await User.findById(userId).lean();
+      if (userDoc?.hasUsedFreeConsultation) {
+        return { eligible: false, reason: 'User has already used their free initial consultation' };
+      }
+    }
+    if (email) {
+      const normalizedEmail = email.toLowerCase().trim();
+      const userByEmail = await User.findOne({ email: normalizedEmail }).lean();
+      if (userByEmail?.hasUsedFreeConsultation) {
+        return { eligible: false, reason: 'Email has already used their free initial consultation' };
+      }
+    }
+
+    const orConditions = [];
+    if (userId) orConditions.push({ 'patient.id': userId });
+    if (email) orConditions.push({ 'patient.email': email.toLowerCase().trim() });
+    if (phone && phone.trim().length >= 10) {
+      const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+      if (cleanPhone.length === 10) {
+        orConditions.push({ 'patient.phone': new RegExp(cleanPhone + '$') });
+      }
+    }
+
+    if (orConditions.length === 0) {
+      return { eligible: false, reason: 'Authentication required' };
+    }
+
+    const existingCount = await Appointment.countDocuments({
+      $or: orConditions,
+      status: { $ne: 'cancelled' }
+    });
+
+    if (existingCount > 0) {
+      if (userId) {
+        await User.findByIdAndUpdate(userId, { $set: { hasUsedFreeConsultation: true } }).catch(() => {});
+      }
+      return { eligible: false, reason: 'User already has prior consultations' };
+    }
+
+    return { eligible: true };
+  } catch (err) {
+    console.error('Error checking free consultation eligibility:', err);
+    return { eligible: false, reason: 'Verification failed' };
+  }
+}
+
+// Check if current logged-in user is eligible for the 1st free Initial Consultation
+router.get('/appointments/free-eligibility', async (req, res) => {
+  try {
+    if (!req.session?.user?.id && !req.session?.user?.email) {
+      return res.json({ eligible: false, authenticated: false });
+    }
+    const result = await checkFreeConsultationEligibility({
+      userId: req.session.user.id,
+      email: req.session.user.email,
+      phone: req.query.phone ? String(req.query.phone) : undefined
+    });
+    return res.json({
+      eligible: result.eligible,
+      reason: result.reason,
+      authenticated: true
+    });
+  } catch (error) {
+    console.error('Error in free-eligibility endpoint:', error);
+    return res.status(500).json({ eligible: false, error: 'Failed to check eligibility' });
+  }
+});
+
 // Get pricing information for frontend
 router.post('/pricing', async (req, res) => {
   try {
@@ -22,12 +94,22 @@ router.post('/pricing', async (req, res) => {
       return res.status(400).json({ error: 'Consultation type is required' });
     }
 
+    // Verify first-time free eligibility server-side if user session exists
+    let verifiedFirstTime = false;
+    if (consultationType === 'initial' && req.session?.user) {
+      const eligibility = await checkFreeConsultationEligibility({
+        userId: req.session.user.id,
+        email: req.session.user.email
+      });
+      verifiedFirstTime = eligibility.eligible;
+    }
+
     // Get pricing using the new dynamic system
     const pricingData = await getDisplayedPrice(
       consultationType,
       req.ip,
       country || 'IN',
-      isFirstTime
+      verifiedFirstTime
     );
 
     return res.json({
@@ -509,13 +591,51 @@ router.post('/appointments', requireAuth, async (req, res) => {
     }
     
     const country = patientCountry || userDoc?.country || 'IN'; // Default to India
-    const previousCount = await Appointment.countDocuments({ 'patient.id': userDoc?._id });
-    const isFirst = previousCount === 0;
 
-    // Get pricing using the new dynamic system
-    const pricingData = await getDisplayedPrice(typeId, req.ip, country, isFirst);
+    const normalizedTypeId = (typeId === 'Initial Consultation') ? 'initial' :
+                             (typeId === 'Follow-up' || typeId === 'Follow-up Consultation') ? 'followup' :
+                             (typeId === 'Urgent Consultation') ? 'urgent' : typeId.toLowerCase();
 
-    const typeName = mapConsultationTypeId(typeId);
+    // Security Check 1: Follow-up and Urgent consultations are ALWAYS paid
+    if (normalizedTypeId !== 'initial') {
+      return res.status(402).json({
+        error: 'Payment required. Follow-up and Urgent consultations are paid services.'
+      });
+    }
+
+    // Security Check 2: Verify user has never used their free 1st Initial Consultation (checks userId, email, and phone)
+    const eligibility = await checkFreeConsultationEligibility({
+      userId: userDoc?._id,
+      email: userDoc?.email,
+      phone: extractedPhone || userDoc?.phone
+    });
+
+    if (!eligibility.eligible) {
+      return res.status(402).json({
+        error: 'You have already used your free 1st Initial Consultation. Payment is required for subsequent consultations.',
+        reason: eligibility.reason
+      });
+    }
+
+    // Security Check 3: Atomically mark user's free consultation as used to prevent parallel/race condition abuse
+    const claimedUser = await User.findOneAndUpdate(
+      { _id: userDoc._id, hasUsedFreeConsultation: { $ne: true } },
+      { $set: { hasUsedFreeConsultation: true } },
+      { new: true }
+    );
+
+    if (!claimedUser) {
+      return res.status(402).json({
+        error: 'Free initial consultation has already been claimed for this account. Payment is required.'
+      });
+    }
+
+    const isFirst = true;
+
+    // Get pricing using the dynamic system (returns 0 for 1st initial consultation)
+    const pricingData = await getDisplayedPrice('initial', req.ip, country, true);
+
+    const typeName = mapConsultationTypeId('initial');
 
     const appointment = await Appointment.create({
       patient: {
@@ -535,16 +655,16 @@ router.post('/appointments', requireAuth, async (req, res) => {
       date,
       timeSlot,
       type: typeName,
-      status: 'confirmed', // mark confirmed (payments mocked)
+      status: 'confirmed',
       price: {
-        amount: pricingData.finalInrToCharge, // Store INR amount to charge
-        currency: 'INR', // Always store in INR
-        symbol: '₹',
+        amount: 0,
+        currency: pricingData.display.currency || 'INR',
+        symbol: pricingData.display.currency === 'USD' ? '$' : '₹',
         region: country,
-        discountApplied: isFirst,
-        displayPrice: pricingData.display.value, // Display price in local currency
-        displayCurrency: pricingData.display.currency, // Display currency
-        tier: pricingData.tier, // Pricing tier used
+        discountApplied: true,
+        displayPrice: 0,
+        displayCurrency: pricingData.display.currency || 'INR',
+        tier: pricingData.tier,
       },
       meetLink: generateMeetLink(date, timeSlot),
       intake: intake ? {
@@ -554,7 +674,7 @@ router.post('/appointments', requireAuth, async (req, res) => {
       } : undefined,
     });
 
-    console.log('📋 Created appointment with ID:', appointment._id);
+    console.log('📋 Created FREE 1st initial consultation appointment with ID:', appointment._id);
     console.log('📋 Appointment intake saved:', appointment.intake);
     console.log('📋 Documents saved:', appointment.intake?.documents?.length || 0);
 
@@ -665,7 +785,7 @@ router.post('/appointments', requireAuth, async (req, res) => {
               <p><strong>Date:</strong> ${date}</p>
               <p><strong>Time:</strong> ${timeSlot}</p>
               <p><strong>Type:</strong> ${typeName}</p>
-              <p><strong>Amount:</strong> ${appointment.price.symbol}${appointment.price.amount} ${appointment.price.currency}${isFirst ? ' (First consultation discount applied!)' : ''}</p>
+              <p><strong>Amount:</strong> FREE (${appointment.price.symbol}0 ${appointment.price.currency} - 1st Initial Consultation Offer)</p>
             </div>
             
             <div class="info-box">
@@ -700,6 +820,23 @@ router.post('/appointments', requireAuth, async (req, res) => {
         'Booking Confirmed - NephroConsult',
         confirmationHtml
       );
+
+      // Also notify doctor about the new booking (best-effort)
+      try {
+        const doctorRecipient = (env.OWNER_EMAIL && env.OWNER_EMAIL.trim()) ? env.OWNER_EMAIL.trim() : 'suyambu54321@gmail.com';
+        const doctorHtml = `
+          <p>Dear Doctor,</p>
+          <p>A new consultation (1st Free Initial Consultation) has been booked.</p>
+          <p><strong>Patient:</strong> ${userDoc?.name || 'Unknown'} (${userDoc?.email || 'no-email'})<br/>
+          <strong>Phone:</strong> ${extractedPhone || userDoc?.phone || 'N/A'}<br/>
+          <strong>Date:</strong> ${date}<br/>
+          <strong>Time:</strong> ${timeSlot}<br/>
+          <strong>Type:</strong> ${typeName}<br/>
+          <strong>Amount:</strong> FREE (${appointment.price.symbol}0 ${appointment.price.currency} - 1st Initial Consultation)</p>
+          <p><a href="${appointment.meetLink}">Meet Link</a></p>
+        `;
+        await sendBookingEmail(doctorRecipient, 'New Consultation Booked - NephroConsult', doctorHtml);
+      } catch {}
     } catch (e) {
       // ignore
     }

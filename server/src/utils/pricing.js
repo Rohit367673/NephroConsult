@@ -150,9 +150,6 @@ export async function getDisplayedPrice(type, userIp, userCountryCode, isFirstTi
       throw new Error(`Unknown consultation type: ${type}`);
     }
 
-    // Apply first-time discount if applicable (Tier A/B only)
-    const discountedInr = isFirstTime ? Math.round(baseInr * (1 - FIRST_TIME_DISCOUNT)) : baseInr;
-
     // Determine display currency (INR for Tier A, USD for others, local currency for high-income)
     let displayCurrency = 'INR';
     if (tier === 'C' && HIGH_INCOME_COUNTRIES.has(country)) {
@@ -160,6 +157,26 @@ export async function getDisplayedPrice(type, userIp, userCountryCode, isFirstTi
     } else if (country !== 'IN') {
       displayCurrency = 'USD'; // Show USD for non-Indian visitors
     }
+
+    // Only the 1st Initial Consultation is FREE (0); Follow-up, Urgent, and 2nd+ Initial Consultations are paid at standard price
+    const isFreeInitial = Boolean(isFirstTime && type === 'initial');
+    if (isFreeInitial) {
+      return {
+        country,
+        tier,
+        baseInr,
+        discountedInr: 0,
+        finalInrToCharge: 0,
+        isFree: true,
+        display: {
+          currency: displayCurrency,
+          value: 0,
+          rawMultiplier: 0
+        }
+      };
+    }
+
+    const discountedInr = baseInr;
 
     // Get exchange rate for display currency
     const inrToDisplayRate = displayCurrency === 'INR' ? 1 : (rates.rates?.[displayCurrency] ?? inrToUsd);
@@ -189,6 +206,7 @@ export async function getDisplayedPrice(type, userIp, userCountryCode, isFirstTi
       baseInr,
       discountedInr,
       finalInrToCharge,
+      isFree: false,
       display: {
         currency: displayCurrency,
         value: Number(displayValue.toFixed(2)),
@@ -200,7 +218,8 @@ export async function getDisplayedPrice(type, userIp, userCountryCode, isFirstTi
     console.error('Error computing displayed price:', error);
     // Return fallback pricing
     const baseInr = BASE_PRICES[type] || 1000;
-    const discountedInr = isFirstTime ? Math.round(baseInr * (1 - FIRST_TIME_DISCOUNT)) : baseInr;
+    const isFreeInitial = Boolean(isFirstTime && type === 'initial');
+    const discountedInr = isFreeInitial ? 0 : baseInr;
 
     return {
       country: userCountryCode || 'IN',
@@ -208,10 +227,11 @@ export async function getDisplayedPrice(type, userIp, userCountryCode, isFirstTi
       baseInr,
       discountedInr,
       finalInrToCharge: discountedInr,
+      isFree: isFreeInitial,
       display: {
         currency: 'INR',
         value: discountedInr,
-        rawMultiplier: 1.0
+        rawMultiplier: isFreeInitial ? 0 : 1.0
       }
     };
   }
