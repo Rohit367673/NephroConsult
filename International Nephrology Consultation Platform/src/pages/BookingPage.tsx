@@ -296,8 +296,22 @@ function CalendarComponent({ selectedDate, onDateSelect, consultationType }: Cal
 export default function BookingPage() {
   // Get user context and enforce authentication
   const authContext = useContext(AuthContext);
-  const { user, logout, loading } = authContext || {};
+  const { user, logout, loading, updateUser } = authContext || {};
   const navigate = useNavigate();
+
+  // Synchronously determine initial free-consultation state so there is 0ms price-to-FREE flicker
+  const getInitialFreeEligibility = (u: any): boolean => {
+    if (!u) return true;
+    if (u.hasUsedFreeConsultation === true) return false;
+    if (u.email) {
+      try {
+        const cached = localStorage.getItem(`nephro_free_used_${String(u.email).toLowerCase().trim()}`);
+        if (cached === 'true') return false;
+        if (cached === 'false') return true;
+      } catch {}
+    }
+    return true;
+  };
   
   // All hooks must be declared at the top before any conditional logic
   const [step, setStep] = useState(1);
@@ -310,7 +324,7 @@ export default function BookingPage() {
   const [bookedAppointments, setBookedAppointments] = useState<Array<{ date: string, time: string, patientName: string }>>([]);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [isValidating, setIsValidating] = useState(false);
-  const [isFreeEligible, setIsFreeEligible] = useState(false);
+  const [isFreeEligible, setIsFreeEligible] = useState<boolean>(() => getInitialFreeEligibility(user));
   const countrySetRef = useRef(false);
   const [bookingData, setBookingData] = useState({
     consultationType: '',
@@ -575,23 +589,37 @@ export default function BookingPage() {
   // Check if user is eligible for 1st free initial consultation
   useEffect(() => {
     if (!user) {
-      setIsFreeEligible(false);
       return;
     }
+    // Immediately apply cached/user state without waiting for network
+    setIsFreeEligible(getInitialFreeEligibility(user));
+
     const checkEligibility = async () => {
       try {
-        const res = await fetch('/api/appointments/free-eligibility', {
+        const params = new URLSearchParams();
+        if (user.email) params.set('email', user.email);
+        if (user.id) params.set('userId', user.id);
+
+        const res = await fetch(`/api/appointments/free-eligibility?${params.toString()}`, {
           credentials: 'include'
         });
         if (res.ok) {
           const data = await res.json();
-          setIsFreeEligible(!!data.eligible);
-        } else {
-          setIsFreeEligible(false);
+          if (data.authenticated) {
+            const eligible = !!data.eligible;
+            setIsFreeEligible(eligible);
+            if (user.email) {
+              try {
+                localStorage.setItem(
+                  `nephro_free_used_${user.email.toLowerCase().trim()}`,
+                  eligible ? 'false' : 'true'
+                );
+              } catch {}
+            }
+          }
         }
       } catch (e) {
         console.warn('Failed to check free consultation eligibility:', e);
-        setIsFreeEligible(false);
       }
     };
     checkEligibility();
@@ -878,6 +906,10 @@ export default function BookingPage() {
       if (!response.ok) {
         if (response.status === 402) {
           setIsFreeEligible(false);
+          if (user?.email) {
+            try { localStorage.setItem(`nephro_free_used_${user.email.toLowerCase().trim()}`, 'true'); } catch {}
+          }
+          updateUser?.({ hasUsedFreeConsultation: true });
           toast.error(data.error || 'Your 1st free consultation has already been used. Please proceed with regular payment.');
           return;
         }
@@ -886,6 +918,10 @@ export default function BookingPage() {
 
       setIsFreeEligible(false);
       setPaymentCompleted(true);
+      if (user?.email) {
+        try { localStorage.setItem(`nephro_free_used_${user.email.toLowerCase().trim()}`, 'true'); } catch {}
+      }
+      updateUser?.({ hasUsedFreeConsultation: true });
       try {
         localStorage.removeItem('cashfree_booking_details');
         sessionStorage.removeItem('cashfree_payment_details');
@@ -1223,15 +1259,15 @@ export default function BookingPage() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="space-y-6"
+            className="space-y-5 sm:space-y-6"
           >
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Consultation Type</h2>
-              <p className="text-gray-600">Select the type of consultation that best fits your needs</p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4 max-w-2xl mx-auto">
-                <div className="flex items-center justify-center space-x-2">
-                  <MapPin className="h-4 h-4 text-blue-600" />
-                  <p className="text-sm font-medium text-blue-800">
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3">Choose Your Consultation Type</h2>
+              <p className="text-sm sm:text-base text-gray-600">Select the type of consultation that best fits your needs</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mt-4 max-w-2xl mx-auto">
+                <div className="flex items-center justify-center gap-2">
+                  <MapPin className="h-4 w-4 text-blue-600 shrink-0" style={{ minWidth: '16px', minHeight: '16px' }} />
+                  <p className="text-xs sm:text-sm font-medium text-blue-800 leading-relaxed">
                     Your Location: {userCountry} • Doctor Location: India (IST) • Regular: 6-10 PM IST • Urgent: 10 AM-10 PM IST
                   </p>
                 </div>
@@ -1242,14 +1278,14 @@ export default function BookingPage() {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid gap-6"
+              className="grid gap-4 sm:gap-6"
             >
               {consultationTypes.map((type) => {
                 const IconComponent = type.icon;
                 return (
-                  <motion.div key={type.id} variants={itemVariants}>
+                  <motion.div key={type.id} variants={itemVariants} className="w-full min-w-0">
                     <Card
-                      className={`cursor-pointer border-2 transition-all duration-200 hover:shadow-lg ${
+                      className={`w-full overflow-hidden cursor-pointer border-2 transition-all duration-200 hover:shadow-lg ${
                         bookingData.consultationType === type.id
                           ? 'border-[#006f6f] bg-[#006f6f]/5 shadow-lg'
                           : 'border-gray-200 hover:border-[#006f6f]/50'
@@ -1261,57 +1297,89 @@ export default function BookingPage() {
                         istTime: '' // Clear IST time as well
                       }))}
                     >
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-4">
-                            <div className={`p-3 rounded-lg ${
-                              bookingData.consultationType === type.id 
-                                ? 'bg-[#006f6f] text-white' 
-                                : 'bg-[#006f6f]/10 text-[#006f6f]'
-                            }`}>
-                              <IconComponent className="w-6 h-6" />
+                      <CardContent className="p-4 sm:p-6">
+                        {/* Top Header Row: Icon + Title + Badges on left, Price on right */}
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-start gap-3 min-w-0 flex-1">
+                            <div
+                              className={`p-3 rounded-xl shrink-0 ${
+                                bookingData.consultationType === type.id
+                                  ? 'bg-[#006f6f] text-white'
+                                  : 'bg-[#006f6f]/10 text-[#006f6f]'
+                              }`}
+                            >
+                              <IconComponent className="w-5 h-5 sm:w-6 sm:h-6" />
                             </div>
-                            <div className="flex-1">
-                              <div className="flex items-center flex-wrap gap-2 mb-2">
-                                <h3 className="text-xl font-semibold text-gray-900">{type.name}</h3>
-                                <Badge variant="outline">{type.duration}</Badge>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
+                                {type.name}
+                              </h3>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                <Badge variant="outline" className="text-xs px-2 py-0.5">
+                                  {type.duration}
+                                </Badge>
                                 {(type as any).isFree && (
-                                  <Badge className="bg-green-600 hover:bg-green-700 text-white border-0">
+                                  <span
+                                    style={{
+                                      backgroundColor: '#dcfce7',
+                                      color: '#15803d',
+                                      borderColor: '#86efac',
+                                    }}
+                                    className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border"
+                                  >
                                     🎁 1st Consultation FREE
-                                  </Badge>
+                                  </span>
                                 )}
                               </div>
-                              <p className="text-gray-600 mb-4">{type.description}</p>
-                              <div className="grid grid-cols-2 gap-2">
-                                {type.features.map((feature, index) => (
-                                  <div key={index} className="flex items-center space-x-2">
-                                    <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                    <span className="text-sm text-gray-600">{feature}</span>
-                                  </div>
-                                ))}
-                              </div>
                             </div>
                           </div>
-                          <div className="text-right">
+
+                          <div className="text-right shrink-0 pl-2">
                             {(type as any).isFree ? (
-                              <>
-                                <div className="text-sm text-gray-400 line-through">
+                              <div>
+                                <div className="text-xs sm:text-sm text-gray-400 line-through font-medium">
                                   {pricing.symbol}{(type as any).originalPrice}
                                 </div>
-                                <div className="text-2xl font-bold text-green-600">
+                                <div
+                                  style={{ color: '#16a34a' }}
+                                  className="text-xl sm:text-2xl font-bold leading-tight"
+                                >
                                   FREE
                                 </div>
-                                <p className="text-xs text-green-700 font-medium">1st Visit Offer</p>
-                              </>
+                                <p
+                                  style={{ color: '#15803d' }}
+                                  className="text-xs font-semibold mt-0.5"
+                                >
+                                  1st Visit Offer
+                                </p>
+                              </div>
                             ) : (
-                              <>
-                                <div className="text-2xl font-bold text-[#006f6f]">
+                              <div>
+                                <div className="text-xl sm:text-2xl font-bold text-[#006f6f] leading-tight">
                                   {pricing.symbol}{type.price}
                                 </div>
-                                <p className="text-sm text-gray-500">{pricing.currency}</p>
-                              </>
+                                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{pricing.currency}</p>
+                              </div>
                             )}
                           </div>
+                        </div>
+
+                        {/* Full-width Description */}
+                        <p className="text-sm sm:text-base text-gray-600 mb-4 leading-relaxed">
+                          {type.description}
+                        </p>
+
+                        {/* Full-width Features Grid (1 column on mobile, 2 columns on sm+) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-4 border-t border-gray-200">
+                          {type.features.map((feature, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <CheckCircle2
+                                className="w-4 h-4 text-green-600 shrink-0"
+                                style={{ minWidth: '16px', minHeight: '16px' }}
+                              />
+                              <span className="text-xs sm:text-sm text-gray-700 leading-tight">{feature}</span>
+                            </div>
+                          ))}
                         </div>
                       </CardContent>
                     </Card>
@@ -1858,16 +1926,18 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white overflow-x-hidden">
       <Navigation />
-      <div className="container mx-auto px-4 py-6 md:py-12 max-w-6xl">
+      {/* Spacer for fixed top navigation bar so progress steps are never covered on mobile */}
+      <div className="h-16 md:h-20 shrink-0" />
+      <div className="container mx-auto px-3 sm:px-4 py-6 md:py-10 max-w-5xl">
         {/* Progress Steps */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex justify-center mb-8 md:mb-12 overflow-x-auto"
+          className="flex justify-center mb-6 md:mb-10 overflow-x-auto"
         >
-          <div className="flex items-center space-x-2 md:space-x-8 min-w-max px-4">
+          <div className="flex items-center space-x-2 md:space-x-8 min-w-max px-2 sm:px-4">
             {[1, 2, 3, 4].map((s) => (
               <div key={s} className="flex items-center">
                 <motion.div
@@ -1892,7 +1962,7 @@ export default function BookingPage() {
         </motion.div>
 
         {/* Step Content */}
-        <div className="max-w-4xl mx-auto px-2">
+        <div className="max-w-4xl mx-auto px-1 sm:px-2">
           {renderStep()}
 
           {/* Navigation Buttons */}

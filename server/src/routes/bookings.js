@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { requireAuth, requireRole } from '../middlewares/auth.js';
 import Appointment from '../models/Appointment.js';
 import User from '../models/User.js';
@@ -16,14 +17,16 @@ const router = express.Router();
 // Server-side helper to securely verify if a user is eligible for their 1st FREE Initial Consultation
 export async function checkFreeConsultationEligibility({ userId, email, phone }) {
   try {
-    if (userId) {
-      const userDoc = await User.findById(userId).lean();
+    const validObjectId = userId && mongoose.Types.ObjectId.isValid(String(userId)) ? String(userId) : null;
+
+    if (validObjectId) {
+      const userDoc = await User.findById(validObjectId).lean();
       if (userDoc?.hasUsedFreeConsultation) {
         return { eligible: false, reason: 'User has already used their free initial consultation' };
       }
     }
     if (email) {
-      const normalizedEmail = email.toLowerCase().trim();
+      const normalizedEmail = String(email).toLowerCase().trim();
       const userByEmail = await User.findOne({ email: normalizedEmail }).lean();
       if (userByEmail?.hasUsedFreeConsultation) {
         return { eligible: false, reason: 'Email has already used their free initial consultation' };
@@ -31,10 +34,10 @@ export async function checkFreeConsultationEligibility({ userId, email, phone })
     }
 
     const orConditions = [];
-    if (userId) orConditions.push({ 'patient.id': userId });
-    if (email) orConditions.push({ 'patient.email': email.toLowerCase().trim() });
-    if (phone && phone.trim().length >= 10) {
-      const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    if (validObjectId) orConditions.push({ 'patient.id': validObjectId });
+    if (email) orConditions.push({ 'patient.email': String(email).toLowerCase().trim() });
+    if (phone && String(phone).trim().length >= 10) {
+      const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
       if (cleanPhone.length === 10) {
         orConditions.push({ 'patient.phone': new RegExp(cleanPhone + '$') });
       }
@@ -50,8 +53,13 @@ export async function checkFreeConsultationEligibility({ userId, email, phone })
     });
 
     if (existingCount > 0) {
-      if (userId) {
-        await User.findByIdAndUpdate(userId, { $set: { hasUsedFreeConsultation: true } }).catch(() => {});
+      if (validObjectId) {
+        await User.findByIdAndUpdate(validObjectId, { $set: { hasUsedFreeConsultation: true } }).catch(() => {});
+      } else if (email) {
+        await User.findOneAndUpdate(
+          { email: String(email).toLowerCase().trim() },
+          { $set: { hasUsedFreeConsultation: true } }
+        ).catch(() => {});
       }
       return { eligible: false, reason: 'User already has prior consultations' };
     }
@@ -66,12 +74,15 @@ export async function checkFreeConsultationEligibility({ userId, email, phone })
 // Check if current logged-in user is eligible for the 1st free Initial Consultation
 router.get('/appointments/free-eligibility', async (req, res) => {
   try {
-    if (!req.session?.user?.id && !req.session?.user?.email) {
+    const resolvedUserId = req.session?.user?.id || (req.query.userId ? String(req.query.userId) : undefined);
+    const resolvedEmail = req.session?.user?.email || (req.query.email ? String(req.query.email) : undefined);
+
+    if (!resolvedUserId && !resolvedEmail) {
       return res.json({ eligible: false, authenticated: false });
     }
     const result = await checkFreeConsultationEligibility({
-      userId: req.session.user.id,
-      email: req.session.user.email,
+      userId: resolvedUserId,
+      email: resolvedEmail,
       phone: req.query.phone ? String(req.query.phone) : undefined
     });
     return res.json({
@@ -272,7 +283,11 @@ router.get('/appointments/mine', requireAuth, async (req, res) => {
       q = {};
     } else {
       // Show appointments linked by id; also fallback to email if id wasn't set during creation
-      q = { $or: [ { 'patient.id': sessionUser.id }, { 'patient.email': sessionUser.email } ] };
+      const validObjId = sessionUser.id && mongoose.Types.ObjectId.isValid(String(sessionUser.id)) ? String(sessionUser.id) : null;
+      const orConds = [];
+      if (validObjId) orConds.push({ 'patient.id': validObjId });
+      if (sessionUser.email) orConds.push({ 'patient.email': sessionUser.email.toLowerCase().trim() });
+      q = orConds.length > 0 ? { $or: orConds } : { 'patient.email': '__none__' };
     }
     const list = await Appointment.find(q).sort({ createdAt: -1 }).limit(100).lean();
     return res.json({ appointments: list });
@@ -525,9 +540,27 @@ router.patch('/appointments/:id/status', requireRole('doctor', 'admin'), async (
 router.post('/appointments', requireAuth, async (req, res) => {
   try {
     console.log('📋 Appointment creation request received');
-    console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
-    console.log('📋 Intake data:', req.body.intake);
-    console.log('📋 Documents in request:', req.body.intake?.documents?.length || 0);
+
+    // Normalize both frontend payload shapes into the canonical schema format
+    const rawBody = req.body || {};
+    const normalizedBody = {
+      ...rawBody,
+      timeSlot: rawBody.timeSlot || rawBody.istTime || rawBody.time,
+      typeId: rawBody.typeId || rawBody.type || rawBody.consultationType,
+      patientPhone: rawBody.patientPhone || rawBody.patientInfo?.phone || rawBody.intake?.patientPhone || rawBody.intake?.patientInfo?.phone,
+      patientCountry: rawBody.patientCountry || rawBody.country,
+      intake: rawBody.intake || (rawBody.patientInfo || rawBody.documents ? {
+        address: rawBody.patientInfo?.currentMedications || '',
+        description: rawBody.patientInfo?.medicalHistory || '',
+        documents: Array.isArray(rawBody.documents) ? rawBody.documents : [],
+        patientPhone: rawBody.patientInfo?.phone,
+        patientInfo: rawBody.patientInfo ? {
+          phone: rawBody.patientInfo.phone,
+          medicalHistory: rawBody.patientInfo.medicalHistory,
+          currentMedications: rawBody.patientInfo.currentMedications,
+        } : undefined
+      } : undefined)
+    };
     
     const schema = z.object({
       date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -551,7 +584,7 @@ router.post('/appointments', requireAuth, async (req, res) => {
         })
         .optional(),
     });
-    const parsed = schema.safeParse(req.body);
+    const parsed = schema.safeParse(normalizedBody);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
     const { date, timeSlot, typeId, paymentMethod = 'card', intake, patientPhone, patientCountry } = parsed.data;
     
@@ -566,9 +599,15 @@ router.post('/appointments', requireAuth, async (req, res) => {
     if (existing) return res.status(409).json({ error: 'Time slot already booked' });
 
     // Daily appointment limit check (max 2 appointments per day per user)
+    const sessionUserId = req.session.user.id;
+    const validSessionObjId = sessionUserId && mongoose.Types.ObjectId.isValid(String(sessionUserId)) ? String(sessionUserId) : null;
+
     const userTodayAppointments = await Appointment.countDocuments({
       date,
-      'patient.id': req.session.user.id,
+      $or: [
+        ...(validSessionObjId ? [{ 'patient.id': validSessionObjId }] : []),
+        ...(req.session.user.email ? [{ 'patient.email': req.session.user.email.toLowerCase() }] : [])
+      ],
       status: { $ne: 'cancelled' }
     });
     if (userTodayAppointments >= 2) {
@@ -580,10 +619,13 @@ router.post('/appointments', requireAuth, async (req, res) => {
     if (extractedPhone && extractedPhone.trim()) updateData.phone = extractedPhone.trim();
     if (patientCountry) updateData.country = patientCountry;
     
-    let userDoc = await User.findById(req.session.user.id);
-    if (Object.keys(updateData).length > 0) {
+    let userDoc = validSessionObjId
+      ? await User.findById(validSessionObjId)
+      : await User.findOne({ email: (req.session.user.email || '').toLowerCase() });
+
+    if (userDoc && Object.keys(updateData).length > 0) {
       userDoc = await User.findByIdAndUpdate(
-        req.session.user.id,
+        userDoc._id,
         updateData,
         { new: true }
       );

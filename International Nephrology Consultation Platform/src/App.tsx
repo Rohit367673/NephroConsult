@@ -796,6 +796,29 @@ function HomePage() {
   const userCountry = user?.country || getUserCountry();
   const pricing = regionalPricing[userCountry] || regionalPricing.default;
 
+  const hasUsedFree = Boolean(
+    user?.hasUsedFreeConsultation ||
+    (user?.email && (() => {
+      try {
+        return localStorage.getItem(`nephro_free_used_${user.email.toLowerCase()}`) === 'true';
+      } catch {
+        return false;
+      }
+    })())
+  );
+  const showFreeOffer = !hasUsedFree;
+
+  const handleBookConsultationClick = () => {
+    if (!user) {
+      try {
+        sessionStorage.setItem('redirect_after_login', '/booking');
+      } catch {}
+      setIsLoginOpen(true);
+    } else {
+      navigate('/booking');
+    }
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('action') === 'login' || (location.state as any)?.showLogin) {
@@ -982,6 +1005,29 @@ function HomePage() {
               and 24/7 support.</span>
             </motion.p>
             
+            {/* Free 1st Consultation Offer Banner */}
+            {showFreeOffer && (
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.8, duration: 0.5 }}
+                className="mb-5 sm:mb-6 px-3"
+              >
+                <div
+                  onClick={handleBookConsultationClick}
+                  style={{
+                    backgroundColor: '#f0fdf4',
+                    borderColor: '#86efac',
+                    color: '#166534'
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border shadow-sm cursor-pointer hover:shadow-md transition-all text-xs sm:text-sm md:text-base font-semibold"
+                >
+                  <span>🎁</span>
+                  <span>Special Offer: Your 1st Initial Consultation is 100% FREE!</span>
+                </div>
+              </motion.div>
+            )}
+
             {/* Enhanced CTA buttons */}
             <motion.div 
               initial={{ y: 40, opacity: 0 }}
@@ -998,18 +1044,20 @@ function HomePage() {
                 <Button
                   size="lg"
                   className="relative w-full sm:w-auto px-5 sm:px-7 md:px-10 py-4 sm:py-5 md:py-6 bg-gradient-to-r from-[#006f6f] to-[#004f4f] hover:from-[#005555] hover:to-[#003f3f] text-white border-0 rounded-xl shadow-xl text-[13px] sm:text-sm md:text-base lg:text-lg min-h-[48px] sm:min-h-[52px]"
-                  onClick={() => {
-                    if (!user) {
-                      setIsLoginOpen(true);
-                    } else {
-                      navigate('/booking');
-                    }
-                  }}
+                  onClick={handleBookConsultationClick}
                 >
                   <Calendar className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 flex-shrink-0" />
                   <span className="font-semibold">
-                    <span className="hidden sm:inline">Book Consultation</span>
-                    <span className="sm:hidden">Book Now</span>
+                    {showFreeOffer ? (
+                      <>
+                        <span>Book Your 1st Appointment Free</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="hidden sm:inline">Book Consultation</span>
+                        <span className="sm:hidden">Book Now</span>
+                      </>
+                    )}
                   </span>
                   <motion.div
                     className="absolute inset-0 bg-white/20 rounded-xl"
@@ -1645,10 +1693,10 @@ function HomePage() {
               <Button
                 size="lg"
                 className="w-full sm:w-auto bg-gradient-to-r from-[#006f6f] to-[#004f4f] hover:from-[#005555] hover:to-[#003f3f] text-white px-5 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 text-[13px] sm:text-sm md:text-base min-h-[48px]"
-                onClick={() => window.location.href = '/booking'}
+                onClick={handleBookConsultationClick}
               >
                 <Calendar className="w-4 h-4 md:w-5 md:h-5 mr-2 flex-shrink-0" />
-                Book Your Consultation
+                {showFreeOffer ? 'Book Your 1st Appointment Free' : 'Book Your Consultation'}
                 <ArrowRight className="w-4 h-4 md:w-5 md:h-5 ml-2 flex-shrink-0" />
               </Button>
             </div>
@@ -1775,17 +1823,17 @@ function HomePage() {
                 <Button
                   size="lg"
                   className="relative w-full sm:w-auto px-6 sm:px-8 md:px-12 py-4 sm:py-5 md:py-6 bg-gradient-to-r from-[#006f6f] to-[#004f4f] hover:from-[#005555] hover:to-[#003f3f] text-white border-0 rounded-xl sm:rounded-2xl shadow-2xl text-[13px] sm:text-sm md:text-base lg:text-lg font-semibold min-h-[48px] sm:min-h-[52px]"
-                  onClick={() => {
-                    if (!user) {
-                      setIsLoginOpen(true);
-                    } else {
-                      navigate('/booking');
-                    }
-                  }}
+                  onClick={handleBookConsultationClick}
                 >
                   <Calendar className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 flex-shrink-0" />
-                  <span className="hidden sm:inline">Book Consultation Now</span>
-                  <span className="sm:hidden">Book Now</span>
+                  {showFreeOffer ? (
+                    <span>Book Your 1st Appointment Free</span>
+                  ) : (
+                    <>
+                      <span className="hidden sm:inline">Book Consultation Now</span>
+                      <span className="sm:hidden">Book Now</span>
+                    </>
+                  )}
                   <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 ml-2 flex-shrink-0" />
                 </Button>
               </motion.div>

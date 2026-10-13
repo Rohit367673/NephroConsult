@@ -13,6 +13,7 @@ export interface User {
   country?: string;
   phone?: string;
   avatar?: string;
+  hasUsedFreeConsultation?: boolean;
 }
 
 interface AuthContextType {
@@ -191,7 +192,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 email: data.user.email || firebaseUser.email || '',
                 role: data.user.role || 'patient',
                 avatar: data.user.photoURL || firebaseUser.photoURL || '',
-                country: getUserCountry()
+                country: getUserCountry(),
+                hasUsedFreeConsultation: !!data.user.hasUsedFreeConsultation
               };
               setUser(backendUser);
               setCookie('nephro_user', encodeURIComponent(JSON.stringify(backendUser)), 7);
@@ -305,7 +307,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
                       email: data.user.email || redirectResult.user.email || '',
                       role: data.user.role || 'patient',
                       avatar: data.user.photoURL || redirectResult.user.photoURL || '',
-                      country: getUserCountry()
+                      country: getUserCountry(),
+                      hasUsedFreeConsultation: !!data.user.hasUsedFreeConsultation
                     };
                     setUser(backendUser);
                     setCookie('nephro_user', encodeURIComponent(JSON.stringify(backendUser)), 7);
@@ -383,9 +386,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     setCookie('nephro_user', encodeURIComponent(JSON.stringify(backendUser)), 7);
                   }
                 } else {
-                  console.log('Session verification failed or session destroyed on backend. Response:', response);
-                  setUser(null);
-                  deleteCookie('nephro_user');
+                  console.log('Backend session not active; keeping valid cookie user on mobile/Safari:', userData.email);
                 }
               } catch (error) {
                 console.error('Error verifying session with backend:', error);

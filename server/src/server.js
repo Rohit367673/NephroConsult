@@ -157,6 +157,8 @@ if (isProd) {
   app.use(verifyOrigin);
 }
 
+import User from './models/User.js';
+
 // Trust proxy for dev preview proxies and production reverse proxies
 app.set('trust proxy', 1);
 
@@ -169,10 +171,9 @@ const sessionConfig = {
   proxy: true, // Always trust proxy since we're behind Render
   cookie: {
     httpOnly: true,
-    sameSite: isProd ? 'none' : 'lax',
+    sameSite: 'lax',
     secure: isProd,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    domain: isProd ? '.nephroconsultation.com' : undefined, // Set domain for cross-subdomain cookies in production
   },
 };
 
@@ -189,6 +190,61 @@ if (env.MONGO_URI && didConnectDb) {
 
 app.use(session(sessionConfig));
 
+// Hydrate session from first-party `nephro_user` cookie when iOS Safari / mobile ITP drops `nephro.sid`
+app.use(async (req, res, next) => {
+  try {
+    if (!req.session?.user && req.headers?.cookie && dbReady) {
+      const match = req.headers.cookie
+        .split(';')
+        .map((c) => c.trim())
+        .find((c) => c.startsWith('nephro_user='));
+      if (match) {
+        const rawVal = match.substring('nephro_user='.length);
+        let parsedUser = null;
+        try {
+          parsedUser = JSON.parse(decodeURIComponent(rawVal));
+        } catch {
+          try {
+            parsedUser = JSON.parse(decodeURIComponent(decodeURIComponent(rawVal)));
+          } catch {}
+        }
+        if (parsedUser && parsedUser.email && typeof parsedUser.email === 'string') {
+          const normalizedEmail = parsedUser.email.toLowerCase().trim();
+          let userDoc = await User.findOne({ email: normalizedEmail });
+          if (!userDoc && parsedUser.name) {
+            const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
+            userDoc = await User.create({
+              name: String(parsedUser.name).trim(),
+              email: normalizedEmail,
+              role: adminEmails.includes(normalizedEmail) ? 'admin' : 'patient',
+              isEmailVerified: true,
+              authProvider: 'google',
+            });
+          }
+          if (userDoc && req.session) {
+            const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
+            const sessionRole = userDoc.email === 'suyambu54321@gmail.com'
+              ? 'doctor'
+              : adminEmails.includes(userDoc.email)
+              ? 'admin'
+              : userDoc.role || 'patient';
+            req.session.user = {
+              id: String(userDoc._id),
+              email: userDoc.email,
+              name: userDoc.name,
+              role: sessionRole,
+              photoURL: userDoc.photoURL,
+            };
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Session cookie hydration warning:', err?.message);
+  }
+  next();
+});
+
 // Debug session middleware
 app.use((req, res, next) => {
   console.log('📋 SESSION DEBUG:', {
@@ -202,26 +258,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Adjust cookie settings per-request based on host so cookies work on Render and custom domains
+// Adjust cookie settings per-request based on host so cookies work on Render, Vercel proxy, and iOS Safari
 app.use((req, res, next) => {
   try {
     if (req.session && req.session.cookie) {
-      const host = String(req.headers?.host || '').toLowerCase();
-      const originHost = (() => {
-        try {
-          if (req.headers?.origin) return new URL(req.headers.origin).hostname.toLowerCase();
-          if (req.headers?.referer) return new URL(req.headers.referer).hostname.toLowerCase();
-        } catch {}
-        return '';
-      })();
-      const underNephro = /(^|\.)nephroconsultation\.com$/.test(host) || /(^|\.)nephroconsultation\.com$/.test(originHost);
-      // Ensure secure/SameSite are enforced in prod
-      req.session.cookie.sameSite = isProd ? 'none' : 'lax';
+      req.session.cookie.sameSite = 'lax';
       req.session.cookie.secure = isProd;
-      // Ensure session cookie works across apex and www in production
-      if (isProd && underNephro) {
-        req.session.cookie.domain = '.nephroconsultation.com';
-      }
     }
   } catch (_) {
     // noop

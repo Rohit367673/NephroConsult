@@ -109,6 +109,9 @@ export default function ProfilePage() {
   // Bug 14 fix: Use actual DB currency/amount; only override if currency is genuinely missing
   const getCorrectCurrency = (appointment: any) => {
     const price = appointment.price;
+    if (price?.amount === 0 || price?.discountApplied) {
+      return 'FREE';
+    }
     // If DB has a valid non-zero amount and a currency symbol, trust it
     if (price?.symbol && price?.amount && price?.currency) {
       return `${price.symbol}${price.amount}`;
@@ -116,11 +119,11 @@ export default function ProfilePage() {
     // Fallback: derive from user country
     const userCountry = user?.country || 'US';
     if (userCountry === 'IN' || userCountry === 'India') {
-      return `₹${price?.amount || 2500}`;
+      return `₹${price?.amount ?? 2500}`;
     }
-    if (userCountry === 'GB') return `£${price?.amount || 90}`;
-    if (userCountry === 'AU') return `A$${price?.amount || 130}`;
-    return `$${price?.amount || 120}`;
+    if (userCountry === 'GB') return `£${price?.amount ?? 90}`;
+    if (userCountry === 'AU') return `A$${price?.amount ?? 130}`;
+    return `$${price?.amount ?? 120}`;
   };
 
   // Show loading state while user data is being loaded
