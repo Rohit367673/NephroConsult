@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { User, Mail, Phone, MapPin, Calendar, Clock, FileText, Heart, Shield, Edit3, Save, Camera, Star, Award, Bell, Video, Upload, Activity, TrendingUp, CheckCircle2, Menu, X, LogOut, CreditCard, Download, Eye, ExternalLink, AlertCircle, Plus, MessageSquare } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Clock, FileText, Heart, Shield, Edit3, Save, Camera, Star, Award, Bell, Video, Upload, Activity, TrendingUp, CheckCircle2, Menu, X, LogOut, CreditCard, Download, Eye, ExternalLink, AlertCircle, Plus, MessageSquare, Sparkles, Stethoscope, ArrowRight, Check, Droplets } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -392,53 +392,77 @@ For support: suyambu54321@gmail.com
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#f8fafc] text-gray-900 overflow-x-hidden">
       <Navigation />
-      <div className="container-medical pt-8 sm:pt-12 pb-28 sm:pb-12 px-3 sm:px-0">
+      <div className="max-w-7xl mx-auto pt-24 sm:pt-28 pb-20 px-3 sm:px-6">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="max-w-6xl mx-auto"
+          className="space-y-8"
         >
           {/* Header */}
-          <motion.div variants={itemVariants} className="mb-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">My Profile</h1>
-                <p className="text-gray-600">Manage your personal information and medical details</p>
+          <motion.div variants={itemVariants}>
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#006f6f] via-[#005a5a] to-[#004242] p-6 sm:p-8 text-white shadow-xl border border-teal-800/30">
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-teal-100 text-xs font-semibold uppercase tracking-wider mb-3">
+                    <Sparkles className="w-3.5 h-3.5 text-teal-300" />
+                    Patient Portal • Dr. Ilango S. Prakasam (Senior Nephrologist)
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
+                    Welcome back, {profileData.name || user?.name || 'Patient'} 👋
+                  </h1>
+                  <p className="mt-1.5 text-teal-100/90 text-sm sm:text-base max-w-2xl leading-relaxed">
+                    Manage your kidney consultations, review clinical prescriptions, and chat directly with Dr. Ilango S. Prakasam.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    onClick={() => navigate('/booking')}
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-950/20 rounded-xl px-5 py-2.5 h-auto text-sm transition-all transform hover:-translate-y-0.5"
+                  >
+                    <Plus className="w-4 h-4 mr-1.5" />
+                    Book Consultation
+                  </Button>
+                  <Button
+                    onClick={isEditing ? handleSave : () => setIsEditing(true)}
+                    variant="outline"
+                    className="bg-white/10 hover:bg-white/20 text-white border-white/30 backdrop-blur-md rounded-xl px-4 py-2.5 h-auto text-sm font-semibold transition-all"
+                  >
+                    {isEditing ? (
+                      <>
+                        <Save className="w-4 h-4 mr-1.5" />
+                        Save Profile
+                      </>
+                    ) : (
+                      <>
+                        <Edit3 className="w-4 h-4 mr-1.5" />
+                        Edit Profile
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-              <div className="mt-4 md:mt-0">
-                <Button
-                  onClick={isEditing ? handleSave : () => setIsEditing(true)}
-                  className="px-6 py-3 bg-[#006f6f] hover:bg-[#005555]"
-                >
-                  {isEditing ? (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Changes
-                    </>
-                  ) : (
-                    <>
-                      <Edit3 className="w-4 h-4 mr-2" />
-                      Edit Profile
-                    </>
-                  )}
-                </Button>
-              </div>
+
+              {/* Ambient background circles */}
+              <div className="absolute -right-16 -bottom-16 w-64 h-64 rounded-full bg-white/5 pointer-events-none blur-xl" />
+              <div className="absolute right-36 -top-16 w-52 h-52 rounded-full bg-teal-400/10 pointer-events-none blur-lg" />
             </div>
           </motion.div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Profile Overview Card */}
-            <motion.div variants={itemVariants} className="lg:col-span-1">
-              <Card>
-                <CardContent className="p-8 text-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Left Column: Profile Card & Quick Info */}
+            <motion.div variants={itemVariants} className="lg:col-span-4 space-y-6">
+              {/* Profile Overview Card */}
+              <Card className="rounded-3xl border border-gray-200/90 shadow-md bg-white overflow-hidden">
+                <CardContent className="p-6 sm:p-8 text-center">
                   <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    className="relative mb-6"
+                    whileHover={{ scale: 1.03 }}
+                    className="relative mb-5 inline-block"
                   >
-                    <div className="w-32 h-32 rounded-full mx-auto overflow-hidden bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center relative">
+                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full mx-auto overflow-hidden bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center relative shadow-lg ring-4 ring-teal-50">
                       {((user as any)?.photoURL || user?.avatar) && ((user as any)?.photoURL?.trim() !== '' || user?.avatar?.trim() !== '') ? (
                         <>
                           <img 
@@ -449,22 +473,17 @@ For support: suyambu54321@gmail.com
                             referrerPolicy="no-referrer"
                             onLoad={(e) => {
                               console.log('Profile image loaded successfully:', user?.avatar);
-                              // Hide fallback when image loads
                               const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                               if (fallback) fallback.style.display = 'none';
                             }}
                             onError={(e) => {
                               console.log('Profile image failed to load, trying fallback methods');
-                              
-                              // Try alternative Google image URL
                               const currentSrc = e.currentTarget.src;
                               if (currentSrc.includes('googleusercontent.com') && !currentSrc.includes('proxy')) {
                                 const newSrc = `https://images.weserv.nl/?url=${encodeURIComponent(currentSrc)}&w=300&h=300&fit=cover&mask=circle`;
                                 e.currentTarget.src = newSrc;
                                 return;
                               }
-                              
-                              // If all methods fail, hide image and show fallback
                               e.currentTarget.style.display = 'none';
                               const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                               if (fallback) fallback.style.display = 'flex';
@@ -474,161 +493,188 @@ For support: suyambu54321@gmail.com
                             className="w-full h-full bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center absolute inset-0"
                             style={{ display: 'flex' }}
                           >
-                            <span className="text-white text-4xl font-bold">
+                            <span className="text-white text-3xl sm:text-4xl font-extrabold">
                               {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                             </span>
                           </div>
                         </>
                       ) : (
-                        <span className="text-white text-4xl font-bold">
+                        <span className="text-white text-3xl sm:text-4xl font-extrabold">
                           {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                         </span>
                       )}
                     </div>
-                    <button className="absolute bottom-0 right-1/4 bg-white rounded-full p-2 shadow-lg hover:shadow-xl transition-shadow">
-                      <Camera className="w-5 h-5 text-[#006f6f]" />
+                    <button 
+                      onClick={() => toast.info('Profile picture is synced from your Google account')}
+                      className="absolute bottom-0 right-1 bg-white rounded-full p-2 shadow-md hover:shadow-lg border border-gray-100 transition-all text-[#006f6f]"
+                      title="Update avatar"
+                    >
+                      <Camera className="w-4 h-4" />
                     </button>
                   </motion.div>
 
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">{profileData.name}</h2>
-                  <p className="text-gray-600 mb-4">{profileData.email}</p>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{profileData.name || 'Nephrology Patient'}</h2>
+                  <p className="text-sm text-gray-500 mb-4 truncate">{profileData.email}</p>
 
-                  <div className="space-y-3 mb-6">
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
-                      <Shield className="w-4 h-4 mr-1" />
+                  <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+                    <Badge variant="secondary" className="bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-3 py-1 font-semibold text-xs">
+                      <Shield className="w-3.5 h-3.5 mr-1 text-emerald-600" />
                       Verified Patient
                     </Badge>
-                    <div className="flex items-center justify-center space-x-2">
-                      <Star className="w-5 h-5 text-yellow-500" />
-                      <span className="font-medium text-gray-900">4.8 Patient Rating</span>
-                    </div>
+                    {profileData.bloodType && (
+                      <Badge variant="outline" className="border-gray-200 bg-gray-50 text-gray-700 text-xs">
+                        <Droplets className="w-3 h-3 mr-1 text-red-500" />
+                        {profileData.bloodType}
+                      </Badge>
+                    )}
+                    {profileData.country && (
+                      <Badge variant="outline" className="border-gray-200 bg-gray-50 text-gray-700 text-xs">
+                        <MapPin className="w-3 h-3 mr-1 text-teal-600" />
+                        {profileData.country}
+                      </Badge>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 text-center">
-                    <div>
-                      <div className="text-2xl font-bold text-[#006f6f]">{appointments.length}</div>
-                      <div className="text-sm text-gray-600">Consultations</div>
+                  {/* Consultation Counters */}
+                  <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 text-center">
+                    <div className="p-2">
+                      <div className="text-2xl font-extrabold text-[#006f6f]">{appointments.length}</div>
+                      <div className="text-xs font-medium text-gray-600 mt-0.5">Video Visits</div>
                     </div>
-                    <div>
-                      <div className="text-2xl font-bold text-[#006f6f]">
-                        {appointments.length > 0 
-                          ? Math.max(1, Math.floor((new Date().getTime() - new Date(appointments[0]?.createdAt || appointments[0]?.date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)))
-                          : 0
-                        }
-                      </div>
-                      <div className="text-sm text-gray-600">Years Active</div>
+                    <div className="p-2 border-l border-slate-200">
+                      <div className="text-2xl font-extrabold text-[#006f6f]">{doctorChats.length}</div>
+                      <div className="text-xs font-medium text-gray-600 mt-0.5">Doctor Chats</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Quick Stats */}
-              <motion.div variants={itemVariants} className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Award className="w-5 h-5 mr-2 text-[#006f6f]" />
-                      Health Journey
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Last Checkup</span>
-                      <span className="font-medium">{lastCheckupLabel}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Next Appointment</span>
-                      <span className="font-medium text-[#006f6f]">{nextAppointmentLabel}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Health Score</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-20 h-2 bg-gray-200 rounded-full">
-                          <div className={`${barW} h-2 ${barColor} rounded-full`}></div>
-                        </div>
-                        <span className={`font-medium ${color}`}>{scoreLabel}</span>
+              {/* Health Journey Card */}
+              <Card className="rounded-3xl border border-gray-200/90 shadow-md bg-white">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center text-base font-bold text-gray-900">
+                    <Award className="w-5 h-5 mr-2 text-[#006f6f]" />
+                    Kidney Care Journey
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3.5 text-sm">
+                  <div className="flex justify-between items-center py-1 border-b border-gray-100">
+                    <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">Last Checkup</span>
+                    <span className="font-semibold text-gray-800">{lastCheckupLabel}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-gray-100">
+                    <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">Next Visit</span>
+                    <span className="font-semibold text-[#006f6f]">{nextAppointmentLabel}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">Health Status</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div className={`${barW} h-2 ${barColor} rounded-full`}></div>
                       </div>
+                      <span className={`text-xs font-bold ${color}`}>{scoreLabel}</span>
                     </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Doctor Chat Assist Card */}
+              <div className="rounded-3xl bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200/80 p-5 shadow-sm space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                    <Stethoscope className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">Have New Lab Reports?</h4>
+                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                      Upload your KFT, Urine Protein, or Ultrasound files. Dr. Ilango evaluates them within 12–24h for just ₹100 / $1.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => navigate('/booking')}
+                  size="sm"
+                  className="w-full bg-[#006f6f] hover:bg-[#005555] text-white font-semibold text-xs rounded-xl h-9"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                  Upload Reports & Start Chat (₹100 / $1)
+                </Button>
+              </div>
             </motion.div>
 
-            {/* Main Content */}
-            <motion.div variants={itemVariants} className="lg:col-span-2">
-              {/* Horizontal Navigation */}
-              <div className="mb-6">
-                <nav
-                  className="w-full flex flex-wrap sm:flex-nowrap space-x-1 bg-gray-100 p-1 rounded-lg overflow-x-auto sm:overflow-visible pr-3 min-w-0"
-                  style={{ WebkitOverflowScrolling: 'touch', scrollbarGutter: 'stable both-edges' as any }}
+            {/* Right Column: Main Content & Tabs */}
+            <motion.div variants={itemVariants} className="lg:col-span-8 space-y-6">
+              {/* Segmented Pill Navigation Bar */}
+              <div className="bg-slate-100 p-1.5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-wrap sm:flex-nowrap gap-1.5">
+                <button
+                  onClick={() => setActiveTab((user?.role === 'doctor' || user?.role === 'admin') ? 'doctor-dashboard' : 'dashboard')}
+                  className={`flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
+                    activeTab === ((user?.role === 'doctor' || user?.role === 'admin') ? 'doctor-dashboard' : 'dashboard')
+                      ? 'bg-white text-[#006f6f] shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                  }`}
                 >
+                  <Activity className="w-4 h-4" />
+                  {(user?.role === 'doctor' || user?.role === 'admin') ? 'Practice' : 'Consultations'}
+                </button>
+                <button
+                  onClick={() => setActiveTab('personal')}
+                  className={`flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
+                    activeTab === 'personal'
+                      ? 'bg-white text-[#006f6f] shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                  }`}
+                >
+                  <User className="w-4 h-4" />
+                  Personal Info
+                </button>
+                {(user?.role !== 'doctor' && user?.role !== 'admin') && (
                   <button
-                    onClick={() => setActiveTab((user?.role === 'doctor' || user?.role === 'admin') ? 'doctor-dashboard' : 'dashboard')}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                      activeTab === ((user?.role === 'doctor' || user?.role === 'admin') ? 'doctor-dashboard' : 'dashboard')
+                    onClick={() => setActiveTab('history')}
+                    className={`flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
+                      activeTab === 'history'
                         ? 'bg-white text-[#006f6f] shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                     }`}
                   >
-                    {(user?.role === 'doctor' || user?.role === 'admin') ? 'Practice' : 'Dashboard'}
+                    <Clock className="w-4 h-4" />
+                    Past History
                   </button>
-                  <button
-                    onClick={() => setActiveTab('personal')}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                      activeTab === 'personal'
-                        ? 'bg-white text-[#006f6f] shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Personal Info
-                  </button>
-                  {(user?.role !== 'doctor' && user?.role !== 'admin') && (
+                )}
+                {(user?.role === 'doctor' || user?.role === 'admin') && (
+                  <>
                     <button
-                      onClick={() => setActiveTab('history')}
-                      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                        activeTab === 'history'
+                      onClick={() => setActiveTab('medical')}
+                      className={`flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
+                        activeTab === 'medical'
                           ? 'bg-white text-[#006f6f] shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                       }`}
                     >
-                      History
+                      Credentials
                     </button>
-                  )}
-                  {(user?.role === 'doctor' || user?.role === 'admin') && (
-                    <>
-                      <button
-                        onClick={() => setActiveTab('medical')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                          activeTab === 'medical'
-                            ? 'bg-white text-[#006f6f] shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        Credentials
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('appointments')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                          activeTab === 'appointments'
-                            ? 'bg-white text-[#006f6f] shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        Schedule
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('documents')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                          activeTab === 'documents'
-                            ? 'bg-white text-[#006f6f] shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        Documents
-                      </button>
-                    </>
-                  )}
-                </nav>
+                    <button
+                      onClick={() => setActiveTab('appointments')}
+                      className={`flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
+                        activeTab === 'appointments'
+                          ? 'bg-white text-[#006f6f] shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                      }`}
+                    >
+                      Schedule
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('documents')}
+                      className={`flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
+                        activeTab === 'documents'
+                          ? 'bg-white text-[#006f6f] shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                      }`}
+                    >
+                      Documents
+                    </button>
+                  </>
+                )}
               </div>
 
               <div className="space-y-6">
@@ -856,61 +902,113 @@ For support: suyambu54321@gmail.com
                     ) : (
                       // Patient Dashboard
                       <>
-
-                        {/* Appointments Section */}
                         <div className="space-y-6">
-                          {/* Quick Actions */}
-                          <Card>
-                            <CardContent className="p-6">
-                              <div className="flex flex-col sm:flex-row gap-4">
-                                <Button 
-                                  className="bg-[#006f6f] hover:bg-[#005555]"
+                          {/* Quick Consultation Action Banners (2 Plans) */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* Plan 1: Initial Video Consultation */}
+                            <div className="rounded-3xl border border-teal-200/90 bg-gradient-to-br from-white via-teal-50/30 to-emerald-50/20 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                              <div>
+                                <div className="flex items-center justify-between mb-3">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                    <Sparkles className="w-3 h-3" />
+                                    1st Consultation Free
+                                  </span>
+                                  <div className="w-8 h-8 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center">
+                                    <Video className="w-4 h-4" />
+                                  </div>
+                                </div>
+                                <h3 className="font-bold text-gray-900 text-base">Video Consultation</h3>
+                                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                  30-min confidential 1-on-1 video call with Dr. Ilango S. Prakasam. Includes clinical diagnosis and verified digital prescription.
+                                </p>
+                              </div>
+                              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                                <span className="text-xs font-semibold text-emerald-700">₹0 / $0 for 1st visit</span>
+                                <Button
+                                  size="sm"
                                   onClick={() => navigate('/booking')}
+                                  className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-8 px-3"
                                 >
-                                  <Plus className="w-4 h-4 mr-2" />
-                                  Book New Consultation
+                                  Book Visit →
                                 </Button>
                               </div>
-                            </CardContent>
-                          </Card>
+                            </div>
 
-                          {/* Doctor Chats & Report Reviews */}
-                          <Card>
-                            <CardHeader>
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            {/* Plan 2: Doctor Chat & Reports */}
+                            <div className="rounded-3xl border border-cyan-200/90 bg-gradient-to-br from-white via-cyan-50/30 to-sky-50/20 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                              <div>
+                                <div className="flex items-center justify-between mb-3">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-100 text-cyan-800 border border-cyan-300">
+                                    Direct Doctor Review
+                                  </span>
+                                  <div className="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-800 flex items-center justify-center">
+                                    <MessageSquare className="w-4 h-4" />
+                                  </div>
+                                </div>
+                                <h3 className="font-bold text-gray-900 text-base">Doctor Chat & Reports</h3>
+                                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                  Upload lab reports (KFT, Urine, Blood, Ultrasound) + ask questions. Dr. Ilango replies within 12–24h with medical advice.
+                                </p>
+                              </div>
+                              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                                <span className="text-xs font-semibold text-[#006f6f]">₹100 INR / $1 USD</span>
+                                <Button
+                                  size="sm"
+                                  onClick={() => navigate('/booking')}
+                                  className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-8 px-3"
+                                >
+                                  Upload & Chat →
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Doctor Chats & Report Reviews Section */}
+                          <Card className="rounded-3xl border border-gray-200/90 shadow-md bg-white overflow-hidden">
+                            <CardHeader className="p-5 sm:p-6 pb-4 border-b border-gray-100">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div>
-                                  <CardTitle className="flex items-center gap-2 text-lg">
-                                    <MessageSquare className="w-5 h-5 text-[#006f6f]" />
+                                  <CardTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
+                                    <div className="w-8 h-8 rounded-xl bg-teal-50 text-[#006f6f] flex items-center justify-center">
+                                      <MessageSquare className="w-4 h-4" />
+                                    </div>
                                     Doctor Chats & Report Reviews
+                                    {doctorChats.length > 0 && (
+                                      <Badge variant="secondary" className="bg-teal-50 text-teal-800 font-bold ml-1">
+                                        {doctorChats.length}
+                                      </Badge>
+                                    )}
                                   </CardTitle>
                                   <p className="text-xs text-gray-500 mt-1">
-                                    Online reports evaluation, medical chat, and digital prescriptions with Dr. Ilango S. Prakasam
+                                    Direct asynchronous chat, report evaluation & digital prescriptions with Dr. Ilango S. Prakasam
                                   </p>
                                 </div>
                                 <Button
                                   size="sm"
-                                  className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs self-start sm:self-auto"
+                                  className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-9 self-start sm:self-auto px-4"
                                   onClick={() => navigate('/booking')}
                                 >
-                                  + Start New Chat
+                                  + Start New Chat (₹100 / $1)
                                 </Button>
                               </div>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-5 sm:p-6">
                               {doctorChats.length === 0 ? (
-                                <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                                  <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                                  <p className="text-sm font-medium text-gray-700">No Doctor Chat Consultations Yet</p>
-                                  <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
-                                    Upload your lab reports and medical questions for Dr. Ilango to review personally for just ₹100 / $1.
+                                <div className="text-center py-8 px-4 bg-slate-50/70 rounded-2xl border border-dashed border-slate-300">
+                                  <div className="w-14 h-14 rounded-2xl bg-teal-100/70 text-[#006f6f] flex items-center justify-center mx-auto mb-3 shadow-sm">
+                                    <Stethoscope className="w-7 h-7" />
+                                  </div>
+                                  <h4 className="text-base font-bold text-gray-900">No Doctor Chat Consultations Yet</h4>
+                                  <p className="text-xs text-gray-500 mt-1.5 max-w-md mx-auto leading-relaxed">
+                                    Upload your kidney blood work, urine protein, or ultrasound reports and ask Dr. Ilango S. Prakasam medical questions directly for just ₹100 / $1.
                                   </p>
                                   <Button
                                     size="sm"
-                                    variant="outline"
-                                    className="mt-3 border-[#006f6f] text-[#006f6f] hover:bg-teal-50 text-xs"
+                                    className="mt-4 bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-9 px-5 shadow-sm"
                                     onClick={() => navigate('/booking')}
                                   >
-                                    Submit Reports & Start Chat
+                                    <Plus className="w-3.5 h-3.5 mr-1.5" />
+                                    Submit Reports & Start Chat (₹100 / $1)
                                   </Button>
                                 </div>
                               ) : (
@@ -918,12 +1016,12 @@ For support: suyambu54321@gmail.com
                                   {doctorChats.map((chat) => (
                                     <div
                                       key={chat.ticketId}
-                                      className="p-4 rounded-xl border border-gray-200 hover:border-teal-300 bg-white shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                                      className="p-4 sm:p-5 rounded-2xl border border-gray-200/90 hover:border-teal-300 bg-white shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                                     >
-                                      <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-800">
-                                            {chat.ticketId}
+                                      <div className="space-y-1.5 flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg bg-gray-100 text-gray-800 border border-gray-200">
+                                            #{chat.ticketId}
                                           </span>
                                           <Badge
                                             className={
@@ -936,24 +1034,26 @@ For support: suyambu54321@gmail.com
                                             variant="outline"
                                           >
                                             {chat.status === 'waiting_doctor'
-                                              ? '⏳ Doctor Reviewing (12-24h)'
+                                              ? '⏳ Doctor Reviewing (12–24h)'
                                               : chat.status === 'doctor_replied'
                                               ? '✓ Doctor Replied'
                                               : 'Concluded'}
                                           </Badge>
                                         </div>
-                                        <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                                        <p className="text-sm font-semibold text-gray-900 line-clamp-1">
                                           {chat.initialQuery?.symptoms || 'Report Review & Medical Query'}
                                         </p>
-                                        <p className="text-xs text-gray-500">
-                                          {chat.documents?.length || 0} report(s) attached • Last updated: {new Date(chat.updatedAt || chat.createdAt).toLocaleDateString()}
+                                        <p className="text-xs text-gray-500 flex items-center gap-2">
+                                          <span>{chat.documents?.length || 0} report(s) attached</span>
+                                          <span>•</span>
+                                          <span>Last update: {new Date(chat.updatedAt || chat.createdAt).toLocaleDateString()}</span>
                                         </p>
                                       </div>
 
                                       <div className="flex items-center gap-2 shrink-0">
                                         <Button
                                           size="sm"
-                                          className="bg-[#006f6f] hover:bg-[#005555] text-white"
+                                          className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-9 px-4"
                                           onClick={() => navigate(`/doctor-chat?ticketId=${chat.ticketId}`)}
                                         >
                                           <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
@@ -967,170 +1067,201 @@ For support: suyambu54321@gmail.com
                             </CardContent>
                           </Card>
 
-                          {/* Appointments List */}
-                          <Card>
-                            <CardHeader>
-                              <CardTitle>Your Consultations</CardTitle>
+                          {/* Your Consultations (Video Appointments) Section */}
+                          <Card className="rounded-3xl border border-gray-200/90 shadow-md bg-white overflow-hidden">
+                            <CardHeader className="p-5 sm:p-6 pb-4 border-b border-gray-100">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div>
+                                  <CardTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
+                                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                                      <Video className="w-4 h-4" />
+                                    </div>
+                                    Your Consultations (Video Appointments)
+                                    {activeAppointments.length > 0 && (
+                                      <Badge variant="secondary" className="bg-blue-50 text-blue-800 font-bold ml-1">
+                                        {activeAppointments.length}
+                                      </Badge>
+                                    )}
+                                  </CardTitle>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Face-to-face video consultations with Dr. Ilango S. Prakasam
+                                  </p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-9 self-start sm:self-auto px-4"
+                                  onClick={() => navigate('/booking')}
+                                >
+                                  + Book Video Visit
+                                </Button>
+                              </div>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-5 sm:p-6">
                               <div className="space-y-4">
                                 {activeAppointments.length === 0 ? (
-                                  <p className="text-center text-gray-500">No active consultations. Book a new one to get started.</p>
-                                ) : activeAppointments.map((appointment) => (
-                                  <motion.div
-                                    key={appointment._id || appointment.id}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: appointment.id * 0.1 }}
-                                    className="border rounded-lg p-6 hover:shadow-md transition-shadow"
-                                  >
-                                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                                      <div className="flex items-start space-x-4">
-                                        <div className={`p-3 rounded-full ${
-                                          appointment.status === 'Upcoming' ? 'bg-blue-100' : 'bg-green-100'
-                                        }`}>
-                                          <Badge 
-                                            variant="outline" 
-                                            className={
-                                              appointment.status === 'completed' 
-                                                ? 'text-blue-700 border-blue-300 bg-blue-50' 
-                                                : 'text-green-700 border-green-300'
-                                            }
-                                          >
-                                            {appointment.status || 'confirmed'}
-                                          </Badge>
-                                        </div>
-                                        <div className="flex-1">
-                                          <div className="flex items-center gap-2 mb-2">
-                                            <h4 className="font-semibold text-gray-900">{appointment.type}</h4>
-                                            <Badge variant={appointment.status === 'Upcoming' ? 'default' : 'secondary'}>
-                                              {appointment.status}
-                                            </Badge>
+                                  <div className="text-center py-8 px-4 bg-slate-50/70 rounded-2xl border border-dashed border-slate-300">
+                                    <div className="w-14 h-14 rounded-2xl bg-blue-100/70 text-blue-700 flex items-center justify-center mx-auto mb-3 shadow-sm">
+                                      <Video className="w-7 h-7" />
+                                    </div>
+                                    <h4 className="text-base font-bold text-gray-900">No Upcoming Video Consultations</h4>
+                                    <p className="text-xs text-gray-500 mt-1.5 max-w-md mx-auto leading-relaxed">
+                                      You don't have any upcoming video appointments scheduled. Book your 30-minute face-to-face consultation today (1st session free for new patients).
+                                    </p>
+                                    <Button
+                                      size="sm"
+                                      className="mt-4 bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-9 px-5 shadow-sm"
+                                      onClick={() => navigate('/booking')}
+                                    >
+                                      <Plus className="w-3.5 h-3.5 mr-1.5" />
+                                      Book 1st Free Consultation
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  activeAppointments.map((appointment) => (
+                                    <motion.div
+                                      key={appointment._id || appointment.id}
+                                      initial={{ opacity: 0, y: 10 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      className="rounded-2xl border border-gray-200/90 hover:border-teal-300 p-5 bg-white shadow-sm transition-all"
+                                    >
+                                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                                        <div className="flex items-start space-x-4">
+                                          {/* Date block */}
+                                          <div className="p-3 rounded-2xl bg-teal-50 border border-teal-100 text-center shrink-0 w-20">
+                                            <div className="text-xs font-bold text-[#006f6f] uppercase">
+                                              {new Date(appointment.date).toLocaleDateString(undefined, { month: 'short' })}
+                                            </div>
+                                            <div className="text-2xl font-extrabold text-gray-900 leading-tight">
+                                              {new Date(appointment.date).getDate()}
+                                            </div>
+                                            <div className="text-[10px] text-gray-500 font-medium">
+                                              {appointment.timeSlot || appointment.time}
+                                            </div>
                                           </div>
-                                          <div className="space-y-1 text-sm text-gray-600">
-                                            <p className="flex items-center">
-                                              <Clock className="w-4 h-4 mr-2" />
-                                              {new Date(appointment.date).toLocaleDateString()} at {appointment.timeSlot || appointment.time}
-                                              <span className="ml-2 text-xs text-gray-500">(IST: {appointment.timeSlot || appointment.istTime})</span>
-                                            </p>
-                                            <p className="flex items-center">
-                                              <User className="w-4 h-4 mr-2" />
-                                              {appointment.doctor?.name || 'Dr. Ilango S. Prakasam'}
-                                            </p>
-                                            <p className="flex items-center">
-                                              <CreditCard className="w-4 h-4 mr-2" />
-                                              {getCorrectCurrency(appointment)} - {appointment.paymentStatus || 'Paid'}
-                                            </p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      
-                                      <div className="flex flex-col sm:flex-row gap-2 items-start">
-                                        {/* Completed consultation actions */}
-                                        {appointment.status === 'completed' && (
-                                          <>
-                                            {appointment.prescription && (
-                                              <Button 
-                                                size="sm" 
-                                                variant="outline"
-                                                className="border-blue-300 text-blue-700 hover:bg-blue-50"
-                                                onClick={() => handleViewPrescription(appointment.id)}
-                                              >
-                                                <FileText className="w-4 h-4 mr-2" />
-                                                {expandedPrescriptions.has(appointment.id) ? 'Hide Prescription' : 'View Prescription'}
-                                              </Button>
-                                            )}
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              onClick={() => handleDownloadReceipt(appointment)}
-                                            >
-                                              <Download className="w-4 h-4 mr-2" />
-                                              Download Receipt
-                                            </Button>
-                                          </>
-                                        )}
 
-                                        {/* Upcoming consultation actions */}
-                                        {appointment.status !== 'completed' && (
-                                          <>
+                                          <div className="flex-1 min-w-0 space-y-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              <h4 className="font-bold text-gray-900 text-base">{appointment.type}</h4>
+                                              <Badge 
+                                                variant="outline" 
+                                                className={
+                                                  appointment.status === 'completed' 
+                                                    ? 'text-blue-700 border-blue-300 bg-blue-50 font-bold' 
+                                                    : 'text-emerald-700 border-emerald-300 bg-emerald-50 font-bold'
+                                                }
+                                              >
+                                                {appointment.status || 'confirmed'}
+                                              </Badge>
+                                            </div>
+
+                                            <p className="text-xs text-gray-600 flex items-center gap-1.5">
+                                              <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                              <span>{new Date(appointment.date).toLocaleDateString()} at {appointment.timeSlot || appointment.time}</span>
+                                              <span className="text-gray-400 font-mono">(IST: {appointment.timeSlot || appointment.istTime})</span>
+                                            </p>
+
+                                            <p className="text-xs text-gray-600 flex items-center gap-1.5">
+                                              <User className="w-3.5 h-3.5 text-gray-400" />
+                                              <span>{appointment.doctor?.name || 'Dr. Ilango S. Prakasam'}</span>
+                                            </p>
+
+                                            <p className="text-xs text-gray-600 flex items-center gap-1.5">
+                                              <CreditCard className="w-3.5 h-3.5 text-gray-400" />
+                                              <span className="font-semibold text-gray-800">{getCorrectCurrency(appointment)}</span>
+                                              <span>—</span>
+                                              <span className="text-emerald-700 font-medium">{appointment.paymentStatus || 'Confirmed'}</span>
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center">
+                                          {appointment.status !== 'completed' && (
                                             <Button
                                               size="sm"
-                                              className="bg-[#006f6f] hover:bg-[#005555] text-white"
+                                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl h-9 px-4 shadow-sm"
                                               onClick={() => {
                                                 if (appointment.meetLink) {
                                                   window.open(appointment.meetLink, '_blank');
                                                 } else {
-                                                  alert('Meeting link not available');
+                                                  toast.error('Meeting link will be activated closer to your consultation time.');
                                                 }
                                               }}
                                             >
-                                              <Video className="w-4 h-4 mr-2" />
+                                              <Video className="w-3.5 h-3.5 mr-1.5" />
                                               Join Meeting
                                             </Button>
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              onClick={() => handleDownloadReceipt(appointment)}
-                                            >
-                                              <Download className="w-4 h-4 mr-2" />
-                                              Download Receipt
-                                            </Button>
-                                          </>
-                                        )}
-                                      </div>
-                                    </div>
+                                          )}
 
-                                    {/* Prescription Details */}
-                                    {appointment.prescription && expandedPrescriptions.has(appointment.id) && (
-                                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                        <h5 className="font-medium text-blue-900 mb-2">Digital Prescription</h5>
-                                        <div className="space-y-2">
-                                          {appointment.prescription.medicines && appointment.prescription.medicines.length > 0 && (
-                                            <div>
-                                              <p className="text-sm font-medium text-blue-800">Medicines:</p>
-                                              <div className="space-y-1">
-                                                {appointment.prescription.medicines.map((medicine: any, index: number) => (
-                                                  <div key={index} className="flex items-center justify-between text-sm">
-                                                    <span>{medicine.name} - {medicine.dosage}</span>
-                                                    <Button 
-                                                      size="sm" 
-                                                      variant="ghost" 
-                                                      className="text-blue-600 hover:text-blue-800 p-1 h-auto"
-                                                      onClick={() => {
-                                                        const searchQuery = encodeURIComponent(`${medicine.name} ${medicine.dosage}`);
-                                                        const fallbackUrl = `https://www.1mg.com/search/all?name=${searchQuery}`;
-                                                        const url = medicine.link && String(medicine.link).trim() !== '' ? medicine.link : fallbackUrl;
-                                                        window.open(url, '_blank');
-                                                      }}
-                                                    >
-                                                      <ExternalLink className="w-3 h-3 mr-1" />
-                                                      Buy Online
-                                                    </Button>
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            </div>
+                                          {appointment.prescription && (
+                                            <Button 
+                                              size="sm" 
+                                              variant="outline"
+                                              className="border-blue-300 text-blue-700 hover:bg-blue-50 font-semibold rounded-xl h-9 text-xs"
+                                              onClick={() => handleViewPrescription(appointment.id || appointment._id)}
+                                            >
+                                              <FileText className="w-3.5 h-3.5 mr-1.5" />
+                                              {expandedPrescriptions.has(appointment.id || appointment._id) ? 'Hide Prescription' : 'View Prescription'}
+                                            </Button>
                                           )}
-                                          {appointment.prescription.notes && (
-                                            <div>
-                                              <p className="text-sm font-medium text-blue-800">Doctor's Advice:</p>
-                                              <p className="text-sm text-blue-700">{appointment.prescription.notes}</p>
-                                            </div>
-                                          )}
-                                          {appointment.prescription.nextConsultationDate && (
-                                            <div>
-                                              <p className="text-sm font-medium text-blue-800">Next Appointment:</p>
-                                              <p className="text-sm text-blue-700">
-                                                {new Date(appointment.prescription.nextConsultationDate).toLocaleDateString()}
-                                              </p>
-                                            </div>
-                                          )}
+
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl h-9 text-xs font-semibold"
+                                            onClick={() => handleDownloadReceipt(appointment)}
+                                          >
+                                            <Download className="w-3.5 h-3.5 mr-1.5" />
+                                            Receipt
+                                          </Button>
                                         </div>
                                       </div>
-                                    )}
-                                  </motion.div>
-                                ))}
+
+                                      {/* Prescription Details */}
+                                      {appointment.prescription && expandedPrescriptions.has(appointment.id || appointment._id) && (
+                                        <div className="mt-4 p-4 bg-blue-50/70 rounded-2xl border border-blue-200">
+                                          <h5 className="font-bold text-blue-900 text-sm mb-2 flex items-center gap-1.5">
+                                            <FileText className="w-4 h-4 text-blue-700" />
+                                            Digital Prescription
+                                          </h5>
+                                          <div className="space-y-2">
+                                            {appointment.prescription.medicines && appointment.prescription.medicines.length > 0 && (
+                                              <div>
+                                                <p className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-1">Medicines:</p>
+                                                <div className="space-y-1.5">
+                                                  {appointment.prescription.medicines.map((medicine: any, index: number) => (
+                                                    <div key={index} className="flex items-center justify-between text-xs bg-white p-2.5 rounded-xl border border-blue-100">
+                                                      <span className="font-semibold text-gray-800">{medicine.name} — {medicine.dosage}</span>
+                                                      <Button 
+                                                        size="sm" 
+                                                        variant="ghost" 
+                                                        className="text-blue-600 hover:text-blue-800 p-1 h-auto text-xs"
+                                                        onClick={() => {
+                                                          const searchQuery = encodeURIComponent(`${medicine.name} ${medicine.dosage}`);
+                                                          const fallbackUrl = `https://www.1mg.com/search/all?name=${searchQuery}`;
+                                                          const url = medicine.link && String(medicine.link).trim() !== '' ? medicine.link : fallbackUrl;
+                                                          window.open(url, '_blank');
+                                                        }}
+                                                      >
+                                                        <ExternalLink className="w-3 h-3 mr-1" />
+                                                        Buy Online
+                                                      </Button>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            )}
+                                            {appointment.prescription.notes && (
+                                              <div className="mt-2">
+                                                <p className="text-xs font-bold text-blue-800 uppercase tracking-wider">Doctor's Advice:</p>
+                                                <p className="text-xs text-blue-900 mt-0.5">{appointment.prescription.notes}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </motion.div>
+                                  ))
+                                )}
                               </div>
                             </CardContent>
                           </Card>
@@ -1142,152 +1273,64 @@ For support: suyambu54321@gmail.com
 
                 {/* History Content */}
                 {activeTab === 'history' && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Complete Appointment History</CardTitle>
-                      <p className="text-sm text-gray-600">View all your completed consultations</p>
+                  <Card className="rounded-3xl border border-gray-200/90 shadow-md bg-white overflow-hidden">
+                    <CardHeader className="p-5 sm:p-6 pb-4 border-b border-gray-100">
+                      <CardTitle className="text-lg font-bold">Past Consultation History</CardTitle>
+                      <p className="text-xs text-gray-500 mt-1">Review your completed consultations and digital prescriptions</p>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-5 sm:p-6">
                       <div className="space-y-4">
                         {historyAppointments.length === 0 ? (
-                          <p className="text-center text-gray-500">No completed consultations yet.</p>
+                          <div className="text-center py-8 px-4 bg-slate-50/70 rounded-2xl border border-dashed border-slate-300">
+                            <Clock className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                            <h4 className="font-bold text-gray-800 text-sm">No Completed Consultations Yet</h4>
+                            <p className="text-xs text-gray-500 mt-1">Your past appointments and doctor reports will appear here after completion.</p>
+                          </div>
                         ) : (
                           historyAppointments.map((appointment) => (
                             <motion.div
                               key={appointment._id || appointment.id}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: appointment.id * 0.1 }}
-                              className="border rounded-lg p-6 hover:shadow-md transition-shadow"
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="rounded-2xl border border-gray-200/90 p-5 bg-white shadow-sm space-y-3"
                             >
-                              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                                <div className="flex items-start space-x-4">
-                                  <div className={`p-3 rounded-full ${
-                                    appointment.status === 'Upcoming' ? 'bg-blue-100' : 'bg-green-100'
-                                  }`}>
-                                    <Calendar className={`w-5 h-5 ${
-                                      appointment.status === 'Upcoming' ? 'text-blue-600' : 'text-green-600'
-                                    }`} />
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="font-bold text-gray-900">{appointment.type}</h4>
+                                    <Badge variant="secondary" className="bg-blue-50 text-blue-800 font-semibold text-xs">
+                                      Completed
+                                    </Badge>
                                   </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <h4 className="font-semibold text-gray-900">{appointment.type}</h4>
-                                      <Badge variant={appointment.status === 'Upcoming' ? 'default' : 'secondary'}>
-                                        {appointment.status}
-                                      </Badge>
-                                      {/* No Join Meeting in history for completed appointments */}
-                                    </div>
-                                    <div className="space-y-1 text-sm text-gray-600">
-                                      <p className="flex items-center">
-                                        <Clock className="w-4 h-4 mr-2" />
-                                        {new Date(appointment.date).toLocaleDateString()} at {appointment.timeSlot || appointment.time}
-                                        <span className="ml-2 text-xs text-gray-500">(IST: {appointment.timeSlot || appointment.istTime})</span>
-                                      </p>
-                                      <p className="flex items-center">
-                                        <User className="w-4 h-4 mr-2" />
-                                        {appointment.doctor?.name || 'Dr. Ilango S. Prakasam'}
-                                      </p>
-                                      <p className="flex items-center">
-                                        <CreditCard className="w-4 h-4 mr-2" />
-                                        {getCorrectCurrency(appointment)} - {appointment.paymentStatus || 'Paid'}
-                                      </p>
-                                    </div>
-                                  </div>
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    {new Date(appointment.date).toLocaleDateString()} at {appointment.timeSlot || appointment.time} • {appointment.doctor?.name || 'Dr. Ilango S. Prakasam'}
+                                  </p>
                                 </div>
-                              </div>
-                              
-                              <div className="flex flex-col sm:flex-row gap-2">
-                                {(appointment.status === 'Upcoming' || appointment.status === 'confirmed') && (
-                                  <Button 
-                                    size="sm" 
-                                    className="bg-green-600 hover:bg-green-700"
-                                    onClick={() => {
-                                      const meetLink = appointment.meetLink;
-                                      console.log('🎥 Trying to open meet link:', meetLink);
-                                      if (meetLink && meetLink.trim() !== '') {
-                                        window.open(meetLink, '_blank');
-                                      } else {
-                                        toast.error('Meeting link not available yet. It will be provided closer to your appointment time.');
-                                      }
-                                    }}
-                                  >
-                                    <Video className="w-4 h-4 mr-2" />
-                                    Join Meeting
-                                  </Button>
-                                )}
-                                
-                                {appointment.prescription && (
+                                <div className="flex gap-2">
+                                  {appointment.prescription && (
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      className="rounded-xl text-xs border-blue-200 text-blue-700"
+                                      onClick={() => handleViewPrescription(appointment.id || appointment._id)}
+                                    >
+                                      <FileText className="w-3.5 h-3.5 mr-1" />
+                                      Prescription
+                                    </Button>
+                                  )}
                                   <Button 
                                     size="sm" 
                                     variant="outline"
-                                    onClick={() => handleViewPrescription(appointment.id)}
+                                    className="rounded-xl text-xs"
+                                    onClick={() => handleDownloadReceipt(appointment)}
                                   >
-                                    <FileText className="w-4 h-4 mr-2" />
-                                    {expandedPrescriptions.has(appointment.id) ? 'Hide Prescription' : 'View Prescription'}
+                                    <Download className="w-3.5 h-3.5 mr-1" />
+                                    Receipt
                                   </Button>
-                                )}
-
-                                
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => handleDownloadReceipt(appointment)}
-                                >
-                                  <Download className="w-4 h-4 mr-2" />
-                                  Download Receipt
-                                </Button>
-                              </div>
-
-                              {/* Prescription Details */}
-                              {appointment.prescription && expandedPrescriptions.has(appointment.id) && (
-                              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                <h5 className="font-medium text-blue-900 mb-2">Digital Prescription</h5>
-                                <div className="space-y-2">
-                                  {appointment.prescription.medicines && appointment.prescription.medicines.length > 0 && (
-                                    <div>
-                                      <p className="text-sm font-medium text-blue-800">Medicines:</p>
-                                      <div className="space-y-1">
-                                        {appointment.prescription.medicines.map((medicine: any, index: number) => (
-                                          <div key={index} className="flex items-center justify-between text-sm">
-                                            <span>{medicine.name} - {medicine.dosage}</span>
-                                            <Button 
-                                              size="sm" 
-                                              variant="ghost" 
-                                              className="text-blue-600 hover:text-blue-800 p-1 h-auto"
-                                              onClick={() => {
-                                                const searchQuery = encodeURIComponent(`${medicine.name} ${medicine.dosage}`);
-                                                const fallbackUrl = `https://www.1mg.com/search/all?name=${searchQuery}`;
-                                                const url = medicine.link && String(medicine.link).trim() !== '' ? medicine.link : fallbackUrl;
-                                                window.open(url, '_blank');
-                                              }}
-                                            >
-                                              <ExternalLink className="w-3 h-3 mr-1" />
-                                              Buy Online
-                                            </Button>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {appointment.prescription.notes && (
-                                    <div>
-                                      <p className="text-sm font-medium text-blue-800">Doctor's Advice:</p>
-                                      <p className="text-sm text-blue-700">{appointment.prescription.notes}</p>
-                                    </div>
-                                  )}
-                                  {appointment.prescription.nextConsultationDate && (
-                                    <div>
-                                      <p className="text-sm font-medium text-blue-800">Next Appointment:</p>
-                                      <p className="text-sm text-blue-700">
-                                        {new Date(appointment.prescription.nextConsultationDate).toLocaleDateString()}
-                                      </p>
-                                    </div>
-                                  )}
                                 </div>
                               </div>
-                              )}
                             </motion.div>
-                        ))
+                          ))
                         )}
                       </div>
                     </CardContent>
@@ -1296,126 +1339,166 @@ For support: suyambu54321@gmail.com
 
                 {/* Personal Information Content */}
                 {activeTab === 'personal' && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Personal Information</CardTitle>
+                  <Card className="rounded-3xl border border-gray-200/90 shadow-md bg-white overflow-hidden">
+                    <CardHeader className="p-5 sm:p-6 pb-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div>
+                        <CardTitle className="text-lg font-bold">Personal & Medical Details</CardTitle>
+                        <p className="text-xs text-gray-500 mt-1">Your confidential details used for consultations and official prescriptions</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={isEditing ? handleSave : () => setIsEditing(true)}
+                        className="bg-[#006f6f] hover:bg-[#005555] text-white font-bold rounded-xl h-9 px-4 text-xs"
+                      >
+                        {isEditing ? (
+                          <>
+                            <Save className="w-3.5 h-3.5 mr-1.5" />
+                            Save Changes
+                          </>
+                        ) : (
+                          <>
+                            <Edit3 className="w-3.5 h-3.5 mr-1.5" />
+                            Edit Information
+                          </>
+                        )}
+                      </Button>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div>
-                          <Label>Full Name</Label>
-                          <Input
-                            value={profileData.name}
-                            onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                            disabled={!isEditing}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label>Email Address</Label>
-                          <Input
-                            type="email"
-                            value={profileData.email}
-                            onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                            disabled={!isEditing}
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid md:grid-cols-3 gap-6">
-                        <div>
-                          <Label>Phone Number</Label>
-                          <Input
-                            value={profileData.phone}
-                            onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                            disabled={!isEditing}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label>Age</Label>
-                          <Input
-                            type="number"
-                            value={profileData.age}
-                            onChange={(e) => setProfileData({ ...profileData, age: e.target.value })}
-                            disabled={!isEditing}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label>Gender</Label>
-                          <Select
-                            value={profileData.gender}
-                            onValueChange={(value) => setProfileData({ ...profileData, gender: value })}
-                            disabled={!isEditing}
-                          >
-                            <SelectTrigger className="mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Male">Male</SelectItem>
-                              <SelectItem value="Female">Female</SelectItem>
-                              <SelectItem value="Other">Other</SelectItem>
-                              <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div>
-                          <Label>Country</Label>
-                          <Input
-                            value={profileData.country}
-                            onChange={(e) => setProfileData({ ...profileData, country: e.target.value })}
-                            disabled={!isEditing}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label>Blood Type</Label>
-                          <Select
-                            value={profileData.bloodType}
-                            onValueChange={(value) => setProfileData({ ...profileData, bloodType: value })}
-                            disabled={!isEditing}
-                          >
-                            <SelectTrigger className="mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="A+">A+</SelectItem>
-                              <SelectItem value="A-">A-</SelectItem>
-                              <SelectItem value="B+">B+</SelectItem>
-                              <SelectItem value="B-">B-</SelectItem>
-                              <SelectItem value="AB+">AB+</SelectItem>
-                              <SelectItem value="AB-">AB-</SelectItem>
-                              <SelectItem value="O+">O+</SelectItem>
-                              <SelectItem value="O-">O-</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
+                    <CardContent className="p-5 sm:p-6 space-y-6">
+                      {/* Section 1: Personal Details */}
                       <div>
-                        <Label>Address</Label>
-                        <Textarea
-                          value={profileData.address}
-                          onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
-                          disabled={!isEditing}
-                          className="mt-1"
-                        />
+                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">1. Personal Information</h4>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs font-semibold text-gray-700">Full Name</Label>
+                            <Input
+                              value={profileData.name}
+                              onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                              disabled={!isEditing}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-gray-700">Email Address</Label>
+                            <Input
+                              type="email"
+                              value={profileData.email}
+                              onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                              disabled={!isEditing}
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-3 gap-4 mt-4">
+                          <div>
+                            <Label className="text-xs font-semibold text-gray-700">Phone Number</Label>
+                            <Input
+                              value={profileData.phone}
+                              onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                              disabled={!isEditing}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-gray-700">Age</Label>
+                            <Input
+                              type="number"
+                              value={profileData.age}
+                              onChange={(e) => setProfileData({ ...profileData, age: e.target.value })}
+                              disabled={!isEditing}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-gray-700">Gender</Label>
+                            <Select
+                              value={profileData.gender}
+                              onValueChange={(value) => setProfileData({ ...profileData, gender: value })}
+                              disabled={!isEditing}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Male">Male</SelectItem>
+                                <SelectItem value="Female">Female</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                                <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
                       </div>
 
-                      <div>
-                        <Label>Emergency Contact</Label>
-                        <Input
-                          value={profileData.emergencyContact}
-                          onChange={(e) => setProfileData({ ...profileData, emergencyContact: e.target.value })}
-                          disabled={!isEditing}
-                          className="mt-1"
-                        />
+                      {/* Section 2: Medical & Emergency */}
+                      <div className="pt-4 border-t border-gray-100">
+                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">2. Medical & Emergency Details</h4>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs font-semibold text-gray-700">Country</Label>
+                            <Input
+                              value={profileData.country}
+                              onChange={(e) => setProfileData({ ...profileData, country: e.target.value })}
+                              disabled={!isEditing}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold text-gray-700">Blood Type</Label>
+                            <Select
+                              value={profileData.bloodType}
+                              onValueChange={(value) => setProfileData({ ...profileData, bloodType: value })}
+                              disabled={!isEditing}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="Select blood type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="A+">A+</SelectItem>
+                                <SelectItem value="A-">A-</SelectItem>
+                                <SelectItem value="B+">B+</SelectItem>
+                                <SelectItem value="B-">B-</SelectItem>
+                                <SelectItem value="AB+">AB+</SelectItem>
+                                <SelectItem value="AB-">AB-</SelectItem>
+                                <SelectItem value="O+">O+</SelectItem>
+                                <SelectItem value="O-">O-</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <Label className="text-xs font-semibold text-gray-700">Emergency Contact (Name & Phone)</Label>
+                          <Input
+                            value={profileData.emergencyContact}
+                            onChange={(e) => setProfileData({ ...profileData, emergencyContact: e.target.value })}
+                            disabled={!isEditing}
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <div className="mt-4">
+                          <Label className="text-xs font-semibold text-gray-700">Residential Address</Label>
+                          <Textarea
+                            value={profileData.address}
+                            onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                            disabled={!isEditing}
+                            className="mt-1 min-h-[90px]"
+                          />
+                        </div>
                       </div>
+
+                      {isEditing && (
+                        <div className="pt-4 flex justify-end">
+                          <Button
+                            onClick={handleSave}
+                            className="bg-[#006f6f] hover:bg-[#005555] text-white font-bold rounded-xl px-6 h-11 shadow-md"
+                          >
+                            <Save className="w-4 h-4 mr-2" />
+                            Save All Changes
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
