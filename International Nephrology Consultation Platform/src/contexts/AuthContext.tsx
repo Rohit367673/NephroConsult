@@ -14,6 +14,7 @@ export interface User {
   phone?: string;
   avatar?: string;
   hasUsedFreeConsultation?: boolean;
+  hasUsedFreeChat?: boolean;
 }
 
 interface AuthContextType {
@@ -193,7 +194,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 role: data.user.role || 'patient',
                 avatar: data.user.photoURL || firebaseUser.photoURL || '',
                 country: getUserCountry(),
-                hasUsedFreeConsultation: !!data.user.hasUsedFreeConsultation
+                hasUsedFreeConsultation: !!data.user.hasUsedFreeConsultation,
+                hasUsedFreeChat: !!data.user.hasUsedFreeChat
               };
               setUser(backendUser);
               setCookie('nephro_user', encodeURIComponent(JSON.stringify(backendUser)), 7);
@@ -308,7 +310,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
                       role: data.user.role || 'patient',
                       avatar: data.user.photoURL || redirectResult.user.photoURL || '',
                       country: getUserCountry(),
-                      hasUsedFreeConsultation: !!data.user.hasUsedFreeConsultation
+                      hasUsedFreeConsultation: !!data.user.hasUsedFreeConsultation,
+                hasUsedFreeChat: !!data.user.hasUsedFreeChat
                     };
                     setUser(backendUser);
                     setCookie('nephro_user', encodeURIComponent(JSON.stringify(backendUser)), 7);

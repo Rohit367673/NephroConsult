@@ -798,10 +798,12 @@ function HomePage() {
   const pricing = regionalPricing[userCountry] || regionalPricing.default;
 
   const hasUsedFree = Boolean(
-    user?.hasUsedFreeConsultation ||
+    (user?.hasUsedFreeConsultation && user?.hasUsedFreeChat) ||
     (user?.email && (() => {
       try {
-        return localStorage.getItem(`nephro_free_used_${user.email.toLowerCase()}`) === 'true';
+        const usedApt = localStorage.getItem(`nephro_free_used_${user.email.toLowerCase()}`) === 'true';
+        const usedChat = localStorage.getItem(`nephro_free_chat_used_${user.email.toLowerCase()}`) === 'true';
+        return usedApt && usedChat;
       } catch {
         return false;
       }
@@ -1024,7 +1026,7 @@ function HomePage() {
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-full border shadow-sm cursor-pointer hover:shadow-md transition-all text-xs sm:text-sm md:text-base font-semibold"
                 >
                   <span>🎁</span>
-                  <span>Special Offer: Your 1st Initial Consultation is 100% FREE!</span>
+                  <span>Special Offer: Your 1st Consultation & 1st Doctor Chat are 100% FREE!</span>
                 </div>
               </motion.div>
             )}

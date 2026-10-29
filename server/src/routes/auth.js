@@ -250,7 +250,7 @@ router.get('/me', async (req, res) => {
     if (!req.session.user) return res.json({ user: null });
     const u = await User.findById(req.session.user.id).lean().select('-passwordHash');
     if (!u) return res.json({ user: null });
-    const user = { ...u, id: String(u._id), hasUsedFreeConsultation: !!u.hasUsedFreeConsultation };
+    const user = { ...u, id: String(u._id), hasUsedFreeConsultation: !!u.hasUsedFreeConsultation, hasUsedFreeChat: !!u.hasUsedFreeChat };
     return res.json({ user });
   } catch (e) {
     return res.status(500).json({ error: 'Failed to fetch session user' });
@@ -491,7 +491,8 @@ router.post('/firebase-login', async (req, res) => {
       role: sessionRole, // Use session role, not DB role
       photoURL: user.photoURL,
       isEmailVerified: user.isEmailVerified,
-      hasUsedFreeConsultation: !!user.hasUsedFreeConsultation
+      hasUsedFreeConsultation: !!user.hasUsedFreeConsultation,
+      hasUsedFreeChat: !!user.hasUsedFreeChat
     };
 
     console.log('🔥 [FIREBASE LOGIN] Response user:', userResponse);

@@ -316,6 +316,20 @@ export default function BookingPage() {
     }
     return true;
   };
+
+  // Synchronously determine initial free doctor chat state
+  const getInitialFreeChatEligibility = (u: any): boolean => {
+    if (!u) return true;
+    if (u.hasUsedFreeChat === true) return false;
+    if (u.email) {
+      try {
+        const cached = localStorage.getItem(`nephro_free_chat_used_${String(u.email).toLowerCase().trim()}`);
+        if (cached === 'true') return false;
+        if (cached === 'false') return true;
+      } catch {}
+    }
+    return true;
+  };
   
   // All hooks must be declared at the top before any conditional logic
   const [step, setStep] = useState(1);
@@ -329,6 +343,7 @@ export default function BookingPage() {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [isValidating, setIsValidating] = useState(false);
   const [isFreeEligible, setIsFreeEligible] = useState<boolean>(() => getInitialFreeEligibility(user));
+  const [isFreeChatEligible, setIsFreeChatEligible] = useState<boolean>(() => getInitialFreeChatEligibility(user));
   const countrySetRef = useRef(false);
   const [bookingData, setBookingData] = useState({
     consultationType: 'initial',
@@ -600,13 +615,14 @@ export default function BookingPage() {
     setBookedAppointments([]);
   }, []);
 
-  // Check if user is eligible for 1st free initial consultation
+  // Check if user is eligible for 1st free initial consultation & 1st free doctor chat
   useEffect(() => {
     if (!user) {
       return;
     }
     // Immediately apply cached/user state without waiting for network
     setIsFreeEligible(getInitialFreeEligibility(user));
+    setIsFreeChatEligible(getInitialFreeChatEligibility(user));
 
     const checkEligibility = async () => {
       try {
@@ -614,11 +630,13 @@ export default function BookingPage() {
         if (user.email) params.set('email', user.email);
         if (user.id) params.set('userId', user.id);
 
-        const res = await fetch(`/api/appointments/free-eligibility?${params.toString()}`, {
-          credentials: 'include'
-        });
-        if (res.ok) {
-          const data = await res.json();
+        const [resApt, resChat] = await Promise.all([
+          fetch(`/api/appointments/free-eligibility?${params.toString()}`, { credentials: 'include' }).catch(() => null),
+          fetch(`/api/doctor-chat/free-eligibility?${params.toString()}`, { credentials: 'include' }).catch(() => null)
+        ]);
+
+        if (resApt && resApt.ok) {
+          const data = await resApt.json().catch(() => ({}));
           if (data.authenticated) {
             const eligible = !!data.eligible;
             setIsFreeEligible(eligible);
@@ -627,6 +645,22 @@ export default function BookingPage() {
                 localStorage.setItem(
                   `nephro_free_used_${user.email.toLowerCase().trim()}`,
                   eligible ? 'false' : 'true'
+                );
+              } catch {}
+            }
+          }
+        }
+
+        if (resChat && resChat.ok) {
+          const chatData = await resChat.json().catch(() => ({}));
+          if (chatData.authenticated) {
+            const chatEligible = !!chatData.eligible;
+            setIsFreeChatEligible(chatEligible);
+            if (user.email) {
+              try {
+                localStorage.setItem(
+                  `nephro_free_chat_used_${user.email.toLowerCase().trim()}`,
+                  chatEligible ? 'false' : 'true'
                 );
               } catch {}
             }
@@ -818,12 +852,12 @@ export default function BookingPage() {
       { 
         id: 'doctor_chat', 
         name: 'Upload Files & Chat with Doctor', 
-        price: doctorChatPrice,
+        price: isFreeChatEligible ? 0 : doctorChatPrice,
         originalPrice: doctorChatPrice,
-        isFree: false,
-        formattedPrice: getFormattedPrice(doctorChatPrice, pricing.currency),
+        isFree: isFreeChatEligible,
+        formattedPrice: isFreeChatEligible ? 'FREE' : getFormattedPrice(doctorChatPrice, pricing.currency),
         duration: 'Response within 12–24 hrs',
-        badgeText: 'Report Review & Chat',
+        badgeText: isFreeChatEligible ? '1st Chat FREE' : 'Report Review & Chat',
         description: 'Upload your lab reports and medical history. Dr. Ilango personally reviews your files, provides clinical advice, digital prescription, and direct follow-up chat.',
         icon: FileText,
         features: [
@@ -834,7 +868,7 @@ export default function BookingPage() {
         ]
       }
     ];
-  }, [bookingData.country, userCountry, pricing.currency, isFreeEligible]);
+  }, [bookingData.country, userCountry, pricing.currency, isFreeEligible, isFreeChatEligible]);
 
   const handleNext = useCallback(() => {
     const currentMax = bookingData.consultationType === 'doctor_chat' ? 3 : 4;
@@ -960,9 +994,93 @@ export default function BookingPage() {
     }
   };
 
+  const processFreeChatBooking = async () => {
+    const { patientInfo } = bookingData;
+    if (!patientInfo.name || !patientInfo.email || !patientInfo.phone || !patientInfo.age || !patientInfo.gender || !patientInfo.medicalHistory) {
+      toast.error('Please fill in all required patient information');
+      return;
+    }
+
+    try {
+      setIsProcessingPayment(true);
+
+      let preProcessedDocuments: string[] = [];
+      try {
+        if (Array.isArray((bookingData as any).uploadedFiles) && (bookingData as any).uploadedFiles.length > 0) {
+          preProcessedDocuments = await Promise.all(
+            (bookingData as any).uploadedFiles.map((file: File) => new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(`${file.name}|${reader.result as string}`);
+              reader.onerror = () => resolve(`${file.name}|error`);
+              reader.readAsDataURL(file);
+            }))
+          );
+        }
+      } catch (e) {
+        console.warn('⚠️ Failed to process uploaded files for chat:', e);
+      }
+
+      const response = await fetch('/api/doctor-chat/free-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          patientInfo: bookingData.patientInfo,
+          documents: preProcessedDocuments,
+          country: bookingData.country || userCountry
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        if (response.status === 402) {
+          setIsFreeChatEligible(false);
+          if (user?.email) {
+            try { localStorage.setItem(`nephro_free_chat_used_${user.email.toLowerCase().trim()}`, 'true'); } catch {}
+          }
+          updateUser?.({ hasUsedFreeChat: true });
+          toast.error(data.error || 'Your 1st free doctor chat has already been used. Please proceed with payment.');
+          return;
+        }
+        throw new Error(data.error || 'Failed to submit free doctor chat');
+      }
+
+      setIsFreeChatEligible(false);
+      setPaymentCompleted(true);
+      if (user?.email) {
+        try { localStorage.setItem(`nephro_free_chat_used_${user.email.toLowerCase().trim()}`, 'true'); } catch {}
+      }
+      updateUser?.({ hasUsedFreeChat: true });
+      try {
+        localStorage.removeItem('cashfree_booking_details');
+        sessionStorage.removeItem('cashfree_payment_details');
+      } catch {}
+
+      toast.success('🎉 Free 1st Doctor Chat Consultation submitted! Dr. Ilango will review your reports within 12–24 hours.');
+      const ticketId = data.ticketId || data.chat?.ticketId;
+      if (ticketId) {
+        navigate(`/doctor-chat?ticketId=${ticketId}`);
+      } else {
+        navigate('/profile');
+      }
+    } catch (error: any) {
+      console.error('❌ Error in processFreeChatBooking:', error);
+      toast.error(error?.message || 'Failed to submit free doctor chat. Please try again.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
   const handleBooking = async () => {
     console.log('🚀 handleBooking called with payment method:', bookingData.paymentMethod);
     console.log('🚀 Full bookingData:', bookingData);
+
+    // If eligible for 1st free Doctor Chat, bypass payment gateway and submit directly on server
+    if (isFreeChatEligible && bookingData.consultationType === 'doctor_chat') {
+      await processFreeChatBooking();
+      return;
+    }
 
     // If eligible for 1st free Initial Consultation, bypass payment gateway and confirm directly on server
     if (isFreeEligible && bookingData.consultationType === 'initial') {
@@ -1288,6 +1406,9 @@ export default function BookingPage() {
   };
 
   const isDoctorChat = bookingData.consultationType === 'doctor_chat';
+  const isCurrentBookingFree = (isFreeEligible && bookingData.consultationType === 'initial') ||
+                              (isFreeChatEligible && bookingData.consultationType === 'doctor_chat');
+  const currentRegularAmount = getConsultationPrice(bookingData.consultationType, bookingData.country || userCountry, pricing.currency);
   const effectiveStep = isDoctorChat 
     ? (step === 2 ? 3 : step === 3 ? 4 : step) 
     : step;
@@ -1823,8 +1944,7 @@ export default function BookingPage() {
 
       case 4: {
         const selectedType = consultationTypes.find(t => t.id === bookingData.consultationType);
-        const isCurrentBookingFree = isFreeEligible && bookingData.consultationType === 'initial';
-        const regularAmount = getConsultationPrice(bookingData.consultationType, bookingData.country || userCountry, pricing.currency);
+        const regularAmount = currentRegularAmount;
         return (
           <motion.div
             variants={stepVariants}
@@ -1835,11 +1955,15 @@ export default function BookingPage() {
           >
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                {isCurrentBookingFree ? 'Review & Confirm Free Booking' : 'Review & Payment'}
+                {isCurrentBookingFree 
+                  ? (isDoctorChat ? 'Review & Confirm Free Doctor Chat' : 'Review & Confirm Free Booking')
+                  : 'Review & Payment'}
               </h2>
               <p className="text-gray-600">
                 {isCurrentBookingFree
-                  ? 'Your 1st Initial Consultation is completely free — review your details and confirm below'
+                  ? isDoctorChat
+                    ? 'Your 1st Doctor Chat Consultation is 100% free — review your details and submit below'
+                    : 'Your 1st Initial Consultation is completely free — review your details and confirm below'
                   : 'Please review your booking details and complete payment'}
               </p>
             </div>
@@ -1864,7 +1988,7 @@ export default function BookingPage() {
                         <div className="flex justify-between">
                           <span className="text-gray-600">Attached Reports:</span>
                           <span className="font-medium">
-                            {uploadedFiles.length > 0 ? `${uploadedFiles.length} file(s) attached` : 'None'}
+                            {(bookingData.uploadedFiles && bookingData.uploadedFiles.length > 0) ? `${bookingData.uploadedFiles.length} file(s) attached` : 'None'}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -1919,9 +2043,11 @@ export default function BookingPage() {
                       </div>
                       {isCurrentBookingFree ? (
                         <div className="mt-2 text-sm text-green-700 font-medium">
-                          <p>✓ 1st Initial Consultation Free Offer Applied</p>
+                          <p>✓ {isDoctorChat ? '1st Doctor Chat Free Offer Applied' : '1st Initial Consultation Free Offer Applied'}</p>
                           <p className="text-xs text-gray-500 font-normal mt-1">
-                            Valid once per patient for your first Initial Consultation only.
+                            {isDoctorChat
+                              ? 'Valid once per patient for your first Doctor Chat & Reports consultation only.'
+                              : 'Valid once per patient for your first Initial Consultation only.'}
                           </p>
                         </div>
                       ) : (
@@ -1949,15 +2075,17 @@ export default function BookingPage() {
                           <CheckCircle2 className="w-6 h-6 text-green-600 mt-0.5 flex-shrink-0" />
                           <div>
                             <p className="font-semibold text-green-900 text-base">
-                              1st Initial Consultation — 100% Free
+                              {isDoctorChat ? '1st Doctor Chat Consultation — 100% Free' : '1st Initial Consultation — 100% Free'}
                             </p>
                             <p className="text-sm text-green-700 mt-1">
-                              No payment is required today. Click <strong>Confirm Free Booking</strong> below to schedule your appointment and receive your Google Meet link via email.
+                              {isDoctorChat
+                                ? 'No payment is required today. Click Confirm Free Doctor Chat below to submit your details and reports for Dr. Ilango S. Prakasam to review personally.'
+                                : 'No payment is required today. Click Confirm Free Booking below to schedule your appointment and receive your Google Meet link via email.'}
                             </p>
                           </div>
                         </div>
                         <div className="text-xs text-gray-600 border-t border-green-200 pt-3">
-                          Note: This complimentary offer applies strictly to your very first Initial Consultation. Subsequent Initial Consultations are billed at standard rates.
+                          Note: This complimentary offer applies strictly to your very first {isDoctorChat ? 'Doctor Chat' : 'Initial Consultation'}. Subsequent consultations are billed at standard rates.
                         </div>
                       </div>
                     ) : (
@@ -2110,9 +2238,9 @@ export default function BookingPage() {
                     ? (isProcessingPayment
                         ? 'Processing...'
                         : (isCurrentBookingFree 
-                            ? 'Confirm Free Booking' 
+                            ? (isDoctorChat ? 'Confirm Free Doctor Chat' : 'Confirm Free Booking')
                             : (isDoctorChat 
-                                ? `Pay ${getFormattedPrice(regularAmount, pricing.currency)} & Start Chat` 
+                                ? `Pay ${getFormattedPrice(currentRegularAmount, pricing.currency)} & Start Chat` 
                                 : 'Pay Now')))
                     : 'Next'}
                 </span>

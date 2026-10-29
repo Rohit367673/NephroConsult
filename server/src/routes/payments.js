@@ -364,6 +364,13 @@ router.post('/verify-payment', async (req, res) => {
 
           console.log('✅ DoctorChat created successfully:', createdDoctorChat.ticketId);
 
+          // Mark user has used their free chat so they don't claim free later
+          if (patientId) {
+            await User.findByIdAndUpdate(patientId, { $set: { hasUsedFreeChat: true } }).catch(() => {});
+          } else if (patientEmail) {
+            await User.findOneAndUpdate({ email: patientEmail.toLowerCase().trim() }, { $set: { hasUsedFreeChat: true } }).catch(() => {});
+          }
+
           // Email & Telegram notifications for doctor_chat
           try {
             const doctorRecipient = (env.OWNER_EMAIL && env.OWNER_EMAIL.trim()) ? env.OWNER_EMAIL.trim() : 'suyambu54321@gmail.com';

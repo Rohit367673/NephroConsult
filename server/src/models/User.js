@@ -15,6 +15,7 @@ const UserSchema = new mongoose.Schema(
     isEmailVerified: { type: Boolean, default: false },
     authProvider: { type: String, enum: ['email', 'google'], default: 'email' },
     hasUsedFreeConsultation: { type: Boolean, default: false, index: true },
+    hasUsedFreeChat: { type: Boolean, default: false, index: true },
   },
   { timestamps: true }
 );

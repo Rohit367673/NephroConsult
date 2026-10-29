@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { z } from 'zod';
 import DoctorChat from '../models/DoctorChat.js';
 import User from '../models/User.js';
@@ -15,6 +16,277 @@ function isDoctorOrAdmin(req) {
   const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
   return role === 'admin' || role === 'doctor' || adminEmails.includes(email);
 }
+
+// Server-side helper to verify if a patient is eligible for their 1st FREE Doctor Chat
+export async function checkFreeChatEligibility({ userId, email, phone }) {
+  try {
+    const validObjectId = userId && mongoose.Types.ObjectId.isValid(String(userId)) ? String(userId) : null;
+
+    if (validObjectId) {
+      const userDoc = await User.findById(validObjectId).lean();
+      if (userDoc?.hasUsedFreeChat) {
+        return { eligible: false, reason: 'User has already used their free doctor chat consultation' };
+      }
+    }
+    if (email) {
+      const normalizedEmail = String(email).toLowerCase().trim();
+      const userByEmail = await User.findOne({ email: normalizedEmail }).lean();
+      if (userByEmail?.hasUsedFreeChat) {
+        return { eligible: false, reason: 'Email has already used their free doctor chat consultation' };
+      }
+    }
+
+    const orConditions = [];
+    if (validObjectId) orConditions.push({ 'patient.id': validObjectId });
+    if (email) orConditions.push({ 'patient.email': String(email).toLowerCase().trim() });
+    if (phone && String(phone).trim().length >= 10) {
+      const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+      if (cleanPhone.length === 10) {
+        orConditions.push({ 'patient.phone': new RegExp(cleanPhone + '$') });
+      }
+    }
+
+    if (orConditions.length === 0) {
+      return { eligible: false, reason: 'Authentication required' };
+    }
+
+    const existingCount = await DoctorChat.countDocuments({
+      $or: orConditions,
+      status: { $ne: 'cancelled' }
+    });
+
+    if (existingCount > 0) {
+      if (validObjectId) {
+        await User.findByIdAndUpdate(validObjectId, { $set: { hasUsedFreeChat: true } }).catch(() => {});
+      } else if (email) {
+        await User.findOneAndUpdate(
+          { email: String(email).toLowerCase().trim() },
+          { $set: { hasUsedFreeChat: true } }
+        ).catch(() => {});
+      }
+      return { eligible: false, reason: 'User already has prior doctor chat consultations' };
+    }
+
+    return { eligible: true };
+  } catch (err) {
+    console.error('Error checking free chat eligibility:', err);
+    return { eligible: false, reason: 'Verification failed' };
+  }
+}
+
+/**
+ * GET /api/doctor-chat/free-eligibility
+ * Check if the patient is eligible for a 1st free doctor chat consultation
+ */
+router.get('/free-eligibility', async (req, res) => {
+  try {
+    const resolvedUserId = req.session?.user?.id || (req.query.userId ? String(req.query.userId) : undefined);
+    const resolvedEmail = req.session?.user?.email || (req.query.email ? String(req.query.email) : undefined);
+
+    if (!resolvedUserId && !resolvedEmail) {
+      return res.json({ eligible: false, authenticated: false });
+    }
+    const result = await checkFreeChatEligibility({
+      userId: resolvedUserId,
+      email: resolvedEmail,
+      phone: req.query.phone ? String(req.query.phone) : undefined
+    });
+    return res.json({
+      eligible: result.eligible,
+      reason: result.reason,
+      authenticated: true
+    });
+  } catch (error) {
+    console.error('Error in free-eligibility doctor-chat endpoint:', error);
+    return res.status(500).json({ eligible: false, error: 'Failed to check chat eligibility' });
+  }
+});
+
+/**
+ * POST /api/doctor-chat/free-create
+ * Create a complimentary 1st doctor chat consultation
+ */
+router.post('/free-create', async (req, res) => {
+  try {
+    const sessionUser = req.session?.user;
+    const { patientInfo, documents = [], country = 'IN' } = req.body;
+
+    if (!patientInfo || !patientInfo.name || !patientInfo.email) {
+      return res.status(400).json({ error: 'Patient name and email are required' });
+    }
+
+    const patientName = patientInfo.name.trim();
+    const patientEmail = patientInfo.email.toLowerCase().trim();
+    const patientPhone = patientInfo.phone ? patientInfo.phone.trim() : '';
+    const patientAge = patientInfo.age ? Number(patientInfo.age) : undefined;
+    const patientGender = patientInfo.gender || '';
+    const initialQuery = patientInfo.medicalHistory || 'Review of uploaded lab reports and kidney health query.';
+
+    let resolvedUserId = sessionUser?.id;
+    if (!resolvedUserId) {
+      const existingUser = await User.findOne({ email: patientEmail }).lean();
+      if (existingUser) resolvedUserId = String(existingUser._id);
+    }
+
+    // Check eligibility
+    const eligibility = await checkFreeChatEligibility({
+      userId: resolvedUserId,
+      email: patientEmail,
+      phone: patientPhone
+    });
+
+    if (!eligibility.eligible) {
+      return res.status(402).json({
+        error: 'You have already used your free 1st Doctor Chat. Payment (₹100 / $1) is required for subsequent chats.',
+        reason: eligibility.reason
+      });
+    }
+
+    // Atomically claim free chat on user
+    if (resolvedUserId) {
+      const claimedUser = await User.findOneAndUpdate(
+        { _id: resolvedUserId, hasUsedFreeChat: { $ne: true } },
+        { $set: { hasUsedFreeChat: true } },
+        { new: true }
+      );
+      if (!claimedUser) {
+        return res.status(402).json({ error: 'Free doctor chat has already been claimed for this account.' });
+      }
+    } else {
+      await User.findOneAndUpdate(
+        { email: patientEmail },
+        { $set: { hasUsedFreeChat: true } }
+      ).catch(() => {});
+    }
+
+    const docs = Array.isArray(documents) ? documents : [];
+
+    const createdDoctorChat = await DoctorChat.create({
+      patient: {
+        id: resolvedUserId || undefined,
+        name: patientName,
+        email: patientEmail,
+        phone: patientPhone,
+        age: patientAge,
+        gender: patientGender,
+        country: country || 'IN',
+      },
+      status: 'waiting_doctor',
+      initialQuery,
+      documents: docs,
+      messages: [
+        {
+          sender: 'patient',
+          senderName: patientName,
+          text: initialQuery,
+          attachments: docs.map(d => typeof d === 'string' && d.includes('|') ? d.split('|')[0] : 'Medical Document'),
+          timestamp: new Date()
+        }
+      ],
+      price: {
+        amount: 0,
+        currency: country === 'IN' ? 'INR' : 'USD',
+        discountApplied: true,
+      }
+    });
+
+    console.log('✅ Free DoctorChat created successfully:', createdDoctorChat.ticketId);
+
+    // Send notifications to Dr. Ilango & Telegram alert
+    try {
+      const doctorRecipient = (env.OWNER_EMAIL && env.OWNER_EMAIL.trim()) ? env.OWNER_EMAIL.trim() : 'suyambu54321@gmail.com';
+      const siteUrl = env.FRONTEND_URL || 'https://nephroconsultation.com';
+      const doctorHtml = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #006f6f; color: white; padding: 16px 20px; border-radius: 8px 8px 0 0;">
+            <h2 style="margin: 0; font-size: 20px;">New Doctor Chat & Report Review Request (1st Free)</h2>
+            <p style="margin: 4px 0 0; opacity: 0.9; font-size: 14px;">Ticket: <strong>${createdDoctorChat.ticketId}</strong></p>
+          </div>
+          <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 15px; margin-top: 0;">Dear Dr. Ilango,</p>
+            <p>A patient has submitted their medical query and uploaded reports for your review (1st Free Chat Offer):</p>
+            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+              <p style="margin: 0 0 8px;"><strong>Patient:</strong> ${patientName} (${patientAge ? `${patientAge} yrs` : ''} ${patientGender || ''})</p>
+              <p style="margin: 0 0 8px;"><strong>Email:</strong> ${patientEmail}</p>
+              <p style="margin: 0 0 8px;"><strong>Phone:</strong> ${patientPhone || 'Not provided'}</p>
+              <p style="margin: 0 0 8px;"><strong>Uploaded Reports:</strong> ${docs.length} file(s)</p>
+              <p style="margin: 0 0 8px;"><strong>Status:</strong> 🎁 1st Free Chat Consultation</p>
+              <p style="margin: 0;"><strong>Patient's Message:</strong></p>
+              <div style="background: #f3f4f6; padding: 10px; border-radius: 4px; margin-top: 6px; font-style: italic;">
+                ${initialQuery}
+              </div>
+            </div>
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="${siteUrl}/admin" style="background: #006f6f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                Open Doctor Admin Panel
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+      await sendEmail(doctorRecipient, `New Doctor Chat Request [FREE 1st] (${createdDoctorChat.ticketId}) - ${patientName}`, doctorHtml);
+    } catch (err) {
+      console.warn('⚠️ Doctor chat notification to doctor failed:', err?.message);
+    }
+
+    try {
+      await telegramService.notifyNewAppointment({
+        patientName,
+        patientEmail,
+        phone: patientPhone,
+        date: new Date().toLocaleDateString('en-US'),
+        timeSlot: 'Free 1st Doctor Chat',
+        amount: 0,
+        consultationType: 'Upload Files & Chat with Doctor (1st Free)',
+        symptoms: initialQuery,
+        medicalHistory: `${docs.length} lab report document(s) uploaded`,
+      });
+    } catch {}
+
+    try {
+      if (patientEmail) {
+        const siteUrl = env.FRONTEND_URL || 'https://nephroconsultation.com';
+        const chatLink = `${siteUrl}/doctor-chat?ticketId=${createdDoctorChat.ticketId}`;
+        const patientHtml = `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: #006f6f; color: white; padding: 16px 20px; border-radius: 8px 8px 0 0; text-align: center;">
+              <h2 style="margin: 0; font-size: 20px;">Consultation Received — Dr. Ilango S. Prakasam</h2>
+              <p style="margin: 4px 0 0; opacity: 0.9; font-size: 14px;">Ticket: <strong>${createdDoctorChat.ticketId}</strong> (1st Chat Free)</p>
+            </div>
+            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
+              <p style="font-size: 15px; margin-top: 0;">Dear ${patientName},</p>
+              <p>Thank you for submitting your reports. Your complimentary 1st consultation has been received and assigned to <strong>Dr. Ilango S. Prakasam (Sr. Nephrologist)</strong>.</p>
+              <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 14px; margin-bottom: 16px; color: #065f46;">
+                <h4 style="margin: 0 0 6px; font-size: 15px;">⏳ What happens next?</h4>
+                <p style="margin: 0; font-size: 14px;">Dr. Ilango personally reviews cases within <strong>12 to 24 hours</strong>. You do not need to wait on the website. We will email you immediately once Dr. Ilango replies or prescribes advice.</p>
+              </div>
+              <div style="text-align: center; margin: 24px 0;">
+                <a href="${chatLink}" style="background: #006f6f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                  View Your Consultation Chat
+                </a>
+              </div>
+              <p style="font-size: 12px; color: #6b7280; text-align: center;">
+                You can also access this chat anytime from your NephroConsult profile.
+              </p>
+            </div>
+          </div>
+        `;
+        await sendEmail(patientEmail, `Consultation Received (${createdDoctorChat.ticketId}) - NephroConsult`, patientHtml);
+      }
+    } catch (err) {
+      console.warn('⚠️ Doctor chat confirmation to patient failed:', err?.message);
+    }
+
+    return res.status(201).json({
+      success: true,
+      chat: createdDoctorChat,
+      ticketId: createdDoctorChat.ticketId
+    });
+  } catch (err) {
+    console.error('Error creating free doctor chat:', err);
+    return res.status(500).json({ error: 'Failed to create doctor chat consultation' });
+  }
+});
 
 /**
  * GET /api/doctor-chat/mine

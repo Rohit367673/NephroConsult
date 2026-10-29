@@ -890,7 +890,7 @@ For support: suyambu54321@gmail.com
                                 <Button
                                   size="sm"
                                   className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs self-start sm:self-auto"
-                                  onClick={() => navigate('/booking')}
+                                  onClick={() => navigate('/booking?plan=doctor_chat')}
                                 >
                                   + Start New Chat
                                 </Button>
@@ -902,15 +902,15 @@ For support: suyambu54321@gmail.com
                                   <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                                   <p className="text-sm font-medium text-gray-700">No Doctor Chat Consultations Yet</p>
                                   <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
-                                    Upload your lab reports and medical questions for Dr. Ilango to review personally for just ₹100 / $1.
+                                    Upload your lab reports and medical questions for Dr. Ilango to review personally (1st Chat Free for new patients, then ₹100 / $1).
                                   </p>
                                   <Button
                                     size="sm"
                                     variant="outline"
                                     className="mt-3 border-[#006f6f] text-[#006f6f] hover:bg-teal-50 text-xs"
-                                    onClick={() => navigate('/booking')}
+                                    onClick={() => navigate('/booking?plan=doctor_chat')}
                                   >
-                                    Submit Reports & Start Chat
+                                    Submit Reports & Start {user?.hasUsedFreeChat ? 'Chat' : '1st Free Chat'}
                                   </Button>
                                 </div>
                               ) : (
