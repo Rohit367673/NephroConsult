@@ -1640,20 +1640,20 @@ export default function BookingPage() {
             </div>
 
             <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-              <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-6">
+              <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-5 sm:gap-6">
                 <div>
                   <Label>Full Name *</Label>
                   <Input
                     value={bookingData.patientInfo.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     onBlur={() => handleFieldBlur('name')}
-                    className={`p-4 ${validationErrors.name ? 'border-red-500 focus:border-red-500' : ''}`}
+                    className={validationErrors.name ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20' : ''}
                     required
                     placeholder="Enter your full name"
                   />
                   {validationErrors.name && (
-                    <div className="flex items-center mt-1 text-sm text-red-600">
-                      <AlertCircle className="h-4 w-4 mr-1" />
+                    <div className="flex items-center mt-1.5 text-xs text-red-600 font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
                       {validationErrors.name}
                     </div>
                   )}
@@ -1665,20 +1665,20 @@ export default function BookingPage() {
                     value={bookingData.patientInfo.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     onBlur={() => handleFieldBlur('email')}
-                    className={`p-4 ${validationErrors.email ? 'border-red-500 focus:border-red-500' : ''}`}
+                    className={validationErrors.email ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20' : ''}
                     required
                     placeholder="Enter your email address"
                   />
                   {validationErrors.email && (
-                    <div className="flex items-center mt-1 text-sm text-red-600">
-                      <AlertCircle className="h-4 w-4 mr-1" />
+                    <div className="flex items-center mt-1.5 text-xs text-red-600 font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
                       {validationErrors.email}
                     </div>
                   )}
                 </div>
               </motion.div>
 
-              <motion.div variants={itemVariants} className="grid md:grid-cols-3 gap-6">
+              <motion.div variants={itemVariants} className="grid md:grid-cols-3 gap-5 sm:gap-6">
                 <div>
                   <Label>Phone Number *</Label>
                   <Input
@@ -1686,18 +1686,18 @@ export default function BookingPage() {
                     value={bookingData.patientInfo.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
                     onBlur={() => handleFieldBlur('phone')}
-                    className={`p-4 ${validationErrors.phone ? 'border-red-500 focus:border-red-500' : ''}`}
+                    className={validationErrors.phone ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20' : ''}
                     required
-                    placeholder="Enter your phone number (7-15 digits)"
+                    placeholder="e.g. +91 98765 43210"
                   />
                   {validationErrors.phone && (
-                    <div className="flex items-center mt-1 text-sm text-red-600">
-                      <AlertCircle className="h-4 w-4 mr-1" />
+                    <div className="flex items-center mt-1.5 text-xs text-red-600 font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
                       {validationErrors.phone}
                     </div>
                   )}
-                  <div className="text-xs text-gray-500 mt-1">
-                    Examples: +91 98765 43210, (555) 123-4567, 9876543210
+                  <div className="text-[11px] text-gray-500 mt-1">
+                    Include country code if outside India
                   </div>
                 </div>
                 <div>
@@ -1707,15 +1707,15 @@ export default function BookingPage() {
                     value={bookingData.patientInfo.age}
                     onChange={(e) => handleInputChange('age', e.target.value)}
                     onBlur={() => handleFieldBlur('age')}
-                    className={`p-4 ${validationErrors.age ? 'border-red-500 focus:border-red-500' : ''}`}
+                    className={validationErrors.age ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20' : ''}
                     required
-                    placeholder="Enter your age"
+                    placeholder="e.g. 45"
                     min="1"
                     max="150"
                   />
                   {validationErrors.age && (
-                    <div className="flex items-center mt-1 text-sm text-red-600">
-                      <AlertCircle className="h-4 w-4 mr-1" />
+                    <div className="flex items-center mt-1.5 text-xs text-red-600 font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
                       {validationErrors.age}
                     </div>
                   )}
@@ -1739,7 +1739,7 @@ export default function BookingPage() {
                     }}
                     required
                   >
-                    <SelectTrigger className={`p-4 ${validationErrors.gender ? 'border-red-500 focus:border-red-500' : ''}`}>
+                    <SelectTrigger className={validationErrors.gender ? 'border-red-500 focus:border-red-500' : ''}>
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1750,8 +1750,8 @@ export default function BookingPage() {
                     </SelectContent>
                   </Select>
                   {validationErrors.gender && (
-                    <div className="flex items-center mt-1 text-sm text-red-600">
-                      <AlertCircle className="h-4 w-4 mr-1" />
+                    <div className="flex items-center mt-1.5 text-xs text-red-600 font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
                       {validationErrors.gender}
                     </div>
                   )}
@@ -1764,18 +1764,20 @@ export default function BookingPage() {
                   value={bookingData.patientInfo.medicalHistory}
                   onChange={(e) => handleInputChange('medicalHistory', e.target.value)}
                   onBlur={() => handleFieldBlur('medicalHistory')}
-                  placeholder="Please describe your current symptoms, relevant medical history, and any concerns you'd like to discuss (minimum 10 characters)..."
-                  className={`min-h-32 p-4 ${validationErrors.medicalHistory ? 'border-red-500 focus:border-red-500' : ''}`}
+                  placeholder="Please describe your current symptoms, relevant medical history, and any concerns you'd like Dr. Ilango to evaluate..."
+                  className={`min-h-[120px] ${validationErrors.medicalHistory ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20' : ''}`}
                   required
                 />
-                {validationErrors.medicalHistory && (
-                  <div className="flex items-center mt-1 text-sm text-red-600">
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                    {validationErrors.medicalHistory}
+                <div className="flex justify-between items-center mt-1.5">
+                  {validationErrors.medicalHistory ? (
+                    <div className="flex items-center text-xs text-red-600 font-medium">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
+                      {validationErrors.medicalHistory}
+                    </div>
+                  ) : <span />}
+                  <div className="text-[11px] text-gray-500">
+                    Characters: {bookingData.patientInfo.medicalHistory.length}/2000
                   </div>
-                )}
-                <div className="text-xs text-gray-500 mt-1">
-                  Characters: {bookingData.patientInfo.medicalHistory.length}/2000
                 </div>
               </motion.div>
 
@@ -1787,8 +1789,8 @@ export default function BookingPage() {
                     ...prev,
                     patientInfo: { ...prev.patientInfo, currentMedications: e.target.value }
                   }))}
-                  placeholder="List any medications you're currently taking..."
-                  className="p-4"
+                  placeholder="List any blood pressure, diabetes, or kidney medications you are currently taking (dosage & frequency)..."
+                  className="min-h-[90px]"
                 />
               </motion.div>
 

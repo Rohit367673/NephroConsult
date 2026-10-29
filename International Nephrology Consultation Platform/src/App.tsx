@@ -70,6 +70,7 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,7 +98,7 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md p-6 sm:p-8 rounded-2xl">
         <DialogHeader>
           <DialogTitle className="sr-only">Login to NephroConsult</DialogTitle>
           <DialogDescription className="sr-only">
@@ -114,7 +115,7 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="w-16 h-16 bg-gradient-to-br from-[#006f6f] to-[#004f4f] rounded-xl flex items-center justify-center mx-auto mb-4"
+              className="w-14 h-14 bg-gradient-to-br from-[#006f6f] to-[#004f4f] rounded-2xl flex items-center justify-center mx-auto mb-3.5 shadow-md"
             >
               <span className="text-white text-2xl font-bold">N</span>
             </motion.div>
@@ -130,7 +131,7 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
               initial={{ y: -10, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="text-gray-600 mt-2"
+              className="text-gray-500 text-sm mt-1"
             >
               Sign in to your NephroConsult account
             </motion.p>
@@ -148,7 +149,7 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="Enter your email"
+                placeholder="name@example.com"
               />
             </motion.div>
 
@@ -158,23 +159,35 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
               transition={{ delay: 0.5 }}
             >
               <Label>Password</Label>
-              <Input
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Enter your password"
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Enter your password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </motion.div>
 
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6 }}
+              className="pt-1"
             >
               <Button
                 type="submit"
-                className="w-full bg-[#006f6f] hover:bg-[#005555]"
+                className="w-full h-11 bg-[#006f6f] hover:bg-[#005555] text-white font-semibold rounded-xl shadow-md transition-all cursor-pointer"
                 disabled={isLoading}
               >
                 {isLoading ? 'Signing in...' : 'Sign In'}
@@ -1161,191 +1174,6 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Consultation Options Section */}
-      <section className="py-12 sm:py-16 md:py-20 bg-white relative overflow-hidden border-b border-gray-100">
-        <div className="container-medical relative z-10">
-          <motion.div
-            initial={{ y: 40, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center max-w-3xl mx-auto mb-10 sm:mb-14"
-          >
-            <Badge className="mb-3 px-3 py-1 bg-[#006f6f]/10 text-[#006f6f] border-[#006f6f]/20 text-xs sm:text-sm font-semibold">
-              <Stethoscope className="w-3.5 h-3.5 mr-1.5 inline" />
-              Choose Your Care Path
-            </Badge>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-3 sm:mb-4">
-              Two Ways to Consult Dr. Ilango
-            </h2>
-            <p className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed">
-              Select the option that best fits your medical needs — schedule an in-depth video consultation or upload your medical reports for prompt doctor chat review.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
-            {/* Option 1: 1-on-1 Video Consultation */}
-            <motion.div
-              initial={{ y: 30, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1, duration: 0.6 }}
-              className="relative flex flex-col justify-between rounded-2xl border-2 border-[#006f6f]/30 bg-gradient-to-b from-[#006f6f]/[0.03] to-white p-6 sm:p-8 shadow-md hover:shadow-xl hover:border-[#006f6f] transition-all duration-300"
-            >
-              <div className="absolute -top-3.5 right-6">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-[#006f6f] text-white shadow-sm">
-                  ★ Popular Choice
-                </span>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-3.5 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-[#006f6f] text-white flex items-center justify-center shadow-sm shrink-0">
-                    <Video className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
-                      1-on-1 Video Consultation
-                    </h3>
-                    <p className="text-xs sm:text-sm font-medium text-[#006f6f]">
-                      45-Minute In-Depth Video Call
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-sm text-gray-600 mb-5 leading-relaxed">
-                  Direct face-to-face appointment with Dr. Ilango over encrypted HD video. Best for initial assessments, new diagnoses, and thorough clinical evaluations.
-                </p>
-
-                {/* Price Box */}
-                <div className="bg-white rounded-xl p-4 border border-gray-200 mb-6 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-gray-500 block">Consultation Fee</span>
-                    {showFreeOffer ? (
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-sm text-gray-400 line-through font-medium">
-                          {currencySymbol}{initialPrice}
-                        </span>
-                        <span className="text-2xl font-black text-emerald-600">
-                          100% FREE
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="text-2xl font-black text-[#006f6f]">
-                        {currencySymbol}{initialPrice}
-                        <span className="text-xs font-normal text-gray-500 ml-1">{currencyCode}</span>
-                      </div>
-                    )}
-                  </div>
-                  {showFreeOffer && (
-                    <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full">
-                      1st Session Free
-                    </span>
-                  )}
-                </div>
-
-                {/* Features */}
-                <ul className="space-y-3 mb-6">
-                  {[
-                    "45-minute comprehensive video consultation",
-                    "Choose your own convenient date & time slot",
-                    "Digital prescription & personalized diet chart",
-                    "Direct interactive discussion with family members"
-                  ].map((feat, i) => (
-                    <li key={i} className="flex items-start text-xs sm:text-sm text-gray-700">
-                      <CheckCircle2 className="w-4 h-4 text-[#006f6f] mr-2.5 mt-0.5 shrink-0" />
-                      <span>{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <Button
-                size="lg"
-                onClick={() => handlePlanClick('initial')}
-                className="w-full bg-[#006f6f] hover:bg-[#005555] text-white font-bold py-5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer"
-              >
-                <span>{showFreeOffer ? "Book Free Video Consultation" : "Book Video Consultation"}</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </motion.div>
-
-            {/* Option 2: Upload Files & Chat with Doctor */}
-            <motion.div
-              initial={{ y: 30, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="relative flex flex-col justify-between rounded-2xl border-2 border-emerald-500/30 bg-gradient-to-b from-emerald-50/[0.15] to-white p-6 sm:p-8 shadow-md hover:shadow-xl hover:border-emerald-600 transition-all duration-300"
-            >
-              <div className="absolute -top-3.5 right-6">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-sm">
-                  ⚡ Fast & Convenient
-                </span>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-3.5 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-sm shrink-0">
-                    <MessageCircle className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
-                      Upload Files & Doctor Chat
-                    </h3>
-                    <p className="text-xs sm:text-sm font-medium text-emerald-800">
-                      Report Review & Written Advice
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-sm text-gray-600 mb-5 leading-relaxed">
-                  Upload your blood work, renal ultrasound, or biopsy reports along with your symptoms. Dr. Ilango reviews them personally and sends detailed advice.
-                </p>
-
-                {/* Price Box */}
-                <div className="bg-white rounded-xl p-4 border border-gray-200 mb-6 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-gray-500 block">Report Review Fee</span>
-                    <div className="text-2xl font-black text-emerald-700">
-                      {currencySymbol}{chatPrice}
-                      <span className="text-xs font-normal text-gray-500 ml-1">{currencyCode}</span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full">
-                    Flat ₹100 / $1 USD
-                  </span>
-                </div>
-
-                {/* Features */}
-                <ul className="space-y-3 mb-6">
-                  {[
-                    "Upload PDFs, images & diagnostic lab reports",
-                    "No scheduled video call required — submit anytime",
-                    "Doctor's written clinical advice & prescription",
-                    "Email notification with direct link when doctor replies"
-                  ].map((feat, i) => (
-                    <li key={i} className="flex items-start text-xs sm:text-sm text-gray-700">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 mr-2.5 mt-0.5 shrink-0" />
-                      <span>{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <Button
-                size="lg"
-                onClick={() => handlePlanClick('doctor_chat')}
-                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer"
-              >
-                <span>Upload Reports & Start Chat</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
       {/* AI Assistant Section */}
       <section className="py-10 sm:py-14 md:py-20 lg:py-24 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden">
         {/* Animated background */}
@@ -2249,15 +2077,15 @@ function ContactPage() {
                 whileInView={{ x: 0, opacity: 1 }}
                 viewport={{ once: true }}
               >
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle>Send us a Message</CardTitle>
-                    <p className="text-gray-600">
-                      Fill out the form below and we'll get back to you as soon as possible.
+                <Card className="shadow-xl rounded-2xl border border-gray-200/80 overflow-hidden bg-white">
+                  <CardHeader className="p-6 sm:p-8 pb-4 border-b border-gray-100">
+                    <CardTitle className="text-2xl font-bold text-gray-900">Send us a Message</CardTitle>
+                    <p className="text-gray-500 text-sm mt-1">
+                      Fill out the form below and Dr. Ilango's clinical team will get back to you within 24 hours.
                     </p>
                   </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                  <CardContent className="p-6 sm:p-8 pt-6">
+                    <form onSubmit={handleSubmit} className="space-y-5">
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
                           <Label>Full Name</Label>
@@ -2266,7 +2094,6 @@ function ContactPage() {
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             placeholder="Enter your name"
-                            className="mt-1"
                           />
                         </div>
                         <div>
@@ -2277,7 +2104,6 @@ function ContactPage() {
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             placeholder="Enter your email"
-                            className="mt-1"
                           />
                         </div>
                       </div>
@@ -2290,19 +2116,18 @@ function ContactPage() {
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                             placeholder="Enter your phone"
-                            className="mt-1"
                           />
                         </div>
                         <div>
-                          <Label>Urgency Level</Label>
+                          <Label>Inquiry Type</Label>
                           <Select value={formData.urgency} onValueChange={(value) => setFormData({ ...formData, urgency: value })}>
-                            <SelectTrigger className="mt-1">
+                            <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="normal">Normal Inquiry</SelectItem>
-                              <SelectItem value="urgent">Urgent</SelectItem>
-                              <SelectItem value="emergency">Emergency</SelectItem>
+                              <SelectItem value="normal">General Inquiry</SelectItem>
+                              <SelectItem value="urgent">Urgent Consultation Query</SelectItem>
+                              <SelectItem value="emergency">Lab Reports Guidance</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -2315,7 +2140,6 @@ function ContactPage() {
                           value={formData.subject}
                           onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                           placeholder="What can we help you with?"
-                          className="mt-1"
                         />
                       </div>
 
@@ -2326,13 +2150,13 @@ function ContactPage() {
                           value={formData.message}
                           onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                           placeholder="Describe your inquiry or concern in detail..."
-                          className="mt-1 min-h-32"
+                          className="min-h-[120px]"
                         />
                       </div>
 
                       <Button 
                         type="submit" 
-                        className="w-full bg-[#006f6f] hover:bg-[#005555]"
+                        className="w-full h-11 bg-[#006f6f] hover:bg-[#005555] text-white font-semibold rounded-xl shadow-md transition-all cursor-pointer"
                         disabled={isSubmitting}
                       >
                         {isSubmitting ? (

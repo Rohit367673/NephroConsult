@@ -206,9 +206,9 @@ export function OTPSignupModal({ isOpen, onClose }: OTPSignupModalProps) {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100"
       >
-        <div className="p-6">
+        <div className="p-6 sm:p-8">
           <AnimatePresence mode="wait">
             {step === 'details' ? (
               <motion.div
@@ -302,7 +302,7 @@ export function OTPSignupModal({ isOpen, onClose }: OTPSignupModalProps) {
 
                   <Button
                     type="submit"
-                    className="w-full bg-[#006f6f] hover:bg-[#005555]"
+                    className="w-full h-11 bg-[#006f6f] hover:bg-[#005555] text-white font-semibold rounded-xl shadow-md transition-all cursor-pointer mt-2"
                     disabled={isLoading}
                   >
                     {isLoading ? 'Sending Code...' : 'Send Verification Code'}
@@ -387,7 +387,7 @@ export function OTPSignupModal({ isOpen, onClose }: OTPSignupModalProps) {
 
                   <Button
                     type="submit"
-                    className="w-full bg-[#006f6f] hover:bg-[#005555]"
+                    className="w-full h-11 bg-[#006f6f] hover:bg-[#005555] text-white font-semibold rounded-xl shadow-md transition-all cursor-pointer mt-2"
                     disabled={isLoading || otp.length !== 6}
                   >
                     {isLoading ? 'Verifying...' : 'Create Account'}
