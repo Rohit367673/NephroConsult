@@ -81,8 +81,9 @@ export const getPricingForTimezone = (timezone: string) => {
   
   // Try exact match
   if (REGION_PRICING[timezone as keyof typeof REGION_PRICING]) {
-    console.log('Found exact match:', REGION_PRICING[timezone as keyof typeof REGION_PRICING]);
-    return REGION_PRICING[timezone as keyof typeof REGION_PRICING];
+    const p = REGION_PRICING[timezone as keyof typeof REGION_PRICING];
+    console.log('Found exact match:', p);
+    return { ...p, doctor_chat: p.currency === 'INR' ? 100 : 1 };
   }
   
   // Special handling for India - check if timezone contains India/Kolkata/Calcutta

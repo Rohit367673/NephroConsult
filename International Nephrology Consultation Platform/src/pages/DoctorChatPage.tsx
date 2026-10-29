@@ -252,6 +252,50 @@ export default function DoctorChatPage() {
     }
   };
 
+  const getInitialQueryDisplay = (query: any) => {
+    if (!query) return 'No description provided.';
+    if (typeof query === 'string') return query;
+    return query.symptoms || query.primaryQuestion || query.medicalHistory || 'No description provided.';
+  };
+
+  const handleDownloadReport = (doc: string) => {
+    if (typeof doc === 'string' && doc.includes('|')) {
+      try {
+        const [filename, base64Data] = doc.split('|');
+        let cleanBase64 = base64Data;
+        if (base64Data.includes(',')) {
+          cleanBase64 = base64Data.split(',')[1];
+        }
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const extension = filename.split('.').pop()?.toLowerCase();
+        let mimeType = 'application/octet-stream';
+        if (extension === 'pdf') mimeType = 'application/pdf';
+        else if (['jpg', 'jpeg'].includes(extension || '')) mimeType = 'image/jpeg';
+        else if (extension === 'png') mimeType = 'image/png';
+        else if (extension === 'gif') mimeType = 'image/gif';
+        const blob = new Blob([byteArray], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        toast.success(`Downloaded: ${filename}`);
+      } catch {
+        toast.error('Failed to download document');
+      }
+    } else if (typeof doc === 'string' && doc.startsWith('http')) {
+      window.open(doc, '_blank');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col justify-between">
@@ -412,7 +456,7 @@ export default function DoctorChatPage() {
                     Patient Medical Query / Symptoms:
                   </h4>
                   <div className="bg-white p-3 rounded-lg border border-gray-200 text-xs sm:text-sm text-gray-700 leading-relaxed">
-                    {activeTicket.initialQuery || 'No description provided.'}
+                    {getInitialQueryDisplay(activeTicket.initialQuery)}
                   </div>
                 </div>
 
@@ -425,25 +469,22 @@ export default function DoctorChatPage() {
                       {activeTicket.documents.map((doc, idx) => {
                         const parts = typeof doc === 'string' ? doc.split('|') : [];
                         const fileName = parts.length > 1 ? parts[0] : `Lab Report ${idx + 1}`;
-                        const fileData = parts.length > 1 ? parts[1] : doc;
                         return (
                           <div
                             key={idx}
                             className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-gray-200 text-xs"
                           >
-                            <span className="truncate max-w-[200px] font-medium text-gray-800" title={fileName}>
+                            <span className="truncate max-w-[180px] font-medium text-gray-800" title={fileName}>
                               📎 {fileName}
                             </span>
-                            {fileData && fileData.startsWith('data:') && (
-                              <a
-                                href={fileData}
-                                download={fileName}
-                                className="text-[#006f6f] hover:underline font-semibold shrink-0 ml-2 inline-flex items-center gap-1"
-                              >
-                                <Download className="w-3 h-3" />
-                                Download
-                              </a>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadReport(doc)}
+                              className="text-[#006f6f] hover:underline font-semibold shrink-0 ml-2 inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Download className="w-3 h-3" />
+                              Download
+                            </button>
                           </div>
                         );
                       })}
@@ -456,7 +497,12 @@ export default function DoctorChatPage() {
         </Card>
 
         {/* Prescription Card (if Dr. Ilango attached one) */}
-        {activeTicket.prescription && (activeTicket.prescription.notes || (activeTicket.prescription.medicines && activeTicket.prescription.medicines.length > 0)) && (
+        {activeTicket.prescription && (
+          (activeTicket.prescription as any).diagnosis ||
+          (activeTicket.prescription as any).instructions ||
+          activeTicket.prescription.notes ||
+          (activeTicket.prescription.medicines && activeTicket.prescription.medicines.length > 0)
+        ) && (
           <Card className="border-2 border-emerald-500/40 shadow-sm mb-3 bg-gradient-to-br from-emerald-50/50 to-white">
             <CardHeader className="py-3 px-4 border-b border-emerald-100 flex flex-row items-center justify-between">
               <div className="flex items-center gap-2">
@@ -470,11 +516,20 @@ export default function DoctorChatPage() {
               </Badge>
             </CardHeader>
             <CardContent className="p-4 space-y-3">
-              {activeTicket.prescription.notes && (
+              {(activeTicket.prescription as any).diagnosis && (
                 <div>
-                  <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Clinical Advice:</h5>
+                  <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Diagnosis:</h5>
+                  <p className="text-xs sm:text-sm text-gray-900 font-medium bg-white p-2.5 rounded-lg border border-emerald-100">
+                    {(activeTicket.prescription as any).diagnosis}
+                  </p>
+                </div>
+              )}
+
+              {((activeTicket.prescription as any).instructions || activeTicket.prescription.notes) && (
+                <div>
+                  <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Clinical Instructions & Diet:</h5>
                   <p className="text-xs sm:text-sm text-gray-800 leading-relaxed bg-white p-3 rounded-lg border border-emerald-100 whitespace-pre-line">
-                    {activeTicket.prescription.notes}
+                    {(activeTicket.prescription as any).instructions || activeTicket.prescription.notes}
                   </p>
                 </div>
               )}
@@ -499,6 +554,12 @@ export default function DoctorChatPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {(activeTicket.prescription as any).nextReview && (
+                <div className="text-xs text-emerald-900 bg-emerald-100/60 p-2.5 rounded-lg border border-emerald-200">
+                  <strong>Recommended Next Review:</strong> {(activeTicket.prescription as any).nextReview}
                 </div>
               )}
             </CardContent>

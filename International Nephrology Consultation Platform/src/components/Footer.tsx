@@ -100,10 +100,10 @@ export default function Footer() {
               <ul className="space-y-3">
                 {[
                   'Video Consultations',
+                  'Upload Files & Doctor Chat',
                   'Lab Report Analysis',
                   'Digital Prescriptions',
-                  'Follow-up Care',
-                  'Urgent Consultations',
+                  'Online Kidney Care',
                   'Health Monitoring'
                 ].map((service) => (
                   <li key={service} className="text-gray-400 hover:text-white transition-colors duration-200 cursor-pointer">

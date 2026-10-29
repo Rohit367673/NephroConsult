@@ -302,6 +302,7 @@ export default function BookingPage() {
   const authContext = useContext(AuthContext);
   const { user, logout, loading, updateUser } = authContext || {};
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Synchronously determine initial free-consultation state so there is 0ms price-to-FREE flicker
   const getInitialFreeEligibility = (u: any): boolean => {
@@ -589,6 +590,17 @@ export default function BookingPage() {
     // Bug 8 fix: Don't use hardcoded 2025 mock data — start with empty, real slots fetched on date change
     setBookedAppointments([]);
   }, []);
+
+  // Pre-select plan if passed via URL query params (?plan=doctor_chat or ?plan=initial)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const plan = params.get('plan') || params.get('type');
+    if (plan === 'doctor_chat') {
+      setBookingData(prev => ({ ...prev, consultationType: 'doctor_chat' }));
+    } else if (plan === 'initial') {
+      setBookingData(prev => ({ ...prev, consultationType: 'initial' }));
+    }
+  }, [location.search]);
 
   // Check if user is eligible for 1st free initial consultation
   useEffect(() => {
@@ -1335,14 +1347,25 @@ export default function BookingPage() {
                         {/* Top Header Row: Icon + Title + Badges on left, Price on right */}
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="flex items-start gap-3 min-w-0 flex-1">
-                            <div
-                              className={`p-3 rounded-xl shrink-0 ${
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`p-2.5 sm:p-3 rounded-xl shrink-0 ${
+                                  bookingData.consultationType === type.id
+                                    ? 'bg-[#006f6f] text-white shadow-sm'
+                                    : 'bg-[#006f6f]/10 text-[#006f6f]'
+                                }`}
+                              >
+                                <IconComponent className="w-5 h-5 sm:w-6 sm:h-6" />
+                              </div>
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                                 bookingData.consultationType === type.id
-                                  ? 'bg-[#006f6f] text-white'
-                                  : 'bg-[#006f6f]/10 text-[#006f6f]'
-                              }`}
-                            >
-                              <IconComponent className="w-5 h-5 sm:w-6 sm:h-6" />
+                                  ? 'border-[#006f6f] bg-[#006f6f]'
+                                  : 'border-gray-300'
+                              }`}>
+                                {bookingData.consultationType === type.id && (
+                                  <div className="w-2 h-2 rounded-full bg-white" />
+                                )}
+                              </div>
                             </div>
                             <div className="min-w-0 flex-1">
                               <h3 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
@@ -1384,7 +1407,7 @@ export default function BookingPage() {
                             {(type as any).isFree ? (
                               <div>
                                 <div className="text-xs sm:text-sm text-gray-400 line-through font-medium">
-                                  {pricing.symbol}{(type as any).originalPrice}
+                                  {getFormattedPrice((type as any).originalPrice, pricing.currency)}
                                 </div>
                                 <div
                                   style={{ color: '#16a34a' }}
@@ -1402,7 +1425,7 @@ export default function BookingPage() {
                             ) : (
                               <div>
                                 <div className="text-xl sm:text-2xl font-bold text-[#006f6f] leading-tight">
-                                  {pricing.symbol}{type.price}
+                                  {type.formattedPrice}
                                 </div>
                                 <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{pricing.currency}</p>
                               </div>
@@ -1452,10 +1475,7 @@ export default function BookingPage() {
                 <div className="flex items-center justify-center space-x-2">
                   <Globe className="h-4 h-4 text-amber-600" />
                   <p className="text-sm text-amber-700">
-                    {bookingData.consultationType === 'urgent' 
-                      ? 'Urgent consultations: 10 AM - 10 PM IST' 
-                      : 'Regular consultations: 6-10 PM IST'} • 
-                    {userCountry === 'India' 
+                    Video Consultations: 6-10 PM IST • {userCountry === 'India' 
                       ? 'Times shown in IST' 
                       : `Times converted to your timezone (${userTimezone})`}
                   </p>
@@ -1773,21 +1793,35 @@ export default function BookingPage() {
               </motion.div>
 
               <motion.div variants={itemVariants}>
-                <Label>Upload Medical Documents (Optional) - Max 5 files</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#006f6f] transition-colors">
-                  <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-600 mb-2">Drag & drop your files or click to browse</p>
-                  <p className="text-sm text-gray-500">Support: PDF, JPG, PNG files up to 10MB each (Maximum 5 files)</p>
+                <div className="flex justify-between items-center mb-2">
+                  <Label className="text-sm font-semibold text-gray-900">
+                    {isDoctorChat 
+                      ? 'Upload Lab Reports & Medical Documents (PDF / Images) - Recommended' 
+                      : 'Upload Medical Documents (Optional) - Max 5 files'}
+                  </Label>
                   {bookingData.uploadedFiles.length > 0 && (
-                    <div className="mt-4 text-sm text-gray-600">
-                      {bookingData.uploadedFiles.length} file(s) selected
-                    </div>
+                    <span className="text-xs text-[#006f6f] font-semibold">
+                      {bookingData.uploadedFiles.length} of 5 files selected
+                    </span>
                   )}
+                </div>
+
+                {isDoctorChat && (
+                  <div className="bg-teal-50/80 border border-teal-200 rounded-lg p-3 mb-3 text-xs text-teal-900">
+                    💡 <strong>Tip for Chat Consultation:</strong> Upload your recent KFT (Kidney Function Test), serum creatinine, urine routine, blood tests, or ultrasound reports. Dr. Ilango personally reviews your files, explains the values, and issues your digital prescription.
+                  </div>
+                )}
+
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 sm:p-8 text-center hover:border-[#006f6f] transition-colors bg-white">
+                  <Upload className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-gray-400 mb-3" />
+                  <p className="text-gray-700 font-medium text-sm sm:text-base mb-1">Drag & drop your files or click to browse</p>
+                  <p className="text-xs text-gray-500">Supported formats: PDF, JPG, PNG files up to 10MB each (Max 5 files)</p>
+                  
                   <Input 
                     type="file" 
                     multiple 
                     accept=".pdf,.jpg,.jpeg,.png" 
-                    className="mt-4 cursor-pointer" 
+                    className="mt-4 cursor-pointer max-w-sm mx-auto" 
                     onChange={(e) => {
                       const files = Array.from(e.target.files || []);
                       if (files.length + bookingData.uploadedFiles.length > 5) {
@@ -1799,13 +1833,50 @@ export default function BookingPage() {
                         ...prev,
                         uploadedFiles: [...prev.uploadedFiles, ...files]
                       }));
+                      e.target.value = '';
                     }}
                     disabled={bookingData.uploadedFiles.length >= 5}
                   />
                   {bookingData.uploadedFiles.length >= 5 && (
-                    <p className="text-sm text-red-600 mt-2">Maximum file limit reached</p>
+                    <p className="text-xs text-amber-600 font-medium mt-2">Maximum file limit (5 files) reached</p>
                   )}
                 </div>
+
+                {/* Uploaded File List with Delete buttons */}
+                {bookingData.uploadedFiles.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-semibold text-gray-700">Selected Reports ({bookingData.uploadedFiles.length}):</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {bookingData.uploadedFiles.map((file: File, fileIdx: number) => (
+                        <div 
+                          key={fileIdx} 
+                          className="flex items-center justify-between p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs"
+                        >
+                          <div className="flex items-center space-x-2 min-w-0 mr-2">
+                            <FileText className="w-4 h-4 text-[#006f6f] shrink-0" />
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{file.name}</p>
+                              <p className="text-[10px] text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBookingData(prev => ({
+                                ...prev,
+                                uploadedFiles: prev.uploadedFiles.filter((_, i) => i !== fileIdx)
+                              }));
+                            }}
+                            className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                            title="Remove file"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             </motion.div>
           </motion.div>
@@ -2000,28 +2071,44 @@ export default function BookingPage() {
       {/* Spacer for fixed top navigation bar so progress steps are never covered on mobile */}
       <div className="h-16 md:h-20 shrink-0" />
       <div className="container mx-auto px-3 sm:px-4 py-6 md:py-10 max-w-5xl">
-        {/* Progress Steps */}
+        {/* Progress Steps with Labels */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex justify-center mb-6 md:mb-10 overflow-x-auto"
+          className="flex justify-center mb-6 md:mb-10 px-2"
         >
-          <div className="flex items-center space-x-2 md:space-x-8 min-w-max px-2 sm:px-4">
-            {(isDoctorChat ? [1, 2, 3] : [1, 2, 3, 4]).map((s, idx, arr) => (
-              <div key={s} className="flex items-center">
-                <motion.div
-                  className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center text-sm md:text-base font-semibold ${
-                    s <= step ? 'bg-[#006f6f] text-white' : 'bg-gray-200 text-gray-600'
-                  }`}
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  {s < step ? <CheckCircle2 className="w-4 h-4 md:w-6 md:h-6" /> : s}
-                </motion.div>
+          <div className="flex items-start justify-center max-w-full overflow-x-auto py-2">
+            {(isDoctorChat ? [
+              { num: 1, label: 'Choose Plan' },
+              { num: 2, label: 'Details & Reports' },
+              { num: 3, label: 'Review & Pay' }
+            ] : [
+              { num: 1, label: 'Choose Plan' },
+              { num: 2, label: 'Date & Time' },
+              { num: 3, label: 'Patient Info' },
+              { num: 4, label: 'Payment' }
+            ]).map((item, idx, arr) => (
+              <div key={item.num} className="flex items-center">
+                <div className="flex flex-col items-center min-w-[72px] sm:min-w-[96px] md:min-w-[120px]">
+                  <motion.div
+                    className={`w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center text-xs md:text-sm font-semibold transition-all ${
+                      item.num <= step ? 'bg-[#006f6f] text-white shadow-md ring-2 ring-[#006f6f]/20' : 'bg-gray-200 text-gray-600'
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    {item.num < step ? <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" /> : item.num}
+                  </motion.div>
+                  <span className={`text-[10px] sm:text-xs mt-1.5 text-center font-medium transition-colors ${
+                    item.num === step ? 'text-[#006f6f] font-bold' : item.num < step ? 'text-gray-700' : 'text-gray-400'
+                  }`}>
+                    {item.label}
+                  </span>
+                </div>
                 {idx < arr.length - 1 && (
                   <div
-                    className={`w-8 md:w-16 h-1 mx-2 md:mx-4 ${
-                      s < step ? 'bg-[#006f6f]' : 'bg-gray-200'
+                    className={`w-6 sm:w-12 md:w-20 h-0.5 sm:h-1 -mt-5 transition-colors ${
+                      item.num < step ? 'bg-[#006f6f]' : 'bg-gray-200'
                     }`}
                   />
                 )}

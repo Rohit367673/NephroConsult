@@ -39,6 +39,7 @@ import TermsPage from './pages/public/TermsPage';
 import CookiesPolicyPage from './pages/public/CookiesPolicyPage';
 import DebugPage from './pages/DebugPage';
 import { hasFirebaseCredentials } from './config/firebase';
+import { getUserTimezone, getPricingForTimezone } from './utils/timezoneUtils';
 
 // Regional pricing (aligned with timezoneUtils.ts)
 const regionalPricing: Record<string, { consultation: number; currency: string; symbol: string }> = {
@@ -797,6 +798,13 @@ function HomePage() {
   const userCountry = user?.country || getUserCountry();
   const pricing = regionalPricing[userCountry] || regionalPricing.default;
 
+  const userTimezone = getUserTimezone();
+  const pricingData = getPricingForTimezone(userTimezone);
+  const currencySymbol = pricingData?.symbol || pricing.symbol || '₹';
+  const currencyCode = pricingData?.currency || pricing.currency || 'INR';
+  const initialPrice = pricingData?.initial || (currencyCode === 'INR' ? 499 : 29);
+  const chatPrice = pricingData?.doctor_chat || (currencyCode === 'INR' ? 100 : 1);
+
   const hasUsedFree = Boolean(
     user?.hasUsedFreeConsultation ||
     (user?.email && (() => {
@@ -809,15 +817,20 @@ function HomePage() {
   );
   const showFreeOffer = !hasUsedFree;
 
-  const handleBookConsultationClick = () => {
+  const handlePlanClick = (plan: 'initial' | 'doctor_chat') => {
+    const targetUrl = `/booking?plan=${plan}`;
     if (!user) {
       try {
-        sessionStorage.setItem('redirect_after_login', '/booking');
+        sessionStorage.setItem('redirect_after_login', targetUrl);
       } catch {}
       setIsLoginOpen(true);
     } else {
-      navigate('/booking');
+      navigate(targetUrl);
     }
+  };
+
+  const handleBookConsultationClick = () => {
+    handlePlanClick('initial');
   };
 
   useEffect(() => {
@@ -1145,6 +1158,191 @@ function HomePage() {
               ))}
             </motion.div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Consultation Options Section */}
+      <section className="py-12 sm:py-16 md:py-20 bg-white relative overflow-hidden border-b border-gray-100">
+        <div className="container-medical relative z-10">
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="text-center max-w-3xl mx-auto mb-10 sm:mb-14"
+          >
+            <Badge className="mb-3 px-3 py-1 bg-[#006f6f]/10 text-[#006f6f] border-[#006f6f]/20 text-xs sm:text-sm font-semibold">
+              <Stethoscope className="w-3.5 h-3.5 mr-1.5 inline" />
+              Choose Your Care Path
+            </Badge>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-3 sm:mb-4">
+              Two Ways to Consult Dr. Ilango
+            </h2>
+            <p className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed">
+              Select the option that best fits your medical needs — schedule an in-depth video consultation or upload your medical reports for prompt doctor chat review.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
+            {/* Option 1: 1-on-1 Video Consultation */}
+            <motion.div
+              initial={{ y: 30, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1, duration: 0.6 }}
+              className="relative flex flex-col justify-between rounded-2xl border-2 border-[#006f6f]/30 bg-gradient-to-b from-[#006f6f]/[0.03] to-white p-6 sm:p-8 shadow-md hover:shadow-xl hover:border-[#006f6f] transition-all duration-300"
+            >
+              <div className="absolute -top-3.5 right-6">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-[#006f6f] text-white shadow-sm">
+                  ★ Popular Choice
+                </span>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-3.5 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#006f6f] text-white flex items-center justify-center shadow-sm shrink-0">
+                    <Video className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                      1-on-1 Video Consultation
+                    </h3>
+                    <p className="text-xs sm:text-sm font-medium text-[#006f6f]">
+                      45-Minute In-Depth Video Call
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-sm text-gray-600 mb-5 leading-relaxed">
+                  Direct face-to-face appointment with Dr. Ilango over encrypted HD video. Best for initial assessments, new diagnoses, and thorough clinical evaluations.
+                </p>
+
+                {/* Price Box */}
+                <div className="bg-white rounded-xl p-4 border border-gray-200 mb-6 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-gray-500 block">Consultation Fee</span>
+                    {showFreeOffer ? (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm text-gray-400 line-through font-medium">
+                          {currencySymbol}{initialPrice}
+                        </span>
+                        <span className="text-2xl font-black text-emerald-600">
+                          100% FREE
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-2xl font-black text-[#006f6f]">
+                        {currencySymbol}{initialPrice}
+                        <span className="text-xs font-normal text-gray-500 ml-1">{currencyCode}</span>
+                      </div>
+                    )}
+                  </div>
+                  {showFreeOffer && (
+                    <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full">
+                      1st Session Free
+                    </span>
+                  )}
+                </div>
+
+                {/* Features */}
+                <ul className="space-y-3 mb-6">
+                  {[
+                    "45-minute comprehensive video consultation",
+                    "Choose your own convenient date & time slot",
+                    "Digital prescription & personalized diet chart",
+                    "Direct interactive discussion with family members"
+                  ].map((feat, i) => (
+                    <li key={i} className="flex items-start text-xs sm:text-sm text-gray-700">
+                      <CheckCircle2 className="w-4 h-4 text-[#006f6f] mr-2.5 mt-0.5 shrink-0" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <Button
+                size="lg"
+                onClick={() => handlePlanClick('initial')}
+                className="w-full bg-[#006f6f] hover:bg-[#005555] text-white font-bold py-5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer"
+              >
+                <span>{showFreeOffer ? "Book Free Video Consultation" : "Book Video Consultation"}</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </motion.div>
+
+            {/* Option 2: Upload Files & Chat with Doctor */}
+            <motion.div
+              initial={{ y: 30, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              className="relative flex flex-col justify-between rounded-2xl border-2 border-emerald-500/30 bg-gradient-to-b from-emerald-50/[0.15] to-white p-6 sm:p-8 shadow-md hover:shadow-xl hover:border-emerald-600 transition-all duration-300"
+            >
+              <div className="absolute -top-3.5 right-6">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-sm">
+                  ⚡ Fast & Convenient
+                </span>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-3.5 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-sm shrink-0">
+                    <MessageCircle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                      Upload Files & Doctor Chat
+                    </h3>
+                    <p className="text-xs sm:text-sm font-medium text-emerald-800">
+                      Report Review & Written Advice
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-sm text-gray-600 mb-5 leading-relaxed">
+                  Upload your blood work, renal ultrasound, or biopsy reports along with your symptoms. Dr. Ilango reviews them personally and sends detailed advice.
+                </p>
+
+                {/* Price Box */}
+                <div className="bg-white rounded-xl p-4 border border-gray-200 mb-6 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-gray-500 block">Report Review Fee</span>
+                    <div className="text-2xl font-black text-emerald-700">
+                      {currencySymbol}{chatPrice}
+                      <span className="text-xs font-normal text-gray-500 ml-1">{currencyCode}</span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full">
+                    Flat ₹100 / $1 USD
+                  </span>
+                </div>
+
+                {/* Features */}
+                <ul className="space-y-3 mb-6">
+                  {[
+                    "Upload PDFs, images & diagnostic lab reports",
+                    "No scheduled video call required — submit anytime",
+                    "Doctor's written clinical advice & prescription",
+                    "Email notification with direct link when doctor replies"
+                  ].map((feat, i) => (
+                    <li key={i} className="flex items-start text-xs sm:text-sm text-gray-700">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 mr-2.5 mt-0.5 shrink-0" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <Button
+                size="lg"
+                onClick={() => handlePlanClick('doctor_chat')}
+                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer"
+              >
+                <span>Upload Reports & Start Chat</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </motion.div>
+          </div>
         </div>
       </section>
 

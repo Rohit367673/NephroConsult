@@ -56,24 +56,16 @@ const SEOHead: React.FC<SEOHeadProps> = ({
           "@type": "Offer",
           "itemOffered": {
             "@type": "Service",
-            "name": "Initial Consultation",
-            "description": "Comprehensive kidney health assessment and treatment planning"
+            "name": "1-on-1 Video Consultation (45 Min)",
+            "description": "Comprehensive kidney health assessment, detailed medical history review, and personalized treatment plan via secure video call. 1st consultation 100% free for new patients."
           }
         },
         {
           "@type": "Offer",
           "itemOffered": {
             "@type": "Service",
-            "name": "Follow-up Consultation",
-            "description": "Ongoing care and monitoring for kidney disease patients"
-          }
-        },
-        {
-          "@type": "Offer",
-          "itemOffered": {
-            "@type": "Service",
-            "name": "Emergency Consultation",
-            "description": "Urgent nephrology care for critical cases"
+            "name": "Upload Files & Chat with Doctor",
+            "description": "Upload lab reports, scans, and health records for Dr. Ilango to review with personalized clinical chat advice and digital prescription."
           }
         }
       ]
