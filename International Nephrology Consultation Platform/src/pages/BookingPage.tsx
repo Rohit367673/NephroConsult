@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Calendar, Clock, Video, Phone, FileText, Upload, CreditCard, CheckCircle2, ArrowRight, User, Star, Heart, Menu, X, LogOut, MapPin, Globe, ChevronLeft, ChevronRight, AlertCircle, Shield } from 'lucide-react';
+import { Calendar, Clock, Video, Phone, FileText, Upload, CreditCard, CheckCircle2, ArrowRight, User, Star, Heart, Menu, X, LogOut, MapPin, Globe, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -302,7 +302,6 @@ export default function BookingPage() {
   const authContext = useContext(AuthContext);
   const { user, logout, loading, updateUser } = authContext || {};
   const navigate = useNavigate();
-  const location = useLocation();
 
   // Synchronously determine initial free-consultation state so there is 0ms price-to-FREE flicker
   const getInitialFreeEligibility = (u: any): boolean => {
@@ -331,7 +330,6 @@ export default function BookingPage() {
   const [isValidating, setIsValidating] = useState(false);
   const [isFreeEligible, setIsFreeEligible] = useState<boolean>(() => getInitialFreeEligibility(user));
   const countrySetRef = useRef(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [bookingData, setBookingData] = useState({
     consultationType: 'initial',
     date: '',
@@ -350,6 +348,16 @@ export default function BookingPage() {
     paymentMethod: '',
     country: ''
   });
+
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const planParam = searchParams.get('plan');
+      if (planParam === 'doctor_chat' || planParam === 'initial') {
+        setBookingData(prev => ({ ...prev, consultationType: planParam }));
+      }
+    } catch {}
+  }, []);
 
   // Enhanced persistent storage using IndexedDB for payment data
   const storeBookingDataPersistent = async (bookingDetails: any) => {
@@ -591,17 +599,6 @@ export default function BookingPage() {
     // Bug 8 fix: Don't use hardcoded 2025 mock data — start with empty, real slots fetched on date change
     setBookedAppointments([]);
   }, []);
-
-  // Pre-select plan if passed via URL query params (?plan=doctor_chat or ?plan=initial)
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const plan = params.get('plan') || params.get('type');
-    if (plan === 'doctor_chat') {
-      setBookingData(prev => ({ ...prev, consultationType: 'doctor_chat' }));
-    } else if (plan === 'initial') {
-      setBookingData(prev => ({ ...prev, consultationType: 'initial' }));
-    }
-  }, [location.search]);
 
   // Check if user is eligible for 1st free initial consultation
   useEffect(() => {
@@ -1306,25 +1303,18 @@ export default function BookingPage() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="space-y-6 sm:space-y-8"
+            className="space-y-5 sm:space-y-6"
           >
-            <div className="text-center max-w-2xl mx-auto mb-2 sm:mb-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#006f6f]/10 text-[#006f6f] mb-3">
-                <Video className="w-3.5 h-3.5" />
-                Step 1 of {isDoctorChat ? 3 : 4}: Select Consultation Model
-              </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-2">
-                Choose Your Consultation Type
-              </h2>
-              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-                Select whether you need a 1-on-1 scheduled video appointment or fast doctor review of your medical reports.
-              </p>
-
-              <div className="bg-teal-50/60 border border-teal-200/80 rounded-2xl p-3 sm:p-3.5 mt-4 text-xs text-teal-900 inline-flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-[#006f6f] shrink-0" />
-                <span>
-                  Consulting with <strong>Dr. Ilango S. Prakasam (Sr. Nephrologist)</strong> • Region: <strong>{userCountry}</strong> ({pricing.currency})
-                </span>
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3">Choose Your Consultation Type</h2>
+              <p className="text-sm sm:text-base text-gray-600">Select the type of consultation that best fits your needs</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mt-4 max-w-2xl mx-auto">
+                <div className="flex items-center justify-center gap-2">
+                  <MapPin className="h-4 w-4 text-blue-600 shrink-0" style={{ minWidth: '16px', minHeight: '16px' }} />
+                  <p className="text-xs sm:text-sm font-medium text-blue-800 leading-relaxed">
+                    Location: {userCountry} • Dr. Ilango S. Prakasam (Sr. Nephrologist) • Live Video Consultations & Online Lab Report Reviews
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -1332,173 +1322,123 @@ export default function BookingPage() {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto"
+              className="grid gap-4 sm:gap-6"
             >
               {consultationTypes.map((type) => {
                 const IconComponent = type.icon;
-                const isSelected = bookingData.consultationType === type.id;
-                const isChat = type.id === 'doctor_chat';
-
                 return (
-                  <motion.div 
-                    key={type.id} 
-                    variants={itemVariants}
-                    whileHover={{ y: -4 }}
-                    transition={{ duration: 0.2 }}
-                    className="w-full min-w-0"
-                  >
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      className={`relative h-full flex flex-col justify-between rounded-3xl border-2 transition-all duration-300 p-6 sm:p-7 cursor-pointer select-none ${
-                        isSelected
-                          ? isChat
-                            ? 'border-emerald-600 bg-emerald-50/20 ring-4 ring-emerald-600/15 shadow-xl'
-                            : 'border-[#006f6f] bg-teal-50/20 ring-4 ring-[#006f6f]/15 shadow-xl'
-                          : 'border-gray-200 bg-white hover:border-gray-300 shadow-sm hover:shadow-md'
+                  <motion.div key={type.id} variants={itemVariants} className="w-full min-w-0">
+                    <Card
+                      className={`w-full overflow-hidden cursor-pointer border-2 transition-all duration-200 hover:shadow-lg ${
+                        bookingData.consultationType === type.id
+                          ? 'border-[#006f6f] bg-[#006f6f]/5 shadow-lg'
+                          : 'border-gray-200 hover:border-[#006f6f]/50'
                       }`}
                       onClick={() => setBookingData(prev => ({ 
                         ...prev, 
                         consultationType: type.id,
-                        time: '', 
-                        istTime: '' 
+                        time: '', // Clear time when consultation type changes
+                        istTime: '' // Clear IST time as well
                       }))}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setBookingData(prev => ({ ...prev, consultationType: type.id, time: '', istTime: '' }));
-                        }
-                      }}
                     >
-                      {/* Top Badges & Radio Indicator */}
-                      <div>
-                        <div className="flex items-center justify-between gap-3 mb-4">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                            isChat 
-                              ? 'bg-emerald-100 text-emerald-800' 
-                              : (type as any).isFree 
-                              ? 'bg-green-100 text-green-800 border border-green-200'
-                              : 'bg-[#006f6f]/10 text-[#006f6f]'
-                          }`}>
-                            <IconComponent className="w-3.5 h-3.5" />
-                            {isChat ? '⚡ Lab Reports & Chat' : '★ 1-on-1 Video Session'}
-                          </span>
-
-                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                            isSelected
-                              ? isChat
-                                ? 'border-emerald-600 bg-emerald-600 text-white'
-                                : 'border-[#006f6f] bg-[#006f6f] text-white'
-                              : 'border-gray-300 bg-white'
-                          }`}>
-                            {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+                      <CardContent className="p-4 sm:p-6">
+                        {/* Top Header Row: Icon + Title + Badges on left, Price on right */}
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-start gap-3 min-w-0 flex-1">
+                            <div
+                              className={`p-3 rounded-xl shrink-0 ${
+                                bookingData.consultationType === type.id
+                                  ? 'bg-[#006f6f] text-white'
+                                  : 'bg-[#006f6f]/10 text-[#006f6f]'
+                              }`}
+                            >
+                              <IconComponent className="w-5 h-5 sm:w-6 sm:h-6" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
+                                {type.name}
+                              </h3>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                <Badge variant="outline" className="text-xs px-2 py-0.5">
+                                  {type.duration}
+                                </Badge>
+                                {(type as any).isFree && (
+                                  <span
+                                    style={{
+                                      backgroundColor: '#dcfce7',
+                                      color: '#15803d',
+                                      borderColor: '#86efac',
+                                    }}
+                                    className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border"
+                                  >
+                                    🎁 1st Consultation FREE
+                                  </span>
+                                )}
+                                {(type as any).badgeText && (
+                                  <span
+                                    style={{
+                                      backgroundColor: '#e0f2fe',
+                                      color: '#0369a1',
+                                      borderColor: '#bae6fd',
+                                    }}
+                                    className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border"
+                                  >
+                                    💬 {(type as any).badgeText}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Title & Duration */}
-                        <div className="mb-4">
-                          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight leading-tight mb-1">
-                            {type.name}
-                          </h3>
-                          <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>{type.duration}</span>
-                            {(type as any).isFree && (
-                              <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                🎁 1st Visit Free
-                              </span>
+                          <div className="text-right shrink-0 pl-2">
+                            {(type as any).isFree ? (
+                              <div>
+                                <div className="text-xs sm:text-sm text-gray-400 line-through font-medium">
+                                  {pricing.symbol}{(type as any).originalPrice}
+                                </div>
+                                <div
+                                  style={{ color: '#16a34a' }}
+                                  className="text-xl sm:text-2xl font-bold leading-tight"
+                                >
+                                  FREE
+                                </div>
+                                <p
+                                  style={{ color: '#15803d' }}
+                                  className="text-xs font-semibold mt-0.5"
+                                >
+                                  1st Visit Offer
+                                </p>
+                              </div>
+                            ) : (
+                              <div>
+                                <div className="text-xl sm:text-2xl font-bold text-[#006f6f] leading-tight">
+                                  {pricing.symbol}{type.price}
+                                </div>
+                                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{pricing.currency}</p>
+                              </div>
                             )}
                           </div>
                         </div>
 
-                        {/* Description */}
-                        <p className="text-xs sm:text-sm text-gray-600 mb-5 leading-relaxed">
+                        {/* Full-width Description */}
+                        <p className="text-sm sm:text-base text-gray-600 mb-4 leading-relaxed">
                           {type.description}
                         </p>
 
-                        {/* Price Card Box */}
-                        <div className="bg-gray-50/80 rounded-2xl p-4 border border-gray-200/80 mb-5 flex items-center justify-between">
-                          <div>
-                            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">
-                              Consultation Fee
-                            </span>
-                            {(type as any).isFree ? (
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-xs sm:text-sm text-gray-400 line-through font-medium">
-                                  {getFormattedPrice((type as any).originalPrice, pricing.currency)}
-                                </span>
-                                <span className="text-2xl font-black text-emerald-600">
-                                  FREE
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="text-2xl font-black text-gray-900">
-                                {type.formattedPrice}
-                                <span className="text-xs font-normal text-gray-500 ml-1.5">{pricing.currency}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="text-right">
-                            {(type as any).isFree ? (
-                              <span className="text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-full">
-                                100% Waived
-                              </span>
-                            ) : isChat ? (
-                              <span className="text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-full">
-                                Flat Fee
-                              </span>
-                            ) : (
-                              <span className="text-xs font-medium text-gray-500">
-                                Per Session
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Features List */}
-                        <ul className="space-y-2.5 mb-6 pt-3 border-t border-gray-100">
+                        {/* Full-width Features Grid (1 column on mobile, 2 columns on sm+) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-4 border-t border-gray-200">
                           {type.features.map((feature, index) => (
-                            <li key={index} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700">
+                            <div key={index} className="flex items-center gap-2">
                               <CheckCircle2
-                                className={`w-4 h-4 shrink-0 mt-0.5 ${isChat ? 'text-emerald-600' : 'text-[#006f6f]'}`}
+                                className="w-4 h-4 text-green-600 shrink-0"
+                                style={{ minWidth: '16px', minHeight: '16px' }}
                               />
-                              <span className="leading-snug">{feature}</span>
-                            </li>
+                              <span className="text-xs sm:text-sm text-gray-700 leading-tight">{feature}</span>
+                            </div>
                           ))}
-                        </ul>
-                      </div>
-
-                      {/* Select Action Pill */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setBookingData(prev => ({ 
-                            ...prev, 
-                            consultationType: type.id,
-                            time: '', 
-                            istTime: '' 
-                          }));
-                        }}
-                        className={`w-full py-2.5 px-4 rounded-xl text-center text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          isSelected
-                            ? isChat
-                              ? 'bg-emerald-700 text-white shadow-md'
-                              : 'bg-[#006f6f] text-white shadow-md'
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                        }`}
-                      >
-                        {isSelected ? (
-                          <>
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>Selected Plan ✓</span>
-                          </>
-                        ) : (
-                          <span>Click to Select</span>
-                        )}
-                      </button>
-                    </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </motion.div>
                 );
               })}
@@ -1522,7 +1462,10 @@ export default function BookingPage() {
                 <div className="flex items-center justify-center space-x-2">
                   <Globe className="h-4 h-4 text-amber-600" />
                   <p className="text-sm text-amber-700">
-                    Video Consultations: 6-10 PM IST • {userCountry === 'India' 
+                    {bookingData.consultationType === 'urgent' 
+                      ? 'Urgent consultations: 10 AM - 10 PM IST' 
+                      : 'Regular consultations: 6-10 PM IST'} • 
+                    {userCountry === 'India' 
                       ? 'Times shown in IST' 
                       : `Times converted to your timezone (${userTimezone})`}
                   </p>
@@ -1668,295 +1611,213 @@ export default function BookingPage() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="max-w-4xl mx-auto"
+            className="space-y-6"
           >
-            <Card className="border border-gray-200/90 shadow-xl rounded-3xl bg-white overflow-hidden">
-              <div className="bg-gradient-to-r from-teal-50/80 via-white to-white p-6 sm:p-8 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                {isDoctorChat ? 'Patient Info & Medical Reports' : 'Patient Information'}
+              </h2>
+              <p className="text-gray-600">
+                {isDoctorChat 
+                  ? 'Please provide your medical details and upload lab reports for Dr. Ilango S. Prakasam' 
+                  : 'Please provide your medical details for the consultation'}
+              </p>
+              <p className="text-sm text-red-600 mt-2">
+                {isDoctorChat 
+                  ? '* Name, email, phone, age, gender & symptoms/queries are required' 
+                  : '* All fields are required except Current Medications and Document Upload'}
+              </p>
+            </div>
+
+            <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+              <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#006f6f]/10 text-[#006f6f] mb-2">
-                    <User className="w-3.5 h-3.5" />
-                    {isDoctorChat ? 'Step 2: Medical Profile & Reports' : 'Step 3: Patient Intake Profile'}
+                  <Label>Full Name *</Label>
+                  <Input
+                    value={bookingData.patientInfo.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    onBlur={() => handleFieldBlur('name')}
+                    className={`p-4 ${validationErrors.name ? 'border-red-500 focus:border-red-500' : ''}`}
+                    required
+                    placeholder="Enter your full name"
+                  />
+                  {validationErrors.name && (
+                    <div className="flex items-center mt-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {validationErrors.name}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <Label>Email Address *</Label>
+                  <Input
+                    type="email"
+                    value={bookingData.patientInfo.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    onBlur={() => handleFieldBlur('email')}
+                    className={`p-4 ${validationErrors.email ? 'border-red-500 focus:border-red-500' : ''}`}
+                    required
+                    placeholder="Enter your email address"
+                  />
+                  {validationErrors.email && (
+                    <div className="flex items-center mt-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {validationErrors.email}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+
+              <motion.div variants={itemVariants} className="grid md:grid-cols-3 gap-6">
+                <div>
+                  <Label>Phone Number *</Label>
+                  <Input
+                    type="tel"
+                    value={bookingData.patientInfo.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    onBlur={() => handleFieldBlur('phone')}
+                    className={`p-4 ${validationErrors.phone ? 'border-red-500 focus:border-red-500' : ''}`}
+                    required
+                    placeholder="Enter your phone number (7-15 digits)"
+                  />
+                  {validationErrors.phone && (
+                    <div className="flex items-center mt-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {validationErrors.phone}
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-500 mt-1">
+                    Examples: +91 98765 43210, (555) 123-4567, 9876543210
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-                    {isDoctorChat ? 'Patient Info & Medical Reports' : 'Patient Information'}
-                  </h2>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                    {isDoctorChat 
-                      ? 'Provide your symptoms and upload diagnostic lab reports for Dr. Ilango S. Prakasam (Sr. Nephrologist)' 
-                      : 'Please provide accurate medical details for your scheduled 1-on-1 video consultation'}
-                  </p>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl shrink-0 self-start sm:self-auto">
-                  <Shield className="w-4 h-4 text-emerald-600" />
-                  <span>Confidential & HIPAA Compliant</span>
+                <div>
+                  <Label>Age *</Label>
+                  <Input
+                    type="number"
+                    value={bookingData.patientInfo.age}
+                    onChange={(e) => handleInputChange('age', e.target.value)}
+                    onBlur={() => handleFieldBlur('age')}
+                    className={`p-4 ${validationErrors.age ? 'border-red-500 focus:border-red-500' : ''}`}
+                    required
+                    placeholder="Enter your age"
+                    min="1"
+                    max="150"
+                  />
+                  {validationErrors.age && (
+                    <div className="flex items-center mt-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {validationErrors.age}
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <CardContent className="p-6 sm:p-8 space-y-6">
-                <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-                  <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-5 sm:gap-6">
-                    <div>
-                      <Label>Full Name *</Label>
-                      <Input
-                        value={bookingData.patientInfo.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        onBlur={() => handleFieldBlur('name')}
-                        className={validationErrors.name ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20' : ''}
-                        required
-                        placeholder="Enter your full name"
-                      />
-                      {validationErrors.name && (
-                        <div className="flex items-center mt-1.5 text-xs text-red-600 font-medium">
-                          <AlertCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
-                          {validationErrors.name}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <Label>Email Address *</Label>
-                      <Input
-                        type="email"
-                        value={bookingData.patientInfo.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        onBlur={() => handleFieldBlur('email')}
-                        className={validationErrors.email ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20' : ''}
-                        required
-                        placeholder="Enter your email address"
-                      />
-                      {validationErrors.email && (
-                        <div className="flex items-center mt-1.5 text-xs text-red-600 font-medium">
-                          <AlertCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
-                          {validationErrors.email}
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants} className="grid md:grid-cols-3 gap-5 sm:gap-6">
-                    <div>
-                      <Label>Phone Number *</Label>
-                      <Input
-                        type="tel"
-                        value={bookingData.patientInfo.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                        onBlur={() => handleFieldBlur('phone')}
-                        className={validationErrors.phone ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20' : ''}
-                        required
-                        placeholder="e.g. +91 98765 43210"
-                      />
-                      {validationErrors.phone && (
-                        <div className="flex items-center mt-1.5 text-xs text-red-600 font-medium">
-                          <AlertCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
-                          {validationErrors.phone}
-                        </div>
-                      )}
-                      <div className="text-[11px] text-gray-500 mt-1">
-                        Include country code if outside India
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Age *</Label>
-                      <Input
-                        type="number"
-                        value={bookingData.patientInfo.age}
-                        onChange={(e) => handleInputChange('age', e.target.value)}
-                        onBlur={() => handleFieldBlur('age')}
-                        className={validationErrors.age ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20' : ''}
-                        required
-                        placeholder="e.g. 45"
-                        min="1"
-                        max="150"
-                      />
-                      {validationErrors.age && (
-                        <div className="flex items-center mt-1.5 text-xs text-red-600 font-medium">
-                          <AlertCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
-                          {validationErrors.age}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <Label>Gender *</Label>
-                      <Select
-                        value={bookingData.patientInfo.gender}
-                        onValueChange={(value) => {
-                          setBookingData(prev => ({
-                            ...prev,
-                            patientInfo: { ...prev.patientInfo, gender: value }
-                          }));
-                          setValidationErrors(prev => ({ ...prev, gender: '' }));
-                        }}
-                        onOpenChange={(open) => {
-                          if (!open && bookingData.patientInfo.gender) {
-                            handleFieldBlur('gender');
-                          }
-                        }}
-                        required
-                      >
-                        <SelectTrigger className={validationErrors.gender ? 'border-red-500 focus:border-red-500' : ''}>
-                          <SelectValue placeholder="Select gender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                          <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {validationErrors.gender && (
-                        <div className="flex items-center mt-1.5 text-xs text-red-600 font-medium">
-                          <AlertCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
-                          {validationErrors.gender}
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants}>
-                    <Label>Medical History & Current Symptoms *</Label>
-                    <Textarea
-                      value={bookingData.patientInfo.medicalHistory || ''}
-                      onChange={(e) => handleInputChange('medicalHistory', e.target.value)}
-                      onBlur={() => handleFieldBlur('medicalHistory')}
-                      placeholder="Please describe your current symptoms, relevant medical history, known kidney parameters, and any concerns you'd like Dr. Ilango to evaluate..."
-                      className={`min-h-[120px] ${validationErrors.medicalHistory ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/20' : ''}`}
-                      required
-                    />
-                    <div className="flex justify-between items-center mt-1.5">
-                      {validationErrors.medicalHistory ? (
-                        <div className="flex items-center text-xs text-red-600 font-medium">
-                          <AlertCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
-                          {validationErrors.medicalHistory}
-                        </div>
-                      ) : <span />}
-                      <div className="text-[11px] text-gray-500">
-                        Characters: {(bookingData.patientInfo?.medicalHistory || '').length}/2000
-                      </div>
-                    </div>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants}>
-                    <Label>Current Medications (Optional)</Label>
-                    <Textarea
-                      value={bookingData.patientInfo.currentMedications}
-                      onChange={(e) => setBookingData(prev => ({
+                <div>
+                  <Label>Gender *</Label>
+                  <Select
+                    value={bookingData.patientInfo.gender}
+                    onValueChange={(value) => {
+                      setBookingData(prev => ({
                         ...prev,
-                        patientInfo: { ...prev.patientInfo, currentMedications: e.target.value }
-                      }))}
-                      placeholder="List any blood pressure, diabetes, or kidney medications you are currently taking (dosage & frequency)..."
-                      className="min-h-[80px]"
-                    />
-                  </motion.div>
-
-                  {/* Document Upload Area */}
-                  <motion.div variants={itemVariants}>
-                    <div className="flex justify-between items-center mb-2">
-                      <Label className="text-sm font-semibold text-gray-900">
-                        {isDoctorChat 
-                          ? 'Upload Lab Reports & Medical Documents (PDF / Images) - Recommended' 
-                          : 'Upload Medical Documents (Optional) - Max 5 files'}
-                      </Label>
-                      {bookingData.uploadedFiles.length > 0 && (
-                        <span className="text-xs text-[#006f6f] font-semibold">
-                          {bookingData.uploadedFiles.length} of 5 files selected
-                        </span>
-                      )}
+                        patientInfo: { ...prev.patientInfo, gender: value }
+                      }));
+                      // Clear gender validation error when selected
+                      setValidationErrors(prev => ({ ...prev, gender: '' }));
+                    }}
+                    onOpenChange={(open) => {
+                      if (!open && bookingData.patientInfo.gender) {
+                        handleFieldBlur('gender');
+                      }
+                    }}
+                    required
+                  >
+                    <SelectTrigger className={`p-4 ${validationErrors.gender ? 'border-red-500 focus:border-red-500' : ''}`}>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {validationErrors.gender && (
+                    <div className="flex items-center mt-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {validationErrors.gender}
                     </div>
+                  )}
+                </div>
+              </motion.div>
 
-                    {isDoctorChat && (
-                      <div className="bg-teal-50/80 border border-teal-200 rounded-xl p-3.5 mb-3 text-xs text-teal-900 leading-relaxed">
-                        💡 <strong>Tip for Chat Consultation:</strong> Upload your recent KFT (Kidney Function Test), serum creatinine, urine routine, blood tests, or ultrasound reports. Dr. Ilango personally reviews your files, explains the values, and issues your digital prescription.
-                      </div>
-                    )}
+              <motion.div variants={itemVariants}>
+                <Label>Medical History & Current Symptoms *</Label>
+                <Textarea
+                  value={bookingData.patientInfo.medicalHistory}
+                  onChange={(e) => handleInputChange('medicalHistory', e.target.value)}
+                  onBlur={() => handleFieldBlur('medicalHistory')}
+                  placeholder="Please describe your current symptoms, relevant medical history, and any concerns you'd like to discuss (minimum 10 characters)..."
+                  className={`min-h-32 p-4 ${validationErrors.medicalHistory ? 'border-red-500 focus:border-red-500' : ''}`}
+                  required
+                />
+                {validationErrors.medicalHistory && (
+                  <div className="flex items-center mt-1 text-sm text-red-600">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {validationErrors.medicalHistory}
+                  </div>
+                )}
+                <div className="text-xs text-gray-500 mt-1">
+                  Characters: {bookingData.patientInfo.medicalHistory.length}/2000
+                </div>
+              </motion.div>
 
-                    <div 
-                      onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-gray-300 hover:border-[#006f6f] rounded-2xl p-6 sm:p-8 text-center bg-gray-50/50 hover:bg-[#006f6f]/[0.02] transition-all cursor-pointer group"
-                    >
-                      <input
-                        ref={fileInputRef}
-                        type="file" 
-                        multiple 
-                        accept=".pdf,.jpg,.jpeg,.png" 
-                        className="hidden" 
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files || []);
-                          if (files.length + bookingData.uploadedFiles.length > 5) {
-                            toast.error('Maximum 5 files allowed');
-                            e.target.value = '';
-                            return;
-                          }
-                          setBookingData(prev => ({
-                            ...prev,
-                            uploadedFiles: [...prev.uploadedFiles, ...files]
-                          }));
-                          e.target.value = '';
-                        }}
-                        disabled={bookingData.uploadedFiles.length >= 5}
-                      />
-                      <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-gray-200/80 flex items-center justify-center mx-auto mb-3 text-gray-400 group-hover:text-[#006f6f] group-hover:border-[#006f6f]/40 transition-all">
-                        <Upload className="w-6 h-6 transition-transform group-hover:-translate-y-0.5" />
-                      </div>
-                      <p className="text-gray-900 font-semibold text-sm sm:text-base mb-1">
-                        Click to browse files or drag & drop here
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        PDF, JPG, or PNG up to 10MB each (Maximum 5 reports)
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-3.5 border-gray-300 text-gray-700 group-hover:border-[#006f6f] group-hover:text-[#006f6f] text-xs font-semibold rounded-xl"
-                      >
-                        Select Documents
-                      </Button>
-                      {bookingData.uploadedFiles.length >= 5 && (
-                        <p className="text-xs text-amber-600 font-medium mt-2">Maximum file limit (5 files) reached</p>
-                      )}
+              <motion.div variants={itemVariants}>
+                <Label>Current Medications (Optional)</Label>
+                <Textarea
+                  value={bookingData.patientInfo.currentMedications}
+                  onChange={(e) => setBookingData(prev => ({
+                    ...prev,
+                    patientInfo: { ...prev.patientInfo, currentMedications: e.target.value }
+                  }))}
+                  placeholder="List any medications you're currently taking..."
+                  className="p-4"
+                />
+              </motion.div>
+
+              <motion.div variants={itemVariants}>
+                <Label>Upload Medical Documents (Optional) - Max 5 files</Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#006f6f] transition-colors">
+                  <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-600 mb-2">Drag & drop your files or click to browse</p>
+                  <p className="text-sm text-gray-500">Support: PDF, JPG, PNG files up to 10MB each (Maximum 5 files)</p>
+                  {bookingData.uploadedFiles.length > 0 && (
+                    <div className="mt-4 text-sm text-gray-600">
+                      {bookingData.uploadedFiles.length} file(s) selected
                     </div>
-
-                    {/* Uploaded File List with Delete buttons */}
-                    {bookingData.uploadedFiles.length > 0 && (
-                      <div className="mt-4 space-y-2">
-                        <p className="text-xs font-semibold text-gray-700">Selected Reports ({bookingData.uploadedFiles.length}):</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                          {bookingData.uploadedFiles.map((file: File, fileIdx: number) => (
-                            <div 
-                              key={fileIdx} 
-                              className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl text-xs shadow-sm"
-                            >
-                              <div className="flex items-center space-x-2.5 min-w-0 mr-2">
-                                <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#006f6f] flex items-center justify-center shrink-0">
-                                  <FileText className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="font-semibold text-gray-900 truncate" title={file.name}>{file.name}</p>
-                                  <p className="text-[10px] text-gray-400">{(file.size / 1024).toFixed(1)} KB</p>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setBookingData(prev => ({
-                                    ...prev,
-                                    uploadedFiles: prev.uploadedFiles.filter((_, i) => i !== fileIdx)
-                                  }));
-                                }}
-                                className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors cursor-pointer"
-                                title="Remove file"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                </motion.div>
-              </CardContent>
-            </Card>
+                  )}
+                  <Input 
+                    type="file" 
+                    multiple 
+                    accept=".pdf,.jpg,.jpeg,.png" 
+                    className="mt-4 cursor-pointer" 
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length + bookingData.uploadedFiles.length > 5) {
+                        toast.error('Maximum 5 files allowed');
+                        e.target.value = '';
+                        return;
+                      }
+                      setBookingData(prev => ({
+                        ...prev,
+                        uploadedFiles: [...prev.uploadedFiles, ...files]
+                      }));
+                    }}
+                    disabled={bookingData.uploadedFiles.length >= 5}
+                  />
+                  {bookingData.uploadedFiles.length >= 5 && (
+                    <p className="text-sm text-red-600 mt-2">Maximum file limit reached</p>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
           </motion.div>
         );
 
@@ -2003,7 +1864,7 @@ export default function BookingPage() {
                         <div className="flex justify-between">
                           <span className="text-gray-600">Attached Reports:</span>
                           <span className="font-medium">
-                            {bookingData.uploadedFiles && bookingData.uploadedFiles.length > 0 ? `${bookingData.uploadedFiles.length} file(s) attached` : 'None'}
+                            {uploadedFiles.length > 0 ? `${uploadedFiles.length} file(s) attached` : 'None'}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -2144,61 +2005,38 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white overflow-x-hidden">
       <Navigation />
-      <div className="pt-24 sm:pt-28 pb-16 px-3 sm:px-6 max-w-5xl mx-auto">
-        {/* Progress Steps Glassmorphic Card */}
+      {/* Spacer for fixed top navigation bar so progress steps are never covered on mobile */}
+      <div className="h-16 md:h-20 shrink-0" />
+      <div className="container mx-auto px-3 sm:px-4 py-6 md:py-10 max-w-5xl">
+        {/* Progress Steps */}
         <motion.div 
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 sm:mb-10 max-w-3xl mx-auto"
+          className="flex justify-center mb-6 md:mb-10 overflow-x-auto"
         >
-          <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-gray-200/90 shadow-sm p-3.5 sm:p-5">
-            <div className="flex items-center justify-between">
-              {(isDoctorChat ? [
-                { num: 1, label: 'Choose Plan' },
-                { num: 2, label: 'Details & Reports' },
-                { num: 3, label: 'Review & Pay' }
-              ] : [
-                { num: 1, label: 'Choose Plan' },
-                { num: 2, label: 'Date & Time' },
-                { num: 3, label: 'Patient Info' },
-                { num: 4, label: 'Payment' }
-              ]).map((item, idx, arr) => (
-                <React.Fragment key={item.num}>
-                  <div className="flex flex-col items-center flex-1">
-                    <motion.div
-                      className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-xs sm:text-sm font-bold transition-all ${
-                        item.num === step
-                          ? isDoctorChat
-                            ? 'bg-emerald-600 text-white shadow-md ring-4 ring-emerald-600/20'
-                            : 'bg-[#006f6f] text-white shadow-md ring-4 ring-[#006f6f]/20'
-                          : item.num < step
-                          ? 'bg-emerald-500 text-white shadow-sm'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                      whileHover={{ scale: 1.05 }}
-                    >
-                      {item.num < step ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> : item.num}
-                    </motion.div>
-                    <span className={`text-[10px] sm:text-xs mt-1.5 text-center font-semibold transition-colors ${
-                      item.num === step
-                        ? isDoctorChat ? 'text-emerald-700' : 'text-[#006f6f]'
-                        : item.num < step ? 'text-gray-800' : 'text-gray-400'
-                    }`}>
-                      {item.label}
-                    </span>
-                  </div>
-                  {idx < arr.length - 1 && (
-                    <div
-                      className={`flex-1 h-0.5 sm:h-1 -mt-4 mx-1 sm:mx-2 rounded-full transition-colors ${
-                        item.num < step ? (isDoctorChat ? 'bg-emerald-500' : 'bg-[#006f6f]') : 'bg-gray-200'
-                      }`}
-                    />
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
+          <div className="flex items-center space-x-2 md:space-x-8 min-w-max px-2 sm:px-4">
+            {(isDoctorChat ? [1, 2, 3] : [1, 2, 3, 4]).map((s, idx, arr) => (
+              <div key={s} className="flex items-center">
+                <motion.div
+                  className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center text-sm md:text-base font-semibold ${
+                    s <= step ? 'bg-[#006f6f] text-white' : 'bg-gray-200 text-gray-600'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  {s < step ? <CheckCircle2 className="w-4 h-4 md:w-6 md:h-6" /> : s}
+                </motion.div>
+                {idx < arr.length - 1 && (
+                  <div
+                    className={`w-8 md:w-16 h-1 mx-2 md:mx-4 ${
+                      s < step ? 'bg-[#006f6f]' : 'bg-gray-200'
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
           </div>
         </motion.div>
 
@@ -2231,11 +2069,11 @@ export default function BookingPage() {
               </Alert>
             )}
 
-            <div className="flex justify-between items-center pt-8 mt-6 border-t border-gray-200">
+            <div className="flex justify-between pt-6 border-t border-gray-200">
               <Button
                 variant="outline"
                 onClick={handleBack}
-                className="h-11 px-5 rounded-xl font-semibold border-gray-300 text-gray-700 hover:bg-gray-100 flex items-center space-x-2 cursor-pointer transition-all"
+                className="flex items-center space-x-2"
                 disabled={step === 1}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -2250,6 +2088,7 @@ export default function BookingPage() {
                   console.log('🔘 Button clicked for step:', step);
                   if (isInfoStep) {
                     console.log('🔘 Info step button clicked - validating fields');
+                    // Force validation check before proceeding
                     const isValid = validateAllFields();
                     console.log('🔘 Validation result:', isValid);
                     if (isValid) {
@@ -2263,13 +2102,7 @@ export default function BookingPage() {
                     handleNext();
                   }
                 }}
-                className={`h-11 px-6 sm:px-8 rounded-xl font-bold flex items-center space-x-2 transition-all ${
-                  !isStepValid() || (isLastStep && isProcessingPayment)
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
-                    : isDoctorChat
-                    ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-md hover:shadow-lg cursor-pointer'
-                    : 'bg-[#006f6f] hover:bg-[#005555] text-white shadow-md hover:shadow-lg cursor-pointer'
-                }`}
+                className="bg-[#006f6f] hover:bg-[#005555] text-white flex items-center space-x-2"
                 disabled={!isStepValid() || (isLastStep && isProcessingPayment)}
               >
                 <span>
@@ -2281,7 +2114,7 @@ export default function BookingPage() {
                             : (isDoctorChat 
                                 ? `Pay ${getFormattedPrice(regularAmount, pricing.currency)} & Start Chat` 
                                 : 'Pay Now')))
-                    : 'Continue'}
+                    : 'Next'}
                 </span>
                 {isLastStep ? (
                   isCurrentBookingFree

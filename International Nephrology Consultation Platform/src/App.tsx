@@ -39,7 +39,6 @@ import TermsPage from './pages/public/TermsPage';
 import CookiesPolicyPage from './pages/public/CookiesPolicyPage';
 import DebugPage from './pages/DebugPage';
 import { hasFirebaseCredentials } from './config/firebase';
-import { getUserTimezone, getPricingForTimezone } from './utils/timezoneUtils';
 
 // Regional pricing (aligned with timezoneUtils.ts)
 const regionalPricing: Record<string, { consultation: number; currency: string; symbol: string }> = {
@@ -70,7 +69,6 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,7 +96,7 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md p-6 sm:p-8 rounded-2xl">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="sr-only">Login to NephroConsult</DialogTitle>
           <DialogDescription className="sr-only">
@@ -115,7 +113,7 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="w-14 h-14 bg-gradient-to-br from-[#006f6f] to-[#004f4f] rounded-2xl flex items-center justify-center mx-auto mb-3.5 shadow-md"
+              className="w-16 h-16 bg-gradient-to-br from-[#006f6f] to-[#004f4f] rounded-xl flex items-center justify-center mx-auto mb-4"
             >
               <span className="text-white text-2xl font-bold">N</span>
             </motion.div>
@@ -131,7 +129,7 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
               initial={{ y: -10, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="text-gray-500 text-sm mt-1"
+              className="text-gray-600 mt-2"
             >
               Sign in to your NephroConsult account
             </motion.p>
@@ -149,7 +147,7 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="name@example.com"
+                placeholder="Enter your email"
               />
             </motion.div>
 
@@ -159,35 +157,23 @@ function LoginModal({ isOpen, onClose, onSignupOpen }: {
               transition={{ delay: 0.5 }}
             >
               <Label>Password</Label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Enter your password"
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
+              <Input
+                type="password"
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Enter your password"
+              />
             </motion.div>
 
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6 }}
-              className="pt-1"
             >
               <Button
                 type="submit"
-                className="w-full h-11 bg-[#006f6f] hover:bg-[#005555] text-white font-semibold rounded-xl shadow-md transition-all cursor-pointer"
+                className="w-full bg-[#006f6f] hover:bg-[#005555]"
                 disabled={isLoading}
               >
                 {isLoading ? 'Signing in...' : 'Sign In'}
@@ -811,13 +797,6 @@ function HomePage() {
   const userCountry = user?.country || getUserCountry();
   const pricing = regionalPricing[userCountry] || regionalPricing.default;
 
-  const userTimezone = getUserTimezone();
-  const pricingData = getPricingForTimezone(userTimezone);
-  const currencySymbol = pricingData?.symbol || pricing.symbol || '₹';
-  const currencyCode = pricingData?.currency || pricing.currency || 'INR';
-  const initialPrice = pricingData?.initial || (currencyCode === 'INR' ? 499 : 29);
-  const chatPrice = pricingData?.doctor_chat || (currencyCode === 'INR' ? 100 : 1);
-
   const hasUsedFree = Boolean(
     user?.hasUsedFreeConsultation ||
     (user?.email && (() => {
@@ -830,20 +809,15 @@ function HomePage() {
   );
   const showFreeOffer = !hasUsedFree;
 
-  const handlePlanClick = (plan: 'initial' | 'doctor_chat') => {
-    const targetUrl = `/booking?plan=${plan}`;
+  const handleBookConsultationClick = () => {
     if (!user) {
       try {
-        sessionStorage.setItem('redirect_after_login', targetUrl);
+        sessionStorage.setItem('redirect_after_login', '/booking');
       } catch {}
       setIsLoginOpen(true);
     } else {
-      navigate(targetUrl);
+      navigate('/booking');
     }
-  };
-
-  const handleBookConsultationClick = () => {
-    handlePlanClick('initial');
   };
 
   useEffect(() => {
@@ -2077,15 +2051,15 @@ function ContactPage() {
                 whileInView={{ x: 0, opacity: 1 }}
                 viewport={{ once: true }}
               >
-                <Card className="shadow-xl rounded-2xl border border-gray-200/80 overflow-hidden bg-white">
-                  <CardHeader className="p-6 sm:p-8 pb-4 border-b border-gray-100">
-                    <CardTitle className="text-2xl font-bold text-gray-900">Send us a Message</CardTitle>
-                    <p className="text-gray-500 text-sm mt-1">
-                      Fill out the form below and Dr. Ilango's clinical team will get back to you within 24 hours.
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Send us a Message</CardTitle>
+                    <p className="text-gray-600">
+                      Fill out the form below and we'll get back to you as soon as possible.
                     </p>
                   </CardHeader>
-                  <CardContent className="p-6 sm:p-8 pt-6">
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                  <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-6">
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
                           <Label>Full Name</Label>
@@ -2094,6 +2068,7 @@ function ContactPage() {
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             placeholder="Enter your name"
+                            className="mt-1"
                           />
                         </div>
                         <div>
@@ -2104,6 +2079,7 @@ function ContactPage() {
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             placeholder="Enter your email"
+                            className="mt-1"
                           />
                         </div>
                       </div>
@@ -2116,18 +2092,19 @@ function ContactPage() {
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                             placeholder="Enter your phone"
+                            className="mt-1"
                           />
                         </div>
                         <div>
-                          <Label>Inquiry Type</Label>
+                          <Label>Urgency Level</Label>
                           <Select value={formData.urgency} onValueChange={(value) => setFormData({ ...formData, urgency: value })}>
-                            <SelectTrigger>
+                            <SelectTrigger className="mt-1">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="normal">General Inquiry</SelectItem>
-                              <SelectItem value="urgent">Urgent Consultation Query</SelectItem>
-                              <SelectItem value="emergency">Lab Reports Guidance</SelectItem>
+                              <SelectItem value="normal">Normal Inquiry</SelectItem>
+                              <SelectItem value="urgent">Urgent</SelectItem>
+                              <SelectItem value="emergency">Emergency</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -2140,6 +2117,7 @@ function ContactPage() {
                           value={formData.subject}
                           onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                           placeholder="What can we help you with?"
+                          className="mt-1"
                         />
                       </div>
 
@@ -2150,13 +2128,13 @@ function ContactPage() {
                           value={formData.message}
                           onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                           placeholder="Describe your inquiry or concern in detail..."
-                          className="min-h-[120px]"
+                          className="mt-1 min-h-32"
                         />
                       </div>
 
                       <Button 
                         type="submit" 
-                        className="w-full h-11 bg-[#006f6f] hover:bg-[#005555] text-white font-semibold rounded-xl shadow-md transition-all cursor-pointer"
+                        className="w-full bg-[#006f6f] hover:bg-[#005555]"
                         disabled={isSubmitting}
                       >
                         {isSubmitting ? (
