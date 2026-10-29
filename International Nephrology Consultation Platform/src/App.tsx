@@ -27,6 +27,7 @@ import { PaymentPage } from './pages/PaymentPage';
 import PaymentSuccess from './pages/PaymentSuccess';
 import BookingPage from './pages/BookingPage';
 import AIDoctorPage from './pages/AIDoctorPage';
+import DoctorChatPage from './pages/DoctorChatPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import SEOHead from './components/SEOHead';
@@ -2577,6 +2578,16 @@ export default function App() {
                   <ProfilePage />
                 </ProtectedRoute>
               }
+            />
+
+            {/* Doctor Chat Consultation Routes */}
+            <Route
+              path="/doctor-chat"
+              element={<DoctorChatPage />}
+            />
+            <Route
+              path="/doctor-chat/:ticketId"
+              element={<DoctorChatPage />}
             />
             
             {/* Admin Panel Route - Protected for specific emails only */}

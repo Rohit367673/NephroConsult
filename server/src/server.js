@@ -24,6 +24,7 @@ import chatRoutes from './routes/chat.js';
 import prescriptionRoutes from './routes/prescriptions.js';
 import paymentRoutes from './routes/payments.js';
 import refundRoutes from './routes/refunds.js';
+import doctorChatRoutes from './routes/doctorChat.js';
 import { startJobs } from './jobs.js';
 import './services/telegramService.js'; // Initialize Telegram service
 
@@ -319,6 +320,7 @@ app.use('/api/contact', contactLimiter, contactRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/refunds', refundRoutes);
+app.use('/api/doctor-chat', doctorChatRoutes);
 
 // 404
 app.use((req, res) => {

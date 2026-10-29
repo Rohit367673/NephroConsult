@@ -3,14 +3,16 @@
 // Base configuration (INR) - Updated pricing
 const BASE_PRICES = {
   initial: 499,     // Initial consultation (Tier A / India & cheap countries)
-  followup: 399,    // Follow-up consultation (Tier A)
-  urgent: 999       // Urgent consultation (Tier A)
+  doctor_chat: 100, // Upload Files & Chat with Doctor (Tier A / India: ₹100 INR)
+  followup: 399,    // Backward compatibility
+  urgent: 999       // Backward compatibility
 };
 
 const FIRST_TIME_DISCOUNT = 0.20; // 20% off
 const TIER_B_MULTIPLIER = 1.8;    // Middle-income countries
 const HIGH_INCOME_TARGET_USD = {
   initial: 29,    // Target $29 USD for high-income countries
+  doctor_chat: 1, // Target $1 USD for doctor chat & report review
   followup: 19,   // Target $19 USD for high-income countries
   urgent: 49      // Target $49 USD for high-income countries
 };
@@ -125,6 +127,7 @@ function computeHighIncomeMultiplier(baseInr, targetUsd, usdPerInr) {
 export function mapConsultationTypeId(id) {
   const mapping = {
     initial: 'Initial Consultation',
+    doctor_chat: 'Doctor Chat & Report Review',
     followup: 'Follow-up',
     urgent: 'Urgent Consultation',
   };

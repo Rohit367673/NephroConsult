@@ -47,14 +47,14 @@ const knowledgeBase = [
     keywords: ['book', 'appointment', 'schedule', 'consult', 'booking', 'how to book'],
     response: () => {
       const { pricing, country } = getDynamicPricing();
-      return `TO BOOK A CONSULTATION:\n\n1️⃣ Visit our 'Book Appointment' page\n2️⃣ Choose consultation type:\n   • Initial: ${pricing.symbol}${pricing.initial} ${pricing.currency} (comprehensive assessment)\n   • Follow-up: ${pricing.symbol}${pricing.followup} ${pricing.currency} (ongoing care)\n   • Urgent: ${pricing.symbol}${pricing.initial + 500} ${pricing.currency} (same-day, connect within 1 hour)\n3️⃣ Select your preferred date and time\n4️⃣ Upload lab reports (recommended)\n5️⃣ Choose payment method\n6️⃣ Confirm booking and receive secure meeting link\n\n🌍 Regional pricing for ${country}\n📞 Available globally with flexible scheduling!`;
+      return `TO BOOK A CONSULTATION:\n\n1️⃣ Visit our 'Book Appointment' page\n2️⃣ Choose your consultation plan:\n   • Initial Video Consultation: 1st Consultation FREE for new patients (then ${pricing.symbol}${pricing.initial} ${pricing.currency}) — 45-min video call with Google Meet\n   • Upload Files & Chat with Doctor: ${pricing.currency === 'INR' ? '₹100' : '$1'} — Upload lab reports for Dr. Ilango's clinical review, prescription & direct chat (response in 12–24h)\n3️⃣ Select slot or upload medical files\n4️⃣ Confirm booking & receive instant email confirmation\n\n🌍 Regional pricing for ${country}\n📞 Available globally with direct doctor access!`;
     }
   },
   {
     keywords: ['fee', 'cost', 'price', 'charge', 'pricing', 'money', 'how much'],
     response: () => {
       const { pricing, country } = getDynamicPricing();
-      return `CONSULTATION PRICING FOR ${country.toUpperCase()}:\n\n💰 Initial Consultation: ${pricing.symbol}${pricing.initial} ${pricing.currency}\n   • Comprehensive kidney health assessment\n   • Medical history review\n   • Treatment plan development\n\n💰 Follow-up Consultation: ${pricing.symbol}${pricing.followup} ${pricing.currency}\n   • Ongoing care and monitoring\n   • Progress evaluation\n   • Treatment adjustments\n\n🚨 Urgent Consultation: ${pricing.symbol}${pricing.initial + 500} ${pricing.currency}\n   • Same-day availability\n   • Connect within 1 hour\n   • Priority scheduling\n\n🌍 Regional pricing tailored for ${country}\n⏰ All consultations: 6-10 PM IST (India Time)\n💳 Multiple payment options accepted`;
+      return `CONSULTATION PRICING FOR ${country.toUpperCase()}:\n\n🎉 1st Initial Consultation: 100% FREE (for all new patients!)\n\n💰 Subsequent Initial Video Consultations: ${pricing.symbol}${pricing.initial} ${pricing.currency}\n   • 45-minute live 1-on-1 HD video call\n   • Comprehensive kidney evaluation & digital prescription\n\n📄 Upload Files & Chat with Doctor: ${pricing.currency === 'INR' ? '₹100' : '$1'}\n   • Upload lab reports & medical queries\n   • Personal clinical review by Dr. Ilango\n   • Digital prescription & asynchronous follow-up chat\n   • 12–24 hour response turnaround\n\n🌍 Tailored regional pricing for ${country}`;
     }
   },
   {

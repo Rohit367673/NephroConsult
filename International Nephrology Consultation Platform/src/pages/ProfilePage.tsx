@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { User, Mail, Phone, MapPin, Calendar, Clock, FileText, Heart, Shield, Edit3, Save, Camera, Star, Award, Bell, Video, Upload, Activity, TrendingUp, CheckCircle2, Menu, X, LogOut, CreditCard, Download, Eye, ExternalLink, AlertCircle, Plus } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Clock, FileText, Heart, Shield, Edit3, Save, Camera, Star, Award, Bell, Video, Upload, Activity, TrendingUp, CheckCircle2, Menu, X, LogOut, CreditCard, Download, Eye, ExternalLink, AlertCircle, Plus, MessageSquare } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -65,6 +65,7 @@ export default function ProfilePage() {
   // Fetch real appointments from API
   const [appointments, setAppointments] = useState<any[]>([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [doctorChats, setDoctorChats] = useState<any[]>([]);
   const [doctorAppointments, setDoctorAppointments] = useState<any[]>([]);
   const [doctorStats, setDoctorStats] = useState({
     todayAppointments: 0,
@@ -151,31 +152,32 @@ export default function ProfilePage() {
   const fetchAppointments = async () => {
     try {
       setAppointmentsLoading(true);
-      // Use same-origin endpoint to keep cookies first-party on mobile
-      const appointmentsEndpoint = '/api/appointments/mine';
+      // Fetch both appointments and doctor chats in parallel
+      const [aptRes, chatRes] = await Promise.all([
+        fetch('/api/appointments/mine', { credentials: 'include' }).catch(() => null),
+        fetch('/api/doctor-chat/mine', { credentials: 'include' }).catch(() => null)
+      ]);
       
-      const response = await fetch(appointmentsEndpoint, {
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        const text = await response.text().catch(() => '');
+      if (aptRes && aptRes.ok) {
+        const text = await aptRes.text().catch(() => '');
         const data = text ? JSON.parse(text) : {};
-        console.log('📋 API Response:', data);
-        console.log('📋 Appointments array:', data.appointments);
-        if (data.appointments && data.appointments.length > 0) {
-          console.log('📋 First appointment details:', data.appointments[0]);
-          console.log('📋 Meet link field:', data.appointments[0].meetLink);
-          console.log('📋 Price details:', data.appointments[0].price);
-        }
-        setAppointments(data.appointments || []); // Empty array instead of dummy data
+        console.log('📋 API Appointments:', data.appointments);
+        setAppointments(data.appointments || []);
       } else {
-        console.error('Failed to fetch appointments');
-        setAppointments([]); // Empty array instead of dummy data
+        setAppointments([]);
+      }
+
+      if (chatRes && chatRes.ok) {
+        const chatData = await chatRes.json().catch(() => ({}));
+        console.log('💬 API Doctor Chats:', chatData.chats);
+        setDoctorChats(chatData.chats || []);
+      } else {
+        setDoctorChats([]);
       }
     } catch (error) {
-      console.error('Error fetching appointments:', error);
-      setAppointments([]); // Empty array instead of dummy data
+      console.error('Error fetching consultations:', error);
+      setAppointments([]);
+      setDoctorChats([]);
     } finally {
       setAppointmentsLoading(false);
     }
@@ -869,6 +871,99 @@ For support: suyambu54321@gmail.com
                                   Book New Consultation
                                 </Button>
                               </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* Doctor Chats & Report Reviews */}
+                          <Card>
+                            <CardHeader>
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div>
+                                  <CardTitle className="flex items-center gap-2 text-lg">
+                                    <MessageSquare className="w-5 h-5 text-[#006f6f]" />
+                                    Doctor Chats & Report Reviews
+                                  </CardTitle>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Online reports evaluation, medical chat, and digital prescriptions with Dr. Ilango S. Prakasam
+                                  </p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs self-start sm:self-auto"
+                                  onClick={() => navigate('/booking')}
+                                >
+                                  + Start New Chat
+                                </Button>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              {doctorChats.length === 0 ? (
+                                <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                                  <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                  <p className="text-sm font-medium text-gray-700">No Doctor Chat Consultations Yet</p>
+                                  <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+                                    Upload your lab reports and medical questions for Dr. Ilango to review personally for just ₹100 / $1.
+                                  </p>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="mt-3 border-[#006f6f] text-[#006f6f] hover:bg-teal-50 text-xs"
+                                    onClick={() => navigate('/booking')}
+                                  >
+                                    Submit Reports & Start Chat
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  {doctorChats.map((chat) => (
+                                    <div
+                                      key={chat.ticketId}
+                                      className="p-4 rounded-xl border border-gray-200 hover:border-teal-300 bg-white shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                                    >
+                                      <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-800">
+                                            {chat.ticketId}
+                                          </span>
+                                          <Badge
+                                            className={
+                                              chat.status === 'waiting_doctor'
+                                                ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                                : chat.status === 'doctor_replied'
+                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                                : 'bg-gray-100 text-gray-700 border-gray-300'
+                                            }
+                                            variant="outline"
+                                          >
+                                            {chat.status === 'waiting_doctor'
+                                              ? '⏳ Doctor Reviewing (12-24h)'
+                                              : chat.status === 'doctor_replied'
+                                              ? '✓ Doctor Replied'
+                                              : 'Concluded'}
+                                          </Badge>
+                                        </div>
+                                        <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                                          {chat.initialQuery?.symptoms || 'Report Review & Medical Query'}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          {chat.documents?.length || 0} report(s) attached • Last updated: {new Date(chat.updatedAt || chat.createdAt).toLocaleDateString()}
+                                        </p>
+                                      </div>
+
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <Button
+                                          size="sm"
+                                          className="bg-[#006f6f] hover:bg-[#005555] text-white"
+                                          onClick={() => navigate(`/doctor-chat?ticketId=${chat.ticketId}`)}
+                                        >
+                                          <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                                          Open Doctor Chat
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </CardContent>
                           </Card>
 

@@ -32,6 +32,50 @@ export interface Medicine {
   url?: string;
 }
 
+export interface DoctorChatMessage {
+  sender: 'patient' | 'doctor';
+  senderName: string;
+  text: string;
+  timestamp: string;
+}
+
+export interface DoctorChatTicket {
+  _id: string;
+  ticketId: string;
+  patient: {
+    name: string;
+    email: string;
+    phone: string;
+    age?: number;
+    gender?: string;
+  };
+  initialQuery?: {
+    symptoms?: string;
+    duration?: string;
+    medicalHistory?: string;
+    currentMedications?: string;
+    allergies?: string;
+    primaryQuestion?: string;
+  };
+  documents?: string[];
+  status: 'waiting_doctor' | 'doctor_replied' | 'waiting_patient' | 'closed';
+  price?: {
+    amount: number;
+    currency: string;
+  };
+  messages: DoctorChatMessage[];
+  prescription?: {
+    medicines?: Array<{ name: string; dosage: string; url?: string }>;
+    instructions?: string;
+    diagnosis?: string;
+    nextReview?: string;
+    issuedAt?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+  closedAt?: string;
+}
+
 class AdminService {
   // Get API base URL - use same-origin in production for proper cookie handling
   private getApiBaseUrl(): string {
@@ -269,6 +313,94 @@ class AdminService {
       console.log('✅ Consultation status updated:', consultationId, status);
     } catch (error) {
       console.error('Error updating consultation status:', error);
+      throw error;
+    }
+  }
+
+  // Get all Doctor Chat & Report Review consultations
+  async getDoctorChats(): Promise<{ chats: DoctorChatTicket[]; counts: { total: number; waiting_doctor: number; doctor_replied: number; closed: number } }> {
+    try {
+      const apiBaseUrl = this.getApiBaseUrl();
+      const response = await fetch(`${apiBaseUrl}/api/doctor-chat/admin/all`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        mode: 'cors',
+        cache: 'no-cache'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch doctor chats: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        chats: data.chats || [],
+        counts: data.counts || { total: 0, waiting_doctor: 0, doctor_replied: 0, closed: 0 }
+      };
+    } catch (error) {
+      console.error('Error in getDoctorChats:', error);
+      throw error;
+    }
+  }
+
+  // Doctor sends message in chat
+  async sendDoctorChatMessage(ticketId: string, text: string, senderName = 'Dr. Ilango S. Prakasam'): Promise<any> {
+    try {
+      const apiBaseUrl = this.getApiBaseUrl();
+      const response = await fetch(`${apiBaseUrl}/api/doctor-chat/${ticketId}/message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        mode: 'cors',
+        body: JSON.stringify({ text, senderName })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to send message');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error in sendDoctorChatMessage:', error);
+      throw error;
+    }
+  }
+
+  // Doctor concludes chat with advice / prescription
+  async closeDoctorChat(ticketId: string, payload: {
+    medicines?: Array<{ name: string; dosage: string; url?: string }>;
+    instructions?: string;
+    diagnosis?: string;
+    nextReview?: string;
+  }): Promise<any> {
+    try {
+      const apiBaseUrl = this.getApiBaseUrl();
+      const response = await fetch(`${apiBaseUrl}/api/doctor-chat/${ticketId}/close`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        mode: 'cors',
+        body: JSON.stringify({ prescription: payload })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to complete consultation');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error in closeDoctorChat:', error);
       throw error;
     }
   }

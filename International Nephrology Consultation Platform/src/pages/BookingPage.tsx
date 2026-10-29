@@ -74,11 +74,15 @@ const getBasePricesINR = () => {
 };
 
 const getConsultationPrice = (type: string, country: string, currency: string) => {
+  if (type === 'doctor_chat') {
+    return currency === 'INR' ? 100 : 1;
+  }
+
   // Updated pricing per client decision
-  // Cheap countries (IN and similar): INR 499/399/999
-  // High-income countries: USD $29/$19/$49
-  const inrPrices = { initial: 499, followup: 399, urgent: 999 } as const;
-  const usdPrices = { initial: 29, followup: 19, urgent: 49 } as const;
+  // Cheap countries (IN and similar): INR 499
+  // High-income countries: USD $29
+  const inrPrices = { initial: 499, doctor_chat: 100, followup: 399, urgent: 999 } as const;
+  const usdPrices = { initial: 29, doctor_chat: 1, followup: 19, urgent: 49 } as const;
 
   const key = (type === 'followup' || type === 'urgent') ? type : 'initial';
 
@@ -751,6 +755,16 @@ export default function BookingPage() {
 
   // Enhanced step validation (pure function - no state updates)
   const isStepValid = () => {
+    if (bookingData.consultationType === 'doctor_chat') {
+      if (step === 1) return bookingData.consultationType !== '';
+      if (step === 2) {
+        const validation = validatePatientInfo(bookingData.patientInfo);
+        return validation.isValid;
+      }
+      if (step === 3) return true;
+      return false;
+    }
+
     switch (step) {
       case 1:
         return bookingData.consultationType !== '';
@@ -771,8 +785,7 @@ export default function BookingPage() {
   // Bug 1 fix: useMemo and useCallback must be declared BEFORE any early return
   const consultationTypes = useMemo(() => {
     const initialRegularPrice = getConsultationPrice('initial', bookingData.country || userCountry, pricing.currency);
-    const followupPrice = getConsultationPrice('followup', bookingData.country || userCountry, pricing.currency);
-    const urgentPrice = getConsultationPrice('urgent', bookingData.country || userCountry, pricing.currency);
+    const doctorChatPrice = getConsultationPrice('doctor_chat', bookingData.country || userCountry, pricing.currency);
 
     return [
       { 
@@ -783,50 +796,50 @@ export default function BookingPage() {
         isFree: isFreeEligible,
         formattedPrice: isFreeEligible ? 'FREE' : getFormattedPrice(initialRegularPrice, pricing.currency),
         duration: '45 min',
-        description: 'Comprehensive kidney health assessment with detailed medical history review',
-        icon: User,
-        features: ['Complete kidney function evaluation', 'Personalized treatment plan', 'Lab report analysis', 'Lifestyle recommendations']
+        description: 'Comprehensive 1-on-1 video consultation with Dr. Ilango via secure video call',
+        icon: Video,
+        features: [
+          '45-minute live 1-on-1 video call',
+          'Complete kidney function evaluation',
+          'Detailed medical history review',
+          'Official digital prescription provided'
+        ]
       },
       { 
-        id: 'followup', 
-        name: 'Follow-up Consultation', 
-        price: followupPrice,
-        originalPrice: followupPrice,
+        id: 'doctor_chat', 
+        name: 'Upload Files & Chat with Doctor', 
+        price: doctorChatPrice,
+        originalPrice: doctorChatPrice,
         isFree: false,
-        formattedPrice: getFormattedPrice(followupPrice, pricing.currency),
-        duration: '30 min',
-        description: 'Progress review and treatment adjustment for existing patients',
+        formattedPrice: getFormattedPrice(doctorChatPrice, pricing.currency),
+        duration: 'Response within 12–24 hrs',
+        badgeText: 'Report Review & Chat',
+        description: 'Upload your lab reports and medical history. Dr. Ilango personally reviews your files, provides clinical advice, digital prescription, and direct follow-up chat.',
         icon: FileText,
-        features: ['Treatment progress review', 'Medication adjustments', 'Lab results discussion', 'Next steps planning']
-      },
-      {
-        id: 'urgent',
-        name: 'Urgent Consultation',
-        price: urgentPrice,
-        originalPrice: urgentPrice,
-        isFree: false,
-        formattedPrice: getFormattedPrice(urgentPrice, pricing.currency),
-        duration: '45 min',
-        description: 'Priority consultation for urgent kidney health concerns (10 AM - 10 PM IST)',
-        icon: Clock,
-        features: ['Connect within 1 hour', 'Priority scheduling (10 AM - 10 PM IST)', 'Urgent symptom evaluation', 'Immediate treatment plan']
+        features: [
+          'Lab reports & medical history review',
+          'Direct asynchronous chat with Dr. Ilango',
+          'Official digital prescription & clinical advice',
+          'Email notifications when Dr. Ilango replies'
+        ]
       }
     ];
   }, [bookingData.country, userCountry, pricing.currency, isFreeEligible]);
 
   const handleNext = useCallback(() => {
-    console.log('🔄 handleNext called, current step:', step);
-    if (step < 4) {
+    const currentMax = bookingData.consultationType === 'doctor_chat' ? 3 : 4;
+    console.log('🔄 handleNext called, current step:', step, 'max:', currentMax);
+    if (step < currentMax) {
       const nextStep = step + 1;
       console.log('🔄 Moving to step:', nextStep);
       setStep(nextStep);
       // Auto-select Cashfree when reaching payment step
-      if (nextStep === 4 && !bookingData.paymentMethod) {
+      if (nextStep === currentMax && !bookingData.paymentMethod) {
         console.log('💳 Auto-selecting Cashfree payment method');
         setBookingData(prev => ({ ...prev, paymentMethod: 'cashfree' }));
       }
     }
-  }, [step, bookingData.paymentMethod]);
+  }, [step, bookingData.consultationType, bookingData.paymentMethod]);
 
   const handleBack = useCallback(() => {
     console.log('⬅️ handleBack called, current step:', step);
@@ -1109,16 +1122,30 @@ export default function BookingPage() {
         }
         console.log('🗑️ Cleared all persistent storage after successful payment');
         
-        // Show success message and redirect to profile (appointment already created by server)
-        toast.success('🎉 Appointment successfully created! Redirecting to your dashboard...', {
-          duration: 4000,
-          id: 'appointment-success'
-        });
-        
-        // Redirect to profile page after 2 seconds
-        setTimeout(() => {
-          window.location.href = '/profile';
-        }, 2000);
+        const lastResult = (window as any).lastPaymentResult || (typeof isVerified === 'object' ? isVerified : null);
+        const ticketId = lastResult?.ticketId;
+        const isDoctorChat = bookingDetails.consultationType === 'doctor_chat' || !!ticketId;
+
+        if (isDoctorChat) {
+          toast.success('🎉 Consultation request submitted! Opening your doctor chat...', {
+            duration: 4000,
+            id: 'appointment-success'
+          });
+          setTimeout(() => {
+            navigate(`/doctor-chat${ticketId ? `?ticketId=${ticketId}` : ''}`);
+          }, 1500);
+        } else {
+          // Show success message and redirect to profile (appointment already created by server)
+          toast.success('🎉 Appointment successfully created! Redirecting to your dashboard...', {
+            duration: 4000,
+            id: 'appointment-success'
+          });
+          
+          // Redirect to profile page after 2 seconds
+          setTimeout(() => {
+            window.location.href = '/profile';
+          }, 2000);
+        }
       } else {
         throw new Error('Payment verification failed');
       }
@@ -1250,8 +1277,15 @@ export default function BookingPage() {
     exit: { x: -50, opacity: 0 }
   };
 
+  const isDoctorChat = bookingData.consultationType === 'doctor_chat';
+  const effectiveStep = isDoctorChat 
+    ? (step === 2 ? 3 : step === 3 ? 4 : step) 
+    : step;
+  const isLastStep = step === (isDoctorChat ? 3 : 4);
+  const isInfoStep = isDoctorChat ? step === 2 : step === 3;
+
   const renderStep = () => {
-    switch (step) {
+    switch (effectiveStep) {
       case 1:
         return (
           <motion.div 
@@ -1268,7 +1302,7 @@ export default function BookingPage() {
                 <div className="flex items-center justify-center gap-2">
                   <MapPin className="h-4 w-4 text-blue-600 shrink-0" style={{ minWidth: '16px', minHeight: '16px' }} />
                   <p className="text-xs sm:text-sm font-medium text-blue-800 leading-relaxed">
-                    Your Location: {userCountry} • Doctor Location: India (IST) • Regular: 6-10 PM IST • Urgent: 10 AM-10 PM IST
+                    Location: {userCountry} • Dr. Ilango S. Prakasam (Sr. Nephrologist) • Live Video Consultations & Online Lab Report Reviews
                   </p>
                 </div>
               </div>
@@ -1328,6 +1362,18 @@ export default function BookingPage() {
                                     className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border"
                                   >
                                     🎁 1st Consultation FREE
+                                  </span>
+                                )}
+                                {(type as any).badgeText && (
+                                  <span
+                                    style={{
+                                      backgroundColor: '#e0f2fe',
+                                      color: '#0369a1',
+                                      borderColor: '#bae6fd',
+                                    }}
+                                    className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border"
+                                  >
+                                    💬 {(type as any).badgeText}
                                   </span>
                                 )}
                               </div>
@@ -1421,14 +1467,6 @@ export default function BookingPage() {
               {/* Calendar Section */}
               <motion.div variants={itemVariants} className="space-y-4">
                 <Label className="text-lg font-semibold">Select Date</Label>
-                {bookingData.consultationType !== 'urgent' && (
-                  <Alert className="bg-amber-50 border-amber-200">
-                    <AlertCircle className="h-4 w-4 text-amber-600" />
-                    <AlertDescription className="text-amber-800 text-sm">
-                      Same-day booking is only available for Urgent Consultations. Please select a future date or upgrade to Urgent Consultation.
-                    </AlertDescription>
-                  </Alert>
-                )}
                 <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                   {/* Calendar Component */}
                   <CalendarComponent
@@ -1566,9 +1604,19 @@ export default function BookingPage() {
             className="space-y-6"
           >
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Patient Information</h2>
-              <p className="text-gray-600">Please provide your medical details for the consultation</p>
-              <p className="text-sm text-red-600 mt-2">* All fields are required except Current Medications and Document Upload</p>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                {isDoctorChat ? 'Patient Info & Medical Reports' : 'Patient Information'}
+              </h2>
+              <p className="text-gray-600">
+                {isDoctorChat 
+                  ? 'Please provide your medical details and upload lab reports for Dr. Ilango S. Prakasam' 
+                  : 'Please provide your medical details for the consultation'}
+              </p>
+              <p className="text-sm text-red-600 mt-2">
+                {isDoctorChat 
+                  ? '* Name, email, phone, age, gender & symptoms/queries are required' 
+                  : '* All fields are required except Current Medications and Document Upload'}
+              </p>
             </div>
 
             <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
@@ -1797,23 +1845,44 @@ export default function BookingPage() {
                       <span className="text-gray-600">Consultation Type:</span>
                       <span className="font-medium">{selectedType?.name}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Date:</span>
-                      <span className="font-medium">
-                        {new Date(bookingData.date).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Time:</span>
-                      <span className="font-medium">
-                        {bookingData.time}
-                        {bookingData.istTime && ` (${bookingData.istTime} IST)`}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Duration:</span>
-                      <span className="font-medium">{selectedType?.duration}</span>
-                    </div>
+                    {isDoctorChat ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Turnaround Time:</span>
+                          <span className="font-medium text-emerald-700">Within 12–24 Hours</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Attached Reports:</span>
+                          <span className="font-medium">
+                            {uploadedFiles.length > 0 ? `${uploadedFiles.length} file(s) attached` : 'None'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Format:</span>
+                          <span className="font-medium">Direct Medical Chat & Prescription</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Date:</span>
+                          <span className="font-medium">
+                            {new Date(bookingData.date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Time:</span>
+                          <span className="font-medium">
+                            {bookingData.time}
+                            {bookingData.istTime && ` (${bookingData.istTime} IST)`}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Duration:</span>
+                          <span className="font-medium">{selectedType?.duration}</span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-gray-600">Doctor:</span>
                       <span className="font-medium text-[#006f6f]">Dr. Ilango S. Prakasam <span className="text-[#006f6f]">(Sr. Nephrologist)</span></span>
@@ -1878,7 +1947,7 @@ export default function BookingPage() {
                           </div>
                         </div>
                         <div className="text-xs text-gray-600 border-t border-green-200 pt-3">
-                          Note: This complimentary offer applies strictly to your very first Initial Consultation. Subsequent Initial Consultations, Follow-up Consultations, and Urgent Consultations are billed at standard rates.
+                          Note: This complimentary offer applies strictly to your very first Initial Consultation. Subsequent Initial Consultations are billed at standard rates.
                         </div>
                       </div>
                     ) : (
@@ -1938,7 +2007,7 @@ export default function BookingPage() {
           className="flex justify-center mb-6 md:mb-10 overflow-x-auto"
         >
           <div className="flex items-center space-x-2 md:space-x-8 min-w-max px-2 sm:px-4">
-            {[1, 2, 3, 4].map((s) => (
+            {(isDoctorChat ? [1, 2, 3] : [1, 2, 3, 4]).map((s, idx, arr) => (
               <div key={s} className="flex items-center">
                 <motion.div
                   className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center text-sm md:text-base font-semibold ${
@@ -1949,7 +2018,7 @@ export default function BookingPage() {
                 >
                   {s < step ? <CheckCircle2 className="w-4 h-4 md:w-6 md:h-6" /> : s}
                 </motion.div>
-                {s < 4 && (
+                {idx < arr.length - 1 && (
                   <div
                     className={`w-8 md:w-16 h-1 mx-2 md:mx-4 ${
                       s < step ? 'bg-[#006f6f]' : 'bg-gray-200'
@@ -1971,8 +2040,8 @@ export default function BookingPage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            {/* Validation Summary for Step 3 */}
-            {step === 3 && Object.keys(validationErrors).some(key => validationErrors[key]) && (
+            {/* Validation Summary for Patient Info Step */}
+            {isInfoStep && Object.keys(validationErrors).some(key => validationErrors[key]) && (
               <Alert className="border-red-200 bg-red-50 mb-6">
                 <AlertCircle className="h-4 w-4 text-red-600" />
                 <AlertDescription className="text-red-800">
@@ -2002,13 +2071,13 @@ export default function BookingPage() {
               </Button>
               
               <Button
-                onClick={step === 4 ? () => {
-                  console.log('🔘 Button clicked for step 4 - calling handleBooking');
+                onClick={isLastStep ? () => {
+                  console.log('🔘 Button clicked for last step - calling handleBooking');
                   handleBooking();
                 } : () => {
                   console.log('🔘 Button clicked for step:', step);
-                  if (step === 3) {
-                    console.log('🔘 Step 3 button clicked - validating fields');
+                  if (isInfoStep) {
+                    console.log('🔘 Info step button clicked - validating fields');
                     // Force validation check before proceeding
                     const isValid = validateAllFields();
                     console.log('🔘 Validation result:', isValid);
@@ -2024,17 +2093,21 @@ export default function BookingPage() {
                   }
                 }}
                 className="bg-[#006f6f] hover:bg-[#005555] text-white flex items-center space-x-2"
-                disabled={!isStepValid() || (step === 4 && isProcessingPayment)}
+                disabled={!isStepValid() || (isLastStep && isProcessingPayment)}
               >
                 <span>
-                  {step === 4
+                  {isLastStep
                     ? (isProcessingPayment
                         ? 'Processing...'
-                        : (isFreeEligible && bookingData.consultationType === 'initial' ? 'Confirm Free Booking' : 'Pay Now'))
+                        : (isCurrentBookingFree 
+                            ? 'Confirm Free Booking' 
+                            : (isDoctorChat 
+                                ? `Pay ${getFormattedPrice(regularAmount, pricing.currency)} & Start Chat` 
+                                : 'Pay Now')))
                     : 'Next'}
                 </span>
-                {step === 4 ? (
-                  isFreeEligible && bookingData.consultationType === 'initial'
+                {isLastStep ? (
+                  isCurrentBookingFree
                     ? <CheckCircle2 className="h-4 w-4" />
                     : <CreditCard className="h-4 w-4" />
                 ) : <ChevronRight className="h-4 w-4" />}

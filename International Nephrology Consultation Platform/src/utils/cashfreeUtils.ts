@@ -395,9 +395,10 @@ export const verifyCashfreePayment = async (
       sessionStorage.removeItem('cashfree_payment_details');
       localStorage.removeItem('cashfree_booking_details');
       localStorage.removeItem('cashfree_last_order_id');
+      (window as any).lastPaymentResult = data;
     } catch {}
 
-    return data.success === true;
+    return data.success === true ? data : false;
   } catch (error) {
     console.error('Error verifying payment:', error);
     return false;

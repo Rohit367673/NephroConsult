@@ -91,7 +91,7 @@ export const getPricingForTimezone = (timezone: string) => {
       timezone.includes('Chennai') || timezone.includes('Bangalore') ||
       timezone === 'Asia/Colombo')) { // Sri Lanka also uses similar pricing
     console.log('Detected Indian region, returning INR pricing');
-    return { initial: 499, followup: 399, currency: 'INR', symbol: '₹' };
+    return { initial: 499, followup: 399, doctor_chat: 100, currency: 'INR', symbol: '₹' };
   }
   
   // Try to match by region/city
@@ -105,11 +105,12 @@ export const getPricingForTimezone = (timezone: string) => {
   });
   
   if (similarTz) {
-    return REGION_PRICING[similarTz as keyof typeof REGION_PRICING];
+    const p = REGION_PRICING[similarTz as keyof typeof REGION_PRICING];
+    return { ...p, doctor_chat: p.currency === 'INR' ? 100 : 1 };
   }
   
   // Default pricing (USD) - updated
-  return { initial: 29, followup: 19, currency: 'USD', symbol: '$' };
+  return { initial: 29, followup: 19, doctor_chat: 1, currency: 'USD', symbol: '$' };
 };
 
 // Convert IST time slots to user's local time

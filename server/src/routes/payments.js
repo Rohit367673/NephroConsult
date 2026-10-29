@@ -6,6 +6,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { env, flags } from '../config.js';
 import Appointment from '../models/Appointment.js';
+import DoctorChat from '../models/DoctorChat.js';
 import User from '../models/User.js';
 import { priceFor, mapConsultationTypeId } from '../utils/pricing.js';
 import { generateMeetLink } from '../utils/meet.js';
@@ -248,8 +249,9 @@ router.post('/verify-payment', async (req, res) => {
       // Don't fail the payment verification if email fails
     }
 
-    // Best-effort: create appointment automatically (use booking_details or fallback to session snapshot or order tags or order note)
+    // Best-effort: create appointment or doctor chat automatically (use booking_details or fallback to session snapshot or order tags or order note)
     let createdAppointment = null;
+    let createdDoctorChat = null;
     try {
       const tags = orderInfo?.cfOrder?.orderTags || orderInfo?.orderTags || {};
       const sessionSnapshot = req.session?.pendingBookingDetails;
@@ -259,7 +261,8 @@ router.post('/verify-payment', async (req, res) => {
       try {
         const lower = String(orderNote).toLowerCase();
         if (lower) {
-          if (lower.includes('follow')) noteType = 'followup';
+          if (lower.includes('chat') || lower.includes('report')) noteType = 'doctor_chat';
+          else if (lower.includes('follow')) noteType = 'followup';
           else if (lower.includes('urgent')) noteType = 'urgent';
           else if (lower.includes('initial')) noteType = 'initial';
         }
@@ -294,12 +297,9 @@ router.post('/verify-payment', async (req, res) => {
       });
 
       if (!details) {
-        console.warn('⚠️ Payment verification: No booking details from client or order tags; skipping auto appointment creation');
+        console.warn('⚠️ Payment verification: No booking details from client or order tags; skipping auto creation');
       } else {
-        // If date/time still missing, do not create
-        if (!details.date || !details.time) {
-          console.warn('⚠️ Payment verification: Missing date/time even after parsing order note; cannot create appointment automatically');
-        } else {
+        const typeId = String(details.consultationType || 'initial');
         // Resolve user without relying solely on session (which may be missing after redirect)
         const sessionUser = req.session?.user;
         let patientId = sessionUser?.id || tags.user_id || null;
@@ -308,15 +308,150 @@ router.post('/verify-payment', async (req, res) => {
           userDoc = await User.findById(patientId).lean().catch(() => null);
         }
         if (!userDoc && details?.patientEmail) {
-          userDoc = await User.findOne({ email: details.patientEmail }).lean().catch(() => null);
+          userDoc = await User.findOne({ email: String(details.patientEmail).toLowerCase().trim() }).lean().catch(() => null);
           if (userDoc) patientId = userDoc._id;
         }
 
+        const patientName = userDoc?.name || sessionUser?.name || details.patientName || details.patientInfo?.name || 'Patient';
+        const patientEmail = String(userDoc?.email || sessionUser?.email || details.patientEmail || details.patientInfo?.email || '').toLowerCase().trim();
+        const patientPhone = userDoc?.phone || details.patientPhone || details.patientInfo?.phone || sessionUser?.phone || '';
         const resolvedCountry = userDoc?.country
           || details.patientCountry
+          || details.country
           || (details.currency === 'INR' ? 'IN' : details.currency === 'USD' ? 'US' : 'default');
+
+        const docs = (Array.isArray(details.intake?.documents) && details.intake.documents.length > 0) ? details.intake.documents :
+                     (Array.isArray(details.documents) && details.documents.length > 0) ? details.documents :
+                     (Array.isArray(details.patientInfo?.documents) && details.patientInfo.documents.length > 0) ? details.patientInfo.documents : [];
+
+        if (typeId === 'doctor_chat' || details.consultationType === 'doctor_chat') {
+          // Asynchronous Doctor Chat & Report Review
+          const patientAge = Number(details.patientInfo?.age || details.patientAge || 0) || undefined;
+          const patientGender = details.patientInfo?.gender || details.patientGender || '';
+          const initialQuery = details.patientInfo?.medicalHistory || details.message || details.intake?.description || 'Review of uploaded lab reports and kidney health assessment.';
+          const amount = Number(details.amount) || (details.currency === 'INR' ? 100 : 1);
+          const currency = String(details.currency || 'INR');
+
+          createdDoctorChat = await DoctorChat.create({
+            patient: {
+              id: patientId || undefined,
+              name: patientName,
+              email: patientEmail,
+              phone: patientPhone,
+              age: patientAge,
+              gender: patientGender,
+              country: resolvedCountry,
+            },
+            status: 'waiting_doctor',
+            initialQuery,
+            documents: docs,
+            messages: [
+              {
+                sender: 'patient',
+                senderName: patientName,
+                text: initialQuery,
+                attachments: docs.map(d => typeof d === 'string' && d.includes('|') ? d.split('|')[0] : 'Medical Document'),
+                timestamp: new Date()
+              }
+            ],
+            price: {
+              amount,
+              currency,
+              paymentId: payment.id,
+              orderId: payment.order_id,
+            }
+          });
+
+          console.log('✅ DoctorChat created successfully:', createdDoctorChat.ticketId);
+
+          // Email & Telegram notifications for doctor_chat
+          try {
+            const doctorRecipient = (env.OWNER_EMAIL && env.OWNER_EMAIL.trim()) ? env.OWNER_EMAIL.trim() : 'suyambu54321@gmail.com';
+            const siteUrl = env.FRONTEND_URL || 'https://nephroconsultation.com';
+            const doctorHtml = `
+              <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: #006f6f; color: white; padding: 16px 20px; border-radius: 8px 8px 0 0;">
+                  <h2 style="margin: 0; font-size: 20px;">New Doctor Chat & Report Review Request</h2>
+                  <p style="margin: 4px 0 0; opacity: 0.9; font-size: 14px;">Ticket: <strong>${createdDoctorChat.ticketId}</strong></p>
+                </div>
+                <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
+                  <p style="font-size: 15px; margin-top: 0;">Dear Dr. Ilango,</p>
+                  <p>A patient has submitted their medical query and uploaded reports for your review:</p>
+                  <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+                    <p style="margin: 0 0 8px;"><strong>Patient:</strong> ${patientName} (${patientAge ? `${patientAge} yrs` : ''} ${patientGender || ''})</p>
+                    <p style="margin: 0 0 8px;"><strong>Email:</strong> ${patientEmail}</p>
+                    <p style="margin: 0 0 8px;"><strong>Phone:</strong> ${patientPhone || 'Not provided'}</p>
+                    <p style="margin: 0 0 8px;"><strong>Uploaded Reports:</strong> ${docs.length} file(s)</p>
+                    <p style="margin: 0 0 8px;"><strong>Fee Paid:</strong> ${currency === 'INR' ? '₹' : '$'}${amount} ${currency}</p>
+                    <p style="margin: 0;"><strong>Patient's Message:</strong></p>
+                    <div style="background: #f3f4f6; padding: 10px; border-radius: 4px; margin-top: 6px; font-style: italic;">
+                      ${initialQuery}
+                    </div>
+                  </div>
+                  <div style="text-align: center; margin: 20px 0;">
+                    <a href="${siteUrl}/admin" style="background: #006f6f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                      Open Doctor Admin Panel
+                    </a>
+                  </div>
+                </div>
+              </div>
+            `;
+            await sendBookingEmail(doctorRecipient, `New Doctor Chat Request (${createdDoctorChat.ticketId}) - ${patientName}`, doctorHtml);
+          } catch (err) {
+            console.warn('⚠️ Doctor chat notification to doctor failed:', err?.message);
+          }
+
+          try {
+            await telegramService.notifyNewAppointment({
+              patientName,
+              patientEmail,
+              phone: patientPhone,
+              date: new Date().toLocaleDateString('en-US'),
+              timeSlot: 'Chat Consultation',
+              amount,
+              consultationType: 'Upload Files & Chat with Doctor',
+              symptoms: initialQuery,
+              medicalHistory: `${docs.length} lab report document(s) uploaded`,
+            });
+          } catch {}
+
+          try {
+            if (patientEmail) {
+              const siteUrl = env.FRONTEND_URL || 'https://nephroconsultation.com';
+              const chatLink = `${siteUrl}/doctor-chat?ticketId=${createdDoctorChat.ticketId}`;
+              const patientHtml = `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <div style="background: #006f6f; color: white; padding: 16px 20px; border-radius: 8px 8px 0 0; text-align: center;">
+                    <h2 style="margin: 0; font-size: 20px;">Consultation Received — Dr. Ilango S. Prakasam</h2>
+                    <p style="margin: 4px 0 0; opacity: 0.9; font-size: 14px;">Ticket: <strong>${createdDoctorChat.ticketId}</strong></p>
+                  </div>
+                  <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
+                    <p style="font-size: 15px; margin-top: 0;">Dear ${patientName},</p>
+                    <p>Thank you for submitting your reports. Your consultation has been received and assigned to <strong>Dr. Ilango S. Prakasam (Sr. Nephrologist)</strong>.</p>
+                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 14px; margin-bottom: 16px; color: #065f46;">
+                      <h4 style="margin: 0 0 6px; font-size: 15px;">⏳ What happens next?</h4>
+                      <p style="margin: 0; font-size: 14px;">Dr. Ilango personally reviews cases within <strong>12 to 24 hours</strong>. You do not need to wait on the website. We will email you immediately once Dr. Ilango replies or prescribes advice.</p>
+                    </div>
+                    <div style="text-align: center; margin: 24px 0;">
+                      <a href="${chatLink}" style="background: #006f6f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                        View Your Consultation Chat
+                      </a>
+                    </div>
+                    <p style="font-size: 12px; color: #6b7280; text-align: center;">
+                      You can also access this chat anytime from your NephroConsult profile.
+                    </p>
+                  </div>
+                </div>
+              `;
+              await sendBookingEmail(patientEmail, `Consultation Received (${createdDoctorChat.ticketId}) - NephroConsult`, patientHtml);
+            }
+          } catch (err) {
+            console.warn('⚠️ Doctor chat confirmation to patient failed:', err?.message);
+          }
+        } else if (!details.date || !details.time) {
+          console.warn('⚠️ Payment verification: Missing date/time even after parsing order note; cannot create appointment automatically');
+        } else {
         const pricing = priceFor(resolvedCountry);
-        const typeId = String(details.consultationType || 'initial');
         const typeName = mapConsultationTypeId(typeId);
 
         // Use paid amount/currency if provided, else fallback to pricing
@@ -493,6 +628,8 @@ router.post('/verify-payment', async (req, res) => {
       success: true,
       message: 'Payment verified successfully',
       payment: payment,
+      consultationType: createdDoctorChat ? 'doctor_chat' : 'initial',
+      ticketId: createdDoctorChat ? createdDoctorChat.ticketId : undefined,
       appointment: createdAppointment ? { id: createdAppointment._id } : undefined,
     });
 
