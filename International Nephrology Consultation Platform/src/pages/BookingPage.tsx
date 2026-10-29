@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Calendar, Clock, Video, Phone, FileText, Upload, CreditCard, CheckCircle2, ArrowRight, User, Star, Heart, Menu, X, LogOut, MapPin, Globe, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Video, Phone, FileText, Upload, CreditCard, CheckCircle2, ArrowRight, User, Star, Heart, Menu, X, LogOut, MapPin, Globe, ChevronLeft, ChevronRight, AlertCircle, Shield } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -333,7 +333,7 @@ export default function BookingPage() {
   const countrySetRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [bookingData, setBookingData] = useState({
-    consultationType: '',
+    consultationType: 'initial',
     date: '',
     time: '',
     istTime: '',
@@ -1348,11 +1348,13 @@ export default function BookingPage() {
                     className="w-full min-w-0"
                   >
                     <div
-                      className={`relative h-full flex flex-col justify-between rounded-3xl border-2 transition-all duration-300 p-6 sm:p-7 cursor-pointer ${
+                      role="button"
+                      tabIndex={0}
+                      className={`relative h-full flex flex-col justify-between rounded-3xl border-2 transition-all duration-300 p-6 sm:p-7 cursor-pointer select-none ${
                         isSelected
                           ? isChat
-                            ? 'border-emerald-600 bg-gradient-to-b from-emerald-500/[0.04] via-white to-white ring-4 ring-emerald-600/15 shadow-xl'
-                            : 'border-[#006f6f] bg-gradient-to-b from-[#006f6f]/[0.04] via-white to-white ring-4 ring-[#006f6f]/15 shadow-xl'
+                            ? 'border-emerald-600 bg-emerald-50/20 ring-4 ring-emerald-600/15 shadow-xl'
+                            : 'border-[#006f6f] bg-teal-50/20 ring-4 ring-[#006f6f]/15 shadow-xl'
                           : 'border-gray-200 bg-white hover:border-gray-300 shadow-sm hover:shadow-md'
                       }`}
                       onClick={() => setBookingData(prev => ({ 
@@ -1361,6 +1363,12 @@ export default function BookingPage() {
                         time: '', 
                         istTime: '' 
                       }))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setBookingData(prev => ({ ...prev, consultationType: type.id, time: '', istTime: '' }));
+                        }
+                      }}
                     >
                       {/* Top Badges & Radio Indicator */}
                       <div>
@@ -1462,22 +1470,34 @@ export default function BookingPage() {
                       </div>
 
                       {/* Select Action Pill */}
-                      <div className={`w-full py-2.5 px-4 rounded-xl text-center text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
-                        isSelected
-                          ? isChat
-                            ? 'bg-emerald-700 text-white shadow-md'
-                            : 'bg-[#006f6f] text-white shadow-md'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }`}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBookingData(prev => ({ 
+                            ...prev, 
+                            consultationType: type.id,
+                            time: '', 
+                            istTime: '' 
+                          }));
+                        }}
+                        className={`w-full py-2.5 px-4 rounded-xl text-center text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          isSelected
+                            ? isChat
+                              ? 'bg-emerald-700 text-white shadow-md'
+                              : 'bg-[#006f6f] text-white shadow-md'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
+                      >
                         {isSelected ? (
                           <>
                             <CheckCircle2 className="w-4 h-4" />
-                            <span>Selected Plan</span>
+                            <span>Selected Plan ✓</span>
                           </>
                         ) : (
                           <span>Click to Select</span>
                         )}
-                      </div>
+                      </button>
                     </div>
                   </motion.div>
                 );
@@ -1794,7 +1814,7 @@ export default function BookingPage() {
                   <motion.div variants={itemVariants}>
                     <Label>Medical History & Current Symptoms *</Label>
                     <Textarea
-                      value={bookingData.patientInfo.medicalHistory}
+                      value={bookingData.patientInfo.medicalHistory || ''}
                       onChange={(e) => handleInputChange('medicalHistory', e.target.value)}
                       onBlur={() => handleFieldBlur('medicalHistory')}
                       placeholder="Please describe your current symptoms, relevant medical history, known kidney parameters, and any concerns you'd like Dr. Ilango to evaluate..."
@@ -1809,7 +1829,7 @@ export default function BookingPage() {
                         </div>
                       ) : <span />}
                       <div className="text-[11px] text-gray-500">
-                        Characters: {bookingData.patientInfo.medicalHistory.length}/2000
+                        Characters: {(bookingData.patientInfo?.medicalHistory || '').length}/2000
                       </div>
                     </div>
                   </motion.div>
@@ -1983,7 +2003,7 @@ export default function BookingPage() {
                         <div className="flex justify-between">
                           <span className="text-gray-600">Attached Reports:</span>
                           <span className="font-medium">
-                            {uploadedFiles.length > 0 ? `${uploadedFiles.length} file(s) attached` : 'None'}
+                            {bookingData.uploadedFiles && bookingData.uploadedFiles.length > 0 ? `${bookingData.uploadedFiles.length} file(s) attached` : 'None'}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -2243,10 +2263,12 @@ export default function BookingPage() {
                     handleNext();
                   }
                 }}
-                className={`h-11 px-6 sm:px-8 rounded-xl font-bold text-white shadow-md hover:shadow-lg flex items-center space-x-2 transition-all cursor-pointer ${
-                  isDoctorChat
-                    ? 'bg-emerald-700 hover:bg-emerald-800'
-                    : 'bg-[#006f6f] hover:bg-[#005555]'
+                className={`h-11 px-6 sm:px-8 rounded-xl font-bold flex items-center space-x-2 transition-all ${
+                  !isStepValid() || (isLastStep && isProcessingPayment)
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                    : isDoctorChat
+                    ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-md hover:shadow-lg cursor-pointer'
+                    : 'bg-[#006f6f] hover:bg-[#005555] text-white shadow-md hover:shadow-lg cursor-pointer'
                 }`}
                 disabled={!isStepValid() || (isLastStep && isProcessingPayment)}
               >

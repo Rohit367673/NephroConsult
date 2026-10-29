@@ -392,77 +392,62 @@ For support: suyambu54321@gmail.com
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-gray-900 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white overflow-x-hidden">
       <Navigation />
-      <div className="max-w-7xl mx-auto pt-24 sm:pt-28 pb-20 px-3 sm:px-6">
+      <div className="container-medical pt-24 sm:pt-28 pb-20 px-3 sm:px-6">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="space-y-8"
+          className="max-w-6xl mx-auto"
         >
           {/* Header */}
-          <motion.div variants={itemVariants}>
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#006f6f] via-[#005a5a] to-[#004242] p-6 sm:p-8 text-white shadow-xl border border-teal-800/30">
-              <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-teal-100 text-xs font-semibold uppercase tracking-wider mb-3">
-                    <Sparkles className="w-3.5 h-3.5 text-teal-300" />
-                    Patient Portal • Dr. Ilango S. Prakasam (Senior Nephrologist)
-                  </div>
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
-                    Welcome back, {profileData.name || user?.name || 'Patient'} 👋
-                  </h1>
-                  <p className="mt-1.5 text-teal-100/90 text-sm sm:text-base max-w-2xl leading-relaxed">
-                    Manage your kidney consultations, review clinical prescriptions, and chat directly with Dr. Ilango S. Prakasam.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button
-                    onClick={() => navigate('/booking')}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-950/20 rounded-xl px-5 py-2.5 h-auto text-sm transition-all transform hover:-translate-y-0.5"
-                  >
-                    <Plus className="w-4 h-4 mr-1.5" />
-                    Book Consultation
-                  </Button>
-                  <Button
-                    onClick={isEditing ? handleSave : () => setIsEditing(true)}
-                    variant="outline"
-                    className="bg-white/10 hover:bg-white/20 text-white border-white/30 backdrop-blur-md rounded-xl px-4 py-2.5 h-auto text-sm font-semibold transition-all"
-                  >
-                    {isEditing ? (
-                      <>
-                        <Save className="w-4 h-4 mr-1.5" />
-                        Save Profile
-                      </>
-                    ) : (
-                      <>
-                        <Edit3 className="w-4 h-4 mr-1.5" />
-                        Edit Profile
-                      </>
-                    )}
-                  </Button>
-                </div>
+          <motion.div variants={itemVariants} className="mb-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">My Profile</h1>
+                <p className="text-gray-600 text-sm">Manage your personal information, consultations, and medical reports</p>
               </div>
-
-              {/* Ambient background circles */}
-              <div className="absolute -right-16 -bottom-16 w-64 h-64 rounded-full bg-white/5 pointer-events-none blur-xl" />
-              <div className="absolute right-36 -top-16 w-52 h-52 rounded-full bg-teal-400/10 pointer-events-none blur-lg" />
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => navigate('/booking')}
+                  className="px-5 py-2.5 bg-[#006f6f] hover:bg-[#005555] text-white rounded-xl text-sm font-semibold shadow-sm"
+                >
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  Book Consultation
+                </Button>
+                <Button
+                  onClick={isEditing ? handleSave : () => setIsEditing(true)}
+                  variant="outline"
+                  className="px-5 py-2.5 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl text-sm font-semibold"
+                >
+                  {isEditing ? (
+                    <>
+                      <Save className="w-4 h-4 mr-1.5" />
+                      Save Changes
+                    </>
+                  ) : (
+                    <>
+                      <Edit3 className="w-4 h-4 mr-1.5" />
+                      Edit Profile
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="grid lg:grid-cols-3 gap-8">
             {/* Left Column: Profile Card & Quick Info */}
-            <motion.div variants={itemVariants} className="lg:col-span-4 space-y-6">
+            <motion.div variants={itemVariants} className="lg:col-span-1 space-y-6">
               {/* Profile Overview Card */}
-              <Card className="rounded-3xl border border-gray-200/90 shadow-md bg-white overflow-hidden">
+              <Card>
                 <CardContent className="p-6 sm:p-8 text-center">
                   <motion.div
-                    whileHover={{ scale: 1.03 }}
-                    className="relative mb-5 inline-block"
+                    whileHover={{ scale: 1.05 }}
+                    className="relative mb-6 inline-block"
                   >
-                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full mx-auto overflow-hidden bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center relative shadow-lg ring-4 ring-teal-50">
+                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full mx-auto overflow-hidden bg-gradient-to-br from-[#006f6f] to-[#004f4f] flex items-center justify-center relative shadow-lg">
                       {((user as any)?.photoURL || user?.avatar) && ((user as any)?.photoURL?.trim() !== '' || user?.avatar?.trim() !== '') ? (
                         <>
                           <img 
@@ -472,12 +457,10 @@ For support: suyambu54321@gmail.com
                             crossOrigin="anonymous"
                             referrerPolicy="no-referrer"
                             onLoad={(e) => {
-                              console.log('Profile image loaded successfully:', user?.avatar);
                               const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                               if (fallback) fallback.style.display = 'none';
                             }}
                             onError={(e) => {
-                              console.log('Profile image failed to load, trying fallback methods');
                               const currentSrc = e.currentTarget.src;
                               if (currentSrc.includes('googleusercontent.com') && !currentSrc.includes('proxy')) {
                                 const newSrc = `https://images.weserv.nl/?url=${encodeURIComponent(currentSrc)}&w=300&h=300&fit=cover&mask=circle`;
@@ -513,168 +496,140 @@ For support: suyambu54321@gmail.com
                     </button>
                   </motion.div>
 
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{profileData.name || 'Nephrology Patient'}</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{profileData.name || 'Patient'}</h2>
                   <p className="text-sm text-gray-500 mb-4 truncate">{profileData.email}</p>
 
-                  <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
-                    <Badge variant="secondary" className="bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-3 py-1 font-semibold text-xs">
-                      <Shield className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                  <div className="space-y-3 mb-6">
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      <Shield className="w-3.5 h-3.5 mr-1 text-green-700" />
                       Verified Patient
                     </Badge>
-                    {profileData.bloodType && (
-                      <Badge variant="outline" className="border-gray-200 bg-gray-50 text-gray-700 text-xs">
-                        <Droplets className="w-3 h-3 mr-1 text-red-500" />
-                        {profileData.bloodType}
-                      </Badge>
-                    )}
-                    {profileData.country && (
-                      <Badge variant="outline" className="border-gray-200 bg-gray-50 text-gray-700 text-xs">
-                        <MapPin className="w-3 h-3 mr-1 text-teal-600" />
-                        {profileData.country}
-                      </Badge>
-                    )}
+                    <div className="flex items-center justify-center space-x-1.5 text-sm text-gray-700">
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                      <span className="font-medium">4.8 Patient Rating</span>
+                    </div>
                   </div>
 
-                  {/* Consultation Counters */}
-                  <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 text-center">
-                    <div className="p-2">
-                      <div className="text-2xl font-extrabold text-[#006f6f]">{appointments.length}</div>
-                      <div className="text-xs font-medium text-gray-600 mt-0.5">Video Visits</div>
+                  <div className="grid grid-cols-2 gap-4 text-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <div>
+                      <div className="text-2xl font-bold text-[#006f6f]">{appointments.length}</div>
+                      <div className="text-xs text-gray-600 mt-0.5">Consultations</div>
                     </div>
-                    <div className="p-2 border-l border-slate-200">
-                      <div className="text-2xl font-extrabold text-[#006f6f]">{doctorChats.length}</div>
-                      <div className="text-xs font-medium text-gray-600 mt-0.5">Doctor Chats</div>
+                    <div>
+                      <div className="text-2xl font-bold text-[#006f6f]">
+                        {doctorChats.length}
+                      </div>
+                      <div className="text-xs text-gray-600 mt-0.5">Doctor Chats</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Health Journey Card */}
-              <Card className="rounded-3xl border border-gray-200/90 shadow-md bg-white">
+              {/* Quick Stats: Health Journey */}
+              <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center text-base font-bold text-gray-900">
+                  <CardTitle className="flex items-center text-base">
                     <Award className="w-5 h-5 mr-2 text-[#006f6f]" />
-                    Kidney Care Journey
+                    Health Journey
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3.5 text-sm">
-                  <div className="flex justify-between items-center py-1 border-b border-gray-100">
-                    <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">Last Checkup</span>
-                    <span className="font-semibold text-gray-800">{lastCheckupLabel}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Last Checkup</span>
+                    <span className="font-medium">{lastCheckupLabel}</span>
                   </div>
-                  <div className="flex justify-between items-center py-1 border-b border-gray-100">
-                    <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">Next Visit</span>
-                    <span className="font-semibold text-[#006f6f]">{nextAppointmentLabel}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Next Appointment</span>
+                    <span className="font-medium text-[#006f6f]">{nextAppointmentLabel}</span>
                   </div>
-                  <div className="flex justify-between items-center pt-1">
-                    <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">Health Status</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Health Score</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div className={`${barW} h-2 ${barColor} rounded-full`}></div>
                       </div>
-                      <span className={`text-xs font-bold ${color}`}>{scoreLabel}</span>
+                      <span className={`font-medium ${color} text-xs`}>{scoreLabel}</span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Quick Doctor Chat Assist Card */}
-              <div className="rounded-3xl bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200/80 p-5 shadow-sm space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                    <Stethoscope className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900 text-sm">Have New Lab Reports?</h4>
-                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                      Upload your KFT, Urine Protein, or Ultrasound files. Dr. Ilango evaluates them within 12–24h for just ₹100 / $1.
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  onClick={() => navigate('/booking')}
-                  size="sm"
-                  className="w-full bg-[#006f6f] hover:bg-[#005555] text-white font-semibold text-xs rounded-xl h-9"
-                >
-                  <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
-                  Upload Reports & Start Chat (₹100 / $1)
-                </Button>
-              </div>
             </motion.div>
 
             {/* Right Column: Main Content & Tabs */}
-            <motion.div variants={itemVariants} className="lg:col-span-8 space-y-6">
-              {/* Segmented Pill Navigation Bar */}
-              <div className="bg-slate-100 p-1.5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-wrap sm:flex-nowrap gap-1.5">
-                <button
-                  onClick={() => setActiveTab((user?.role === 'doctor' || user?.role === 'admin') ? 'doctor-dashboard' : 'dashboard')}
-                  className={`flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
-                    activeTab === ((user?.role === 'doctor' || user?.role === 'admin') ? 'doctor-dashboard' : 'dashboard')
-                      ? 'bg-white text-[#006f6f] shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
-                  }`}
+            <motion.div variants={itemVariants} className="lg:col-span-2 space-y-6">
+              {/* Horizontal Navigation */}
+              <div className="mb-6">
+                <nav
+                  className="w-full flex flex-wrap sm:flex-nowrap space-x-1 bg-gray-100 p-1 rounded-xl overflow-x-auto sm:overflow-visible pr-3 min-w-0"
+                  style={{ WebkitOverflowScrolling: 'touch', scrollbarGutter: 'stable both-edges' as any }}
                 >
-                  <Activity className="w-4 h-4" />
-                  {(user?.role === 'doctor' || user?.role === 'admin') ? 'Practice' : 'Consultations'}
-                </button>
-                <button
-                  onClick={() => setActiveTab('personal')}
-                  className={`flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
-                    activeTab === 'personal'
-                      ? 'bg-white text-[#006f6f] shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
-                  }`}
-                >
-                  <User className="w-4 h-4" />
-                  Personal Info
-                </button>
-                {(user?.role !== 'doctor' && user?.role !== 'admin') && (
                   <button
-                    onClick={() => setActiveTab('history')}
-                    className={`flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
-                      activeTab === 'history'
+                    onClick={() => setActiveTab((user?.role === 'doctor' || user?.role === 'admin') ? 'doctor-dashboard' : 'dashboard')}
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                      activeTab === ((user?.role === 'doctor' || user?.role === 'admin') ? 'doctor-dashboard' : 'dashboard')
                         ? 'bg-white text-[#006f6f] shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                        : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
-                    <Clock className="w-4 h-4" />
-                    Past History
+                    {(user?.role === 'doctor' || user?.role === 'admin') ? 'Practice' : 'Dashboard'}
                   </button>
-                )}
-                {(user?.role === 'doctor' || user?.role === 'admin') && (
-                  <>
+                  <button
+                    onClick={() => setActiveTab('personal')}
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                      activeTab === 'personal'
+                        ? 'bg-white text-[#006f6f] shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Personal Info
+                  </button>
+                  {(user?.role !== 'doctor' && user?.role !== 'admin') && (
                     <button
-                      onClick={() => setActiveTab('medical')}
-                      className={`flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
-                        activeTab === 'medical'
+                      onClick={() => setActiveTab('history')}
+                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                        activeTab === 'history'
                           ? 'bg-white text-[#006f6f] shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                          : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      Credentials
+                      History
                     </button>
-                    <button
-                      onClick={() => setActiveTab('appointments')}
-                      className={`flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
-                        activeTab === 'appointments'
-                          ? 'bg-white text-[#006f6f] shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
-                      }`}
-                    >
-                      Schedule
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('documents')}
-                      className={`flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all ${
-                        activeTab === 'documents'
-                          ? 'bg-white text-[#006f6f] shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
-                      }`}
-                    >
-                      Documents
-                    </button>
-                  </>
-                )}
+                  )}
+                  {(user?.role === 'doctor' || user?.role === 'admin') && (
+                    <>
+                      <button
+                        onClick={() => setActiveTab('medical')}
+                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                          activeTab === 'medical'
+                            ? 'bg-white text-[#006f6f] shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Credentials
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('appointments')}
+                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                          activeTab === 'appointments'
+                            ? 'bg-white text-[#006f6f] shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Schedule
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('documents')}
+                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                          activeTab === 'documents'
+                            ? 'bg-white text-[#006f6f] shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        Documents
+                      </button>
+                    </>
+                  )}
+                </nav>
               </div>
 
               <div className="space-y-6">
@@ -903,172 +858,37 @@ For support: suyambu54321@gmail.com
                       // Patient Dashboard
                       <>
                         <div className="space-y-6">
-                          {/* Quick Consultation Action Banners (2 Plans) */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {/* Plan 1: Initial Video Consultation */}
-                            <div className="rounded-3xl border border-teal-200/90 bg-gradient-to-br from-white via-teal-50/30 to-emerald-50/20 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
-                              <div>
-                                <div className="flex items-center justify-between mb-3">
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                    <Sparkles className="w-3 h-3" />
-                                    1st Consultation Free
-                                  </span>
-                                  <div className="w-8 h-8 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center">
-                                    <Video className="w-4 h-4" />
-                                  </div>
-                                </div>
-                                <h3 className="font-bold text-gray-900 text-base">Video Consultation</h3>
-                                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                  30-min confidential 1-on-1 video call with Dr. Ilango S. Prakasam. Includes clinical diagnosis and verified digital prescription.
-                                </p>
-                              </div>
-                              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                                <span className="text-xs font-semibold text-emerald-700">₹0 / $0 for 1st visit</span>
-                                <Button
-                                  size="sm"
-                                  onClick={() => navigate('/booking')}
-                                  className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-8 px-3"
-                                >
-                                  Book Visit →
-                                </Button>
-                              </div>
+                          {/* Quick Consultation Actions Bar */}
+                          <div className="bg-white rounded-2xl border border-gray-200/80 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div>
+                              <h3 className="text-base font-bold text-gray-900">Need a Consultation?</h3>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                Book a confidential video consultation or submit lab reports for direct doctor chat review
+                              </p>
                             </div>
-
-                            {/* Plan 2: Doctor Chat & Reports */}
-                            <div className="rounded-3xl border border-cyan-200/90 bg-gradient-to-br from-white via-cyan-50/30 to-sky-50/20 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
-                              <div>
-                                <div className="flex items-center justify-between mb-3">
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-100 text-cyan-800 border border-cyan-300">
-                                    Direct Doctor Review
-                                  </span>
-                                  <div className="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-800 flex items-center justify-center">
-                                    <MessageSquare className="w-4 h-4" />
-                                  </div>
-                                </div>
-                                <h3 className="font-bold text-gray-900 text-base">Doctor Chat & Reports</h3>
-                                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                  Upload lab reports (KFT, Urine, Blood, Ultrasound) + ask questions. Dr. Ilango replies within 12–24h with medical advice.
-                                </p>
-                              </div>
-                              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                                <span className="text-xs font-semibold text-[#006f6f]">₹100 INR / $1 USD</span>
-                                <Button
-                                  size="sm"
-                                  onClick={() => navigate('/booking')}
-                                  className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-8 px-3"
-                                >
-                                  Upload & Chat →
-                                </Button>
-                              </div>
+                            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto">
+                              <Button
+                                size="sm"
+                                className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-semibold rounded-xl h-9 px-4 flex-1 sm:flex-initial shadow-sm"
+                                onClick={() => navigate('/booking')}
+                              >
+                                <Video className="w-3.5 h-3.5 mr-1.5" />
+                                Book Video Visit (1st Free)
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-[#006f6f] text-[#006f6f] hover:bg-teal-50 text-xs font-semibold rounded-xl h-9 px-4 flex-1 sm:flex-initial"
+                                onClick={() => navigate('/booking')}
+                              >
+                                <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                                Doctor Chat & Reports (₹100 / $1)
+                              </Button>
                             </div>
                           </div>
 
-                          {/* Doctor Chats & Report Reviews Section */}
-                          <Card className="rounded-3xl border border-gray-200/90 shadow-md bg-white overflow-hidden">
-                            <CardHeader className="p-5 sm:p-6 pb-4 border-b border-gray-100">
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                <div>
-                                  <CardTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
-                                    <div className="w-8 h-8 rounded-xl bg-teal-50 text-[#006f6f] flex items-center justify-center">
-                                      <MessageSquare className="w-4 h-4" />
-                                    </div>
-                                    Doctor Chats & Report Reviews
-                                    {doctorChats.length > 0 && (
-                                      <Badge variant="secondary" className="bg-teal-50 text-teal-800 font-bold ml-1">
-                                        {doctorChats.length}
-                                      </Badge>
-                                    )}
-                                  </CardTitle>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Direct asynchronous chat, report evaluation & digital prescriptions with Dr. Ilango S. Prakasam
-                                  </p>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-9 self-start sm:self-auto px-4"
-                                  onClick={() => navigate('/booking')}
-                                >
-                                  + Start New Chat (₹100 / $1)
-                                </Button>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="p-5 sm:p-6">
-                              {doctorChats.length === 0 ? (
-                                <div className="text-center py-8 px-4 bg-slate-50/70 rounded-2xl border border-dashed border-slate-300">
-                                  <div className="w-14 h-14 rounded-2xl bg-teal-100/70 text-[#006f6f] flex items-center justify-center mx-auto mb-3 shadow-sm">
-                                    <Stethoscope className="w-7 h-7" />
-                                  </div>
-                                  <h4 className="text-base font-bold text-gray-900">No Doctor Chat Consultations Yet</h4>
-                                  <p className="text-xs text-gray-500 mt-1.5 max-w-md mx-auto leading-relaxed">
-                                    Upload your kidney blood work, urine protein, or ultrasound reports and ask Dr. Ilango S. Prakasam medical questions directly for just ₹100 / $1.
-                                  </p>
-                                  <Button
-                                    size="sm"
-                                    className="mt-4 bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-9 px-5 shadow-sm"
-                                    onClick={() => navigate('/booking')}
-                                  >
-                                    <Plus className="w-3.5 h-3.5 mr-1.5" />
-                                    Submit Reports & Start Chat (₹100 / $1)
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="space-y-3">
-                                  {doctorChats.map((chat) => (
-                                    <div
-                                      key={chat.ticketId}
-                                      className="p-4 sm:p-5 rounded-2xl border border-gray-200/90 hover:border-teal-300 bg-white shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                                    >
-                                      <div className="space-y-1.5 flex-1 min-w-0">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg bg-gray-100 text-gray-800 border border-gray-200">
-                                            #{chat.ticketId}
-                                          </span>
-                                          <Badge
-                                            className={
-                                              chat.status === 'waiting_doctor'
-                                                ? 'bg-amber-100 text-amber-900 border-amber-300'
-                                                : chat.status === 'doctor_replied'
-                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                                                : 'bg-gray-100 text-gray-700 border-gray-300'
-                                            }
-                                            variant="outline"
-                                          >
-                                            {chat.status === 'waiting_doctor'
-                                              ? '⏳ Doctor Reviewing (12–24h)'
-                                              : chat.status === 'doctor_replied'
-                                              ? '✓ Doctor Replied'
-                                              : 'Concluded'}
-                                          </Badge>
-                                        </div>
-                                        <p className="text-sm font-semibold text-gray-900 line-clamp-1">
-                                          {chat.initialQuery?.symptoms || 'Report Review & Medical Query'}
-                                        </p>
-                                        <p className="text-xs text-gray-500 flex items-center gap-2">
-                                          <span>{chat.documents?.length || 0} report(s) attached</span>
-                                          <span>•</span>
-                                          <span>Last update: {new Date(chat.updatedAt || chat.createdAt).toLocaleDateString()}</span>
-                                        </p>
-                                      </div>
-
-                                      <div className="flex items-center gap-2 shrink-0">
-                                        <Button
-                                          size="sm"
-                                          className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-9 px-4"
-                                          onClick={() => navigate(`/doctor-chat?ticketId=${chat.ticketId}`)}
-                                        >
-                                          <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
-                                          Open Doctor Chat
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-
                           {/* Your Consultations (Video Appointments) Section */}
-                          <Card className="rounded-3xl border border-gray-200/90 shadow-md bg-white overflow-hidden">
+                          <Card className="rounded-2xl border border-gray-200/90 shadow-sm bg-white overflow-hidden">
                             <CardHeader className="p-5 sm:p-6 pb-4 border-b border-gray-100">
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div>
@@ -1263,6 +1083,110 @@ For support: suyambu54321@gmail.com
                                   ))
                                 )}
                               </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* Doctor Chats & Report Reviews Section */}
+                          <Card className="rounded-2xl border border-gray-200/90 shadow-sm bg-white overflow-hidden">
+                            <CardHeader className="p-5 sm:p-6 pb-4 border-b border-gray-100">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div>
+                                  <CardTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
+                                    <div className="w-8 h-8 rounded-xl bg-teal-50 text-[#006f6f] flex items-center justify-center">
+                                      <MessageSquare className="w-4 h-4" />
+                                    </div>
+                                    Doctor Chats & Report Reviews
+                                    {doctorChats.length > 0 && (
+                                      <Badge variant="secondary" className="bg-teal-50 text-teal-800 font-bold ml-1">
+                                        {doctorChats.length}
+                                      </Badge>
+                                    )}
+                                  </CardTitle>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Direct asynchronous chat, report evaluation & digital prescriptions with Dr. Ilango S. Prakasam
+                                  </p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-9 self-start sm:self-auto px-4"
+                                  onClick={() => navigate('/booking')}
+                                >
+                                  + Start New Chat (₹100 / $1)
+                                </Button>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-5 sm:p-6">
+                              {doctorChats.length === 0 ? (
+                                <div className="text-center py-8 px-4 bg-slate-50/70 rounded-2xl border border-dashed border-slate-300">
+                                  <div className="w-14 h-14 rounded-2xl bg-teal-100/70 text-[#006f6f] flex items-center justify-center mx-auto mb-3 shadow-sm">
+                                    <Stethoscope className="w-7 h-7" />
+                                  </div>
+                                  <h4 className="text-base font-bold text-gray-900">No Doctor Chat Consultations Yet</h4>
+                                  <p className="text-xs text-gray-500 mt-1.5 max-w-md mx-auto leading-relaxed">
+                                    Upload your kidney blood work, urine protein, or ultrasound reports and ask Dr. Ilango S. Prakasam medical questions directly for just ₹100 / $1.
+                                  </p>
+                                  <Button
+                                    size="sm"
+                                    className="mt-4 bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-9 px-5 shadow-sm"
+                                    onClick={() => navigate('/booking')}
+                                  >
+                                    <Plus className="w-3.5 h-3.5 mr-1.5" />
+                                    Submit Reports & Start Chat (₹100 / $1)
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  {doctorChats.map((chat) => (
+                                    <div
+                                      key={chat.ticketId}
+                                      className="p-4 sm:p-5 rounded-2xl border border-gray-200/90 hover:border-teal-300 bg-white shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                                    >
+                                      <div className="space-y-1.5 flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg bg-gray-100 text-gray-800 border border-gray-200">
+                                            #{chat.ticketId}
+                                          </span>
+                                          <Badge
+                                            className={
+                                              chat.status === 'waiting_doctor'
+                                                ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                                : chat.status === 'doctor_replied'
+                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                                : 'bg-gray-100 text-gray-700 border-gray-300'
+                                            }
+                                            variant="outline"
+                                          >
+                                            {chat.status === 'waiting_doctor'
+                                              ? '⏳ Doctor Reviewing (12–24h)'
+                                              : chat.status === 'doctor_replied'
+                                              ? '✓ Doctor Replied'
+                                              : 'Concluded'}
+                                          </Badge>
+                                        </div>
+                                        <p className="text-sm font-semibold text-gray-900 line-clamp-1">
+                                          {chat.initialQuery?.symptoms || 'Report Review & Medical Query'}
+                                        </p>
+                                        <p className="text-xs text-gray-500 flex items-center gap-2">
+                                          <span>{chat.documents?.length || 0} report(s) attached</span>
+                                          <span>•</span>
+                                          <span>Last update: {new Date(chat.updatedAt || chat.createdAt).toLocaleDateString()}</span>
+                                        </p>
+                                      </div>
+
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <Button
+                                          size="sm"
+                                          className="bg-[#006f6f] hover:bg-[#005555] text-white text-xs font-bold rounded-xl h-9 px-4"
+                                          onClick={() => navigate(`/doctor-chat?ticketId=${chat.ticketId}`)}
+                                        >
+                                          <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                                          Open Doctor Chat
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </CardContent>
                           </Card>
                         </div>
