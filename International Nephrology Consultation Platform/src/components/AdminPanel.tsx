@@ -265,8 +265,8 @@ export const AdminPanel: React.FC = () => {
                       </div>
                       <div>
                         <Label className="text-sm">Search</Label>
-                        <div className="relative mt-1">
-                          <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                        <div className="relative mt-1 flex items-center">
+                          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                           <Input placeholder="Search logs..." className="pl-9" />
                         </div>
                       </div>

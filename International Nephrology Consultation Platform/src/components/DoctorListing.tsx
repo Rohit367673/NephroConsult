@@ -135,8 +135,8 @@ export function DoctorListing({ onNavigate }: DoctorListingProps) {
         <div className="bg-white rounded-lg p-6 mb-8 shadow-sm">
           <div className="grid md:grid-cols-5 gap-4">
             <div className="md:col-span-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+              <div className="relative flex items-center">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                 <Input 
                   placeholder="Search by name, specialty, or condition..."
                   className="pl-10"

@@ -17,9 +17,20 @@ export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('upcoming');
-  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [consultations, setConsultations] = useState<Consultation[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('nephro_admin_consultations');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    try {
+      const hasChats = !!sessionStorage.getItem('nephro_admin_doctor_chats');
+      const hasConsults = !!sessionStorage.getItem('nephro_admin_consultations');
+      return !(hasChats || hasConsults);
+    } catch { return true; }
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [isCreatingPrescription, setIsCreatingPrescription] = useState(false);
@@ -29,10 +40,38 @@ export default function AdminDashboard() {
     nextVisit: ''
   });
 
-  // Doctor Chats State
-  const [doctorChats, setDoctorChats] = useState<DoctorChatTicket[]>([]);
-  const [doctorChatCounts, setDoctorChatCounts] = useState({ total: 0, waiting_doctor: 0, doctor_replied: 0, closed: 0 });
-  const [selectedDoctorChat, setSelectedDoctorChat] = useState<DoctorChatTicket | null>(null);
+  // Doctor Chats State - Instant cached SWR for 0ms load
+  const [doctorChats, setDoctorChats] = useState<DoctorChatTicket[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('nephro_admin_doctor_chats');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [doctorChatCounts, setDoctorChatCounts] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('nephro_admin_doctor_chats');
+      if (cached) {
+        const list: DoctorChatTicket[] = JSON.parse(cached);
+        return {
+          total: list.length,
+          waiting_doctor: list.filter(c => c.status === 'waiting_doctor').length,
+          doctor_replied: list.filter(c => c.status === 'doctor_replied').length,
+          closed: list.filter(c => c.status === 'closed').length
+        };
+      }
+    } catch {}
+    return { total: 0, waiting_doctor: 0, doctor_replied: 0, closed: 0 };
+  });
+  const [selectedDoctorChat, setSelectedDoctorChat] = useState<DoctorChatTicket | null>(() => {
+    try {
+      const cached = sessionStorage.getItem('nephro_admin_doctor_chats');
+      if (cached) {
+        const list: DoctorChatTicket[] = JSON.parse(cached);
+        return list.find(c => c.status !== 'closed') || list[0] || null;
+      }
+    } catch {}
+    return null;
+  });
   const [doctorReplyText, setDoctorReplyText] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
   const [isClosingDoctorChatModal, setIsClosingDoctorChatModal] = useState(false);
@@ -85,38 +124,46 @@ export default function AdminDashboard() {
     }
   };
 
-  // Load consultations data
+  // Load consultations data with Instant SWR Cache and resilient auth
   useEffect(() => {
     const loadConsultations = async () => {
+      const userEmail = user?.email || '';
       try {
-        setLoading(true);
-        console.log('👤 Current user:', user);
-        console.log('👤 User role:', user?.role);
-        console.log('👤 User email:', user?.email);
+        // Run session restoration non-blockingly in background
+        restoreSession().catch(() => {});
         
-        // First restore the backend session
-        await restoreSession();
-        
-        // Fetch appointments and doctor chats in parallel
+        // Fetch appointments and doctor chats in parallel passing userEmail header
         const [data, chatRes] = await Promise.all([
-          adminService.getConsultations().catch(err => {
+          adminService.getConsultations(userEmail).catch(err => {
             console.error('Failed to load appointments:', err);
             return [];
           }),
-          adminService.getDoctorChats().catch(err => {
+          adminService.getDoctorChats(userEmail).catch(err => {
             console.error('Failed to load doctor chats:', err);
             return { chats: [], counts: { total: 0, waiting_doctor: 0, doctor_replied: 0, closed: 0 } };
           })
         ]);
 
-        console.log('🏥 Admin Dashboard received consultations:', data);
-        console.log('🏥 Total consultations:', data.length);
+        console.log('🏥 Admin Dashboard received consultations:', data.length);
         console.log('💬 Admin Dashboard received doctor chats:', chatRes.chats?.length);
+        
         setConsultations(data);
         setDoctorChats(chatRes.chats || []);
         setDoctorChatCounts(chatRes.counts || { total: 0, waiting_doctor: 0, doctor_replied: 0, closed: 0 });
+
+        // Save fresh data into session cache for instant subsequent loads
+        try {
+          sessionStorage.setItem('nephro_admin_consultations', JSON.stringify(data));
+          sessionStorage.setItem('nephro_admin_doctor_chats', JSON.stringify(chatRes.chats || []));
+        } catch {}
+
+        // If no consultation is selected yet, select the first active ticket
+        if (!selectedDoctorChat && chatRes.chats && chatRes.chats.length > 0) {
+          const firstActive = chatRes.chats.find(c => c.status !== 'closed') || chatRes.chats[0];
+          setSelectedDoctorChat(firstActive);
+        }
       } catch (error) {
-        toast.error('Failed to load consultations');
+        console.error('Error loading admin dashboard data:', error);
       } finally {
         setLoading(false);
       }
@@ -478,7 +525,7 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Doctor Chats Pending</p>
-                  <p className="text-3xl font-bold text-amber-600">{doctorChatCounts.waiting_doctor}</p>
+                  <p className="text-3xl font-bold text-amber-600">{waitingDoctorCount}</p>
                 </div>
                 <MessageSquare className="w-8 h-8 text-amber-600" />
               </div>
@@ -675,15 +722,15 @@ export default function AdminDashboard() {
                     </div>
                   )}
 
-                  {/* Search Bar */}
-                  <div className="relative">
+                  {/* Search Bar - Pixel-perfect alignment */}
+                  <div className="relative flex items-center">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <Input
                       placeholder="Search patient, ticket, symptoms..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="text-xs h-8 pl-8 border-slate-200"
+                      className="text-xs h-9 pl-9 pr-3 w-full bg-slate-50/50 border-slate-200 focus:bg-white rounded-lg"
                     />
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
                   </div>
                 </CardHeader>
               ) : (
@@ -702,14 +749,14 @@ export default function AdminDashboard() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="mt-2 relative">
+                  <div className="mt-3 relative flex items-center">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <Input
                       placeholder="Search consultations by name or email..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="text-xs sm:text-sm pl-8"
+                      className="text-xs sm:text-sm pl-9 pr-3 h-10 w-full bg-slate-50/50 border-slate-200 focus:bg-white rounded-lg"
                     />
-                    <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-3" />
                   </div>
                 </CardHeader>
               )}
@@ -1774,24 +1821,25 @@ export default function AdminDashboard() {
                 The client will be notified that the consultation is concluded.
               </p>
 
-              <div className="flex items-center justify-center gap-3 mt-6">
-                <Button
+              <div className="grid grid-cols-2 gap-3 mt-6">
+                <button
                   type="button"
-                  variant="outline"
                   onClick={() => setIsClosingDoctorChatModal(false)}
                   disabled={isClosingDoctorChat}
-                  className="px-5 border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
+                  className="w-full py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-semibold text-sm transition-all shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   Cancel
-                </Button>
-                <Button
+                </button>
+                <button
                   type="button"
                   onClick={handleCloseDoctorChat}
                   disabled={isClosingDoctorChat}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 font-semibold shadow-xs"
+                  style={{ backgroundColor: '#006f6f', color: '#ffffff' }}
+                  className="w-full py-2.5 px-4 rounded-xl text-white hover:opacity-95 font-semibold text-sm transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
-                  {isClosingDoctorChat ? 'Closing...' : 'Yes, Close Consultation'}
-                </Button>
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-white" />
+                  <span>{isClosingDoctorChat ? 'Closing...' : 'Confirm & Close'}</span>
+                </button>
               </div>
             </motion.div>
           </motion.div>

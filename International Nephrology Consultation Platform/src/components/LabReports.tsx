@@ -429,8 +429,8 @@ export function LabReports({ onNavigate }: LabReportsProps) {
             <Card>
               <CardContent className="p-4">
                 <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                  <div className="flex-1 relative flex items-center">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                     <Input 
                       placeholder="Search reports..."
                       className="pl-10"

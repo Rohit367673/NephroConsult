@@ -105,33 +105,37 @@ class AdminService {
     return ''; // Use same-origin via Vercel proxy in production
   }
 
-  async getConsultations(): Promise<Consultation[]> {
+  async getConsultations(userEmail?: string): Promise<Consultation[]> {
     try {
       // Use same-origin API path in production for proper cookie handling
       const apiBaseUrl = this.getApiBaseUrl();
-      const endpoint = `${apiBaseUrl}/api/appointments/doctor`;
-      const debugEndpoint = `${apiBaseUrl}/api/appointments/doctor-debug`;
+      const queryParam = userEmail ? `?userEmail=${encodeURIComponent(userEmail)}` : '';
+      const endpoint = `${apiBaseUrl}/api/appointments/doctor${queryParam}`;
+      const debugEndpoint = `${apiBaseUrl}/api/appointments/doctor-debug${queryParam}`;
       
       console.log('🔗 Admin Service API URL:', apiBaseUrl || '(same-origin)');
       console.log('🔗 Full endpoint:', endpoint);
       
-      console.log('🍎 Browser detection:', { isSafari: isSafari() });
-      
       const response = await safariCompatibleFetch(endpoint, {
-        method: 'GET'
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          ...(userEmail ? { 'x-user-email': userEmail } : {})
+        }
       });
       
       if (!response.ok) {
         console.error('❌ API Error:', response.status, response.statusText);
-        if (response.status === 401) {
-          console.error('❌ Unauthorized - user not logged in or session expired');
-        } else if (response.status === 403) {
-          console.error('❌ Forbidden - insufficient permissions (need doctor/admin role)');
-        }
         // Safari/mobile fallback: use temporary no-auth debug endpoint
         try {
           console.warn('⚠️ Falling back to doctor-debug endpoint due to API error');
-          const fallback = await safariCompatibleFetch(debugEndpoint, { method: 'GET' });
+          const fallback = await safariCompatibleFetch(debugEndpoint, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              ...(userEmail ? { 'x-user-email': userEmail } : {})
+            }
+          });
           if (fallback.ok) {
             const fbData = await fallback.json();
             console.log('📋 Fallback (doctor-debug) appointments:', fbData.appointments?.length || 0);
@@ -318,13 +322,15 @@ class AdminService {
   }
 
   // Get all Doctor Chat & Report Review consultations
-  async getDoctorChats(): Promise<{ chats: DoctorChatTicket[]; counts: { total: number; waiting_doctor: number; doctor_replied: number; closed: number } }> {
+  async getDoctorChats(userEmail?: string): Promise<{ chats: DoctorChatTicket[]; counts: { total: number; waiting_doctor: number; doctor_replied: number; closed: number } }> {
     try {
       const apiBaseUrl = this.getApiBaseUrl();
-      const response = await fetch(`${apiBaseUrl}/api/doctor-chat/admin/all`, {
+      const queryParam = userEmail ? `?userEmail=${encodeURIComponent(userEmail)}` : '';
+      const response = await fetch(`${apiBaseUrl}/api/doctor-chat/admin/all${queryParam}`, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          ...(userEmail ? { 'x-user-email': userEmail } : {})
         },
         credentials: 'include',
         mode: 'cors',
@@ -336,9 +342,15 @@ class AdminService {
       }
 
       const data = await response.json();
+      const rawStats = data.stats || data.counts || {};
       return {
         chats: data.chats || [],
-        counts: data.counts || { total: 0, waiting_doctor: 0, doctor_replied: 0, closed: 0 }
+        counts: {
+          total: rawStats.total ?? (data.chats?.length || 0),
+          waiting_doctor: rawStats.waitingDoctor ?? rawStats.waiting_doctor ?? 0,
+          doctor_replied: rawStats.doctorReplied ?? rawStats.doctor_replied ?? 0,
+          closed: rawStats.closed ?? 0
+        }
       };
     } catch (error) {
       console.error('Error in getDoctorChats:', error);
