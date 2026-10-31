@@ -305,29 +305,13 @@ export default function BookingPage() {
 
   // Synchronously determine initial free-consultation state so there is 0ms price-to-FREE flicker
   const getInitialFreeEligibility = (u: any): boolean => {
-    if (!u) return true;
-    if (u.hasUsedFreeConsultation === true) return false;
-    if (u.email) {
-      try {
-        const cached = localStorage.getItem(`nephro_free_used_${String(u.email).toLowerCase().trim()}`);
-        if (cached === 'true') return false;
-        if (cached === 'false') return true;
-      } catch {}
-    }
+    if (u && u.hasUsedFreeConsultation === true) return false;
     return true;
   };
 
   // Synchronously determine initial free doctor chat state
   const getInitialFreeChatEligibility = (u: any): boolean => {
-    if (!u) return true;
-    if (u.hasUsedFreeChat === true) return false;
-    if (u.email) {
-      try {
-        const cached = localStorage.getItem(`nephro_free_chat_used_${String(u.email).toLowerCase().trim()}`);
-        if (cached === 'true') return false;
-        if (cached === 'false') return true;
-      } catch {}
-    }
+    if (u && u.hasUsedFreeChat === true) return false;
     return true;
   };
   
@@ -617,18 +601,17 @@ export default function BookingPage() {
 
   // Check if user is eligible for 1st free initial consultation & 1st free doctor chat
   useEffect(() => {
-    if (!user) {
-      return;
+    // Immediately set from user context (100% free by default unless user has already used it)
+    if (user) {
+      if (user.hasUsedFreeConsultation === true) setIsFreeEligible(false);
+      if (user.hasUsedFreeChat === true) setIsFreeChatEligible(false);
     }
-    // Immediately apply cached/user state without waiting for network
-    setIsFreeEligible(getInitialFreeEligibility(user));
-    setIsFreeChatEligible(getInitialFreeChatEligibility(user));
 
     const checkEligibility = async () => {
       try {
         const params = new URLSearchParams();
-        if (user.email) params.set('email', user.email);
-        if (user.id) params.set('userId', user.id);
+        if (user?.email) params.set('email', user.email.toLowerCase().trim());
+        if (user?.id) params.set('userId', user.id);
 
         const [resApt, resChat] = await Promise.all([
           fetch(`/api/appointments/free-eligibility?${params.toString()}`, { credentials: 'include' }).catch(() => null),
@@ -637,33 +620,15 @@ export default function BookingPage() {
 
         if (resApt && resApt.ok) {
           const data = await resApt.json().catch(() => ({}));
-          if (data.authenticated) {
-            const eligible = !!data.eligible;
-            setIsFreeEligible(eligible);
-            if (user.email) {
-              try {
-                localStorage.setItem(
-                  `nephro_free_used_${user.email.toLowerCase().trim()}`,
-                  eligible ? 'false' : 'true'
-                );
-              } catch {}
-            }
+          if (typeof data?.eligible === 'boolean') {
+            setIsFreeEligible(data.eligible);
           }
         }
 
         if (resChat && resChat.ok) {
           const chatData = await resChat.json().catch(() => ({}));
-          if (chatData.authenticated) {
-            const chatEligible = !!chatData.eligible;
-            setIsFreeChatEligible(chatEligible);
-            if (user.email) {
-              try {
-                localStorage.setItem(
-                  `nephro_free_chat_used_${user.email.toLowerCase().trim()}`,
-                  chatEligible ? 'false' : 'true'
-                );
-              } catch {}
-            }
+          if (typeof chatData?.eligible === 'boolean') {
+            setIsFreeChatEligible(chatData.eligible);
           }
         }
       } catch (e) {
@@ -1483,7 +1448,7 @@ export default function BookingPage() {
                                 <Badge variant="outline" className="text-xs px-2 py-0.5">
                                   {type.duration}
                                 </Badge>
-                                {(type as any).isFree && (
+                                {(type as any).isFree ? (
                                   <span
                                     style={{
                                       backgroundColor: '#dcfce7',
@@ -1492,10 +1457,9 @@ export default function BookingPage() {
                                     }}
                                     className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border"
                                   >
-                                    🎁 1st Consultation FREE
+                                    🎁 {type.id === 'doctor_chat' ? '1st Chat FREE' : '1st Consultation FREE'}
                                   </span>
-                                )}
-                                {(type as any).badgeText && (
+                                ) : (type as any).badgeText ? (
                                   <span
                                     style={{
                                       backgroundColor: '#e0f2fe',
@@ -1506,7 +1470,7 @@ export default function BookingPage() {
                                   >
                                     💬 {(type as any).badgeText}
                                   </span>
-                                )}
+                                ) : null}
                               </div>
                             </div>
                           </div>
@@ -1527,7 +1491,7 @@ export default function BookingPage() {
                                   style={{ color: '#15803d' }}
                                   className="text-xs font-semibold mt-0.5"
                                 >
-                                  1st Visit Offer
+                                  {type.id === 'doctor_chat' ? '1st Chat Offer' : '1st Visit Offer'}
                                 </p>
                               </div>
                             ) : (

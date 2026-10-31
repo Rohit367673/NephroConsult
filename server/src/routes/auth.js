@@ -297,7 +297,12 @@ router.post('/register', async (req, res) => {
     const userDoc = await User.create({ name: name.trim(), email: emailNormalized, passwordHash, role: finalRole, phone, country });
     req.session.user = { id: userDoc._id.toString(), role: userDoc.role, email: userDoc.email, name: userDoc.name };
     const clean = userDoc.toJSON();
-    const user = { ...clean, id: String(userDoc._id) };
+    const user = {
+      ...clean,
+      id: String(userDoc._id),
+      hasUsedFreeConsultation: !!userDoc.hasUsedFreeConsultation,
+      hasUsedFreeChat: !!userDoc.hasUsedFreeChat
+    };
     return res.json({ user });
   } catch (e) {
     return res.status(500).json({ error: 'Registration failed' });
@@ -384,7 +389,12 @@ router.post('/login', async (req, res) => {
     });
     
     const clean = userDoc.toJSON();
-    const user = { ...clean, id: String(userDoc._id) };
+    const user = {
+      ...clean,
+      id: String(userDoc._id),
+      hasUsedFreeConsultation: !!userDoc.hasUsedFreeConsultation,
+      hasUsedFreeChat: !!userDoc.hasUsedFreeChat
+    };
     return res.json({ user });
   } catch (e) {
     return res.status(500).json({ error: 'Login failed' });

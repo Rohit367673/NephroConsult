@@ -84,7 +84,7 @@ router.get('/free-eligibility', async (req, res) => {
     const resolvedEmail = req.session?.user?.email || (req.query.email ? String(req.query.email) : undefined);
 
     if (!resolvedUserId && !resolvedEmail) {
-      return res.json({ eligible: false, authenticated: false });
+      return res.json({ eligible: true, authenticated: false });
     }
     const result = await checkFreeChatEligibility({
       userId: resolvedUserId,
@@ -98,7 +98,7 @@ router.get('/free-eligibility', async (req, res) => {
     });
   } catch (error) {
     console.error('Error in free-eligibility doctor-chat endpoint:', error);
-    return res.status(500).json({ eligible: false, error: 'Failed to check chat eligibility' });
+    return res.status(500).json({ eligible: true, error: 'Failed to check chat eligibility' });
   }
 });
 
