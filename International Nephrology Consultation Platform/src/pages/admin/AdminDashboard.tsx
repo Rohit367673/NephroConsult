@@ -1742,89 +1742,55 @@ export default function AdminDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Conclude Doctor Chat Modal - Direct Closure (No Form Required) */}
+      {/* Conclude Doctor Chat - Clean Direct Confirmation Modal */}
       <AnimatePresence>
         {isClosingDoctorChatModal && selectedDoctorChat && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50"
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50"
+            onClick={() => setIsClosingDoctorChatModal(false)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full flex flex-col overflow-hidden border border-slate-200"
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl max-w-sm sm:max-w-md w-full p-6 border border-slate-200 text-center"
             >
-              {/* Modal Header */}
-              <div className="p-4 sm:p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50/70">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-base sm:text-lg font-bold text-slate-900">Close Consultation</h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Ticket <span className="font-mono font-bold text-slate-800">{selectedDoctorChat.ticketId}</span> • Patient: <span className="font-semibold text-slate-800">{selectedDoctorChat.patient.name}</span>
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 rounded-full text-slate-400 hover:text-slate-700"
-                  onClick={() => setIsClosingDoctorChatModal(false)}
-                >
-                  ✕
-                </Button>
+              <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3 border border-emerald-100">
+                <CheckCircle2 className="w-6 h-6" />
               </div>
 
-              {/* Modal Body */}
-              <div className="p-4 sm:p-6 space-y-4">
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 text-xs text-emerald-950 leading-relaxed flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block font-semibold mb-0.5">Direct Consultation Conclusion</strong>
-                    This consultation will be closed, immediately archived to the <strong>Completed</strong> tab, and the closing message will be sent to <strong>{selectedDoctorChat.patient.email}</strong>.
-                  </div>
-                </div>
+              <h3 className="text-lg font-bold text-slate-900">Close Consultation?</h3>
+              
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                Are you sure you want to conclude the consultation for{' '}
+                <strong className="text-slate-900">{selectedDoctorChat.patient.name}</strong> ({selectedDoctorChat.ticketId})?
+              </p>
 
-                <div>
-                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                    Closing Message to Client
-                  </Label>
-                  <Textarea
-                    rows={4}
-                    placeholder="Enter closing message or clinical advice for client..."
-                    value={closingMessageText}
-                    onChange={(e) => setClosingMessageText(e.target.value)}
-                    className="text-xs sm:text-sm bg-slate-50/50 border-slate-200 focus:border-emerald-500 focus:bg-white"
-                  />
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Pre-filled with doctor's standard conclusion note. You can edit this before closing.
-                  </p>
-                </div>
-              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                The client will be notified that the consultation is concluded.
+              </p>
 
-              {/* Modal Footer */}
-              <div className="p-4 border-t border-slate-200 bg-slate-50/70 flex items-center justify-end gap-2.5">
+              <div className="flex items-center justify-center gap-3 mt-6">
                 <Button
+                  type="button"
                   variant="outline"
-                  size="sm"
                   onClick={() => setIsClosingDoctorChatModal(false)}
                   disabled={isClosingDoctorChat}
-                  className="text-xs h-9"
+                  className="px-5 border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
                 >
                   Cancel
                 </Button>
                 <Button
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-2 shadow-xs text-xs h-9 px-4"
-                  disabled={isClosingDoctorChat}
+                  type="button"
                   onClick={handleCloseDoctorChat}
+                  disabled={isClosingDoctorChat}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 font-semibold shadow-xs"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  {isClosingDoctorChat ? 'Closing...' : 'Close & Notify Client'}
+                  {isClosingDoctorChat ? 'Closing...' : 'Yes, Close Consultation'}
                 </Button>
               </div>
             </motion.div>
