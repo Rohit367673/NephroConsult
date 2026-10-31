@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Calendar, Clock, Video, Phone, FileText, User, Star, Mail, Globe, ChevronDown, LogOut, Filter, CheckCircle2, AlertCircle, Users, ClipboardList, MessageSquare, Download, ExternalLink, Copy, Share, Eye } from 'lucide-react';
+import { Calendar, Clock, Video, Phone, FileText, User, Star, Mail, Globe, ChevronDown, ChevronUp, LogOut, Filter, CheckCircle2, AlertCircle, Users, ClipboardList, MessageSquare, Download, ExternalLink, Copy, Share, Eye, Send, RefreshCw, Search, Stethoscope } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -37,7 +37,9 @@ export default function AdminDashboard() {
   const [isSendingReply, setIsSendingReply] = useState(false);
   const [isClosingDoctorChatModal, setIsClosingDoctorChatModal] = useState(false);
   const [isClosingDoctorChat, setIsClosingDoctorChat] = useState(false);
-  const [doctorChatFilter, setDoctorChatFilter] = useState<'all' | 'waiting_doctor' | 'doctor_replied' | 'closed'>('all');
+  const [doctorChatTab, setDoctorChatTab] = useState<'active' | 'completed'>('active');
+  const [doctorChatFilter, setDoctorChatFilter] = useState<'all' | 'waiting_doctor' | 'doctor_replied'>('all');
+  const [showPatientReportsDrawer, setShowPatientReportsDrawer] = useState(true);
   const [chatCloseForm, setChatCloseForm] = useState({
     diagnosis: '',
     instructions: '',
@@ -124,7 +126,7 @@ export default function AdminDashboard() {
 
   // Verify admin access
   useEffect(() => {
-    const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com'];
+    const adminEmails = ['rohit367673@gmail.com', 'suyambu54321@gmail.com', 'drs.ilangos@gmail.com'];
     if (!user || !adminEmails.includes(user.email || '')) {
       toast.error('Unauthorized access. Redirecting...');
       navigate('/');
@@ -154,6 +156,9 @@ export default function AdminDashboard() {
     return passes;
   });
 
+  const activeDoctorChats = doctorChats.filter(chat => chat.status !== 'closed');
+  const completedDoctorChats = doctorChats.filter(chat => chat.status === 'closed');
+
   const filteredDoctorChats = doctorChats.filter(chat => {
     const s = searchTerm.toLowerCase();
     const matchesSearch = !s ||
@@ -161,8 +166,14 @@ export default function AdminDashboard() {
       chat.patient.email.toLowerCase().includes(s) ||
       chat.ticketId.toLowerCase().includes(s) ||
       (chat.initialQuery?.symptoms && chat.initialQuery.symptoms.toLowerCase().includes(s));
+    
+    if (doctorChatTab === 'completed') {
+      return matchesSearch && chat.status === 'closed';
+    }
+
+    const isActive = chat.status !== 'closed';
     const matchesFilter = doctorChatFilter === 'all' || chat.status === doctorChatFilter;
-    return matchesSearch && matchesFilter;
+    return matchesSearch && isActive && matchesFilter;
   });
   
   console.log('🔍 Filtered consultations:', filteredConsultations.length, 'of', consultations.length);
@@ -343,7 +354,8 @@ export default function AdminDashboard() {
       const res = await adminService.sendDoctorChatMessage(
         selectedDoctorChat.ticketId,
         doctorReplyText.trim(),
-        user?.name || 'Dr. Ilango S. Prakasam'
+        user?.name || 'Dr. Ilango S. Prakasam',
+        user?.email
       );
       toast.success('Reply sent & notification emailed to patient!');
       setDoctorReplyText('');
@@ -368,15 +380,33 @@ export default function AdminDashboard() {
     if (!selectedDoctorChat) return;
     try {
       setIsClosingDoctorChat(true);
-      await adminService.closeDoctorChat(selectedDoctorChat.ticketId, chatCloseForm);
-      toast.success('Consultation completed and digital summary emailed to patient!');
+      await adminService.closeDoctorChat(selectedDoctorChat.ticketId, chatCloseForm, user?.email);
+      toast.success('Consultation concluded & removed from active queue! Summary emailed to patient.');
       setIsClosingDoctorChatModal(false);
+      
+      const closedTicketId = selectedDoctorChat.ticketId;
+      setChatCloseForm({
+        diagnosis: '',
+        instructions: '',
+        nextReview: '',
+        medicines: [{ name: '', dosage: '', url: '' }]
+      });
+
       const updated = await adminService.getDoctorChats();
       setDoctorChats(updated.chats);
       setDoctorChatCounts(updated.counts);
-      const refreshed = updated.chats.find(c => c.ticketId === selectedDoctorChat.ticketId);
-      if (refreshed) {
-        setSelectedDoctorChat(refreshed);
+
+      // In active tab: the concluded consultation is REMOVED from the active queue!
+      if (doctorChatTab === 'active') {
+        const remainingActive = updated.chats.filter(c => c.status !== 'closed' && c.ticketId !== closedTicketId);
+        if (remainingActive.length > 0) {
+          setSelectedDoctorChat(remainingActive[0]);
+        } else {
+          setSelectedDoctorChat(null);
+        }
+      } else {
+        const refreshed = updated.chats.find(c => c.ticketId === closedTicketId);
+        setSelectedDoctorChat(refreshed || null);
       }
     } catch (err: any) {
       toast.error(err.message || 'Failed to complete consultation');
@@ -475,161 +505,281 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* Main Content */}
+        {/* Top Primary Navigation Bar */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-2 sm:p-3 mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap w-full sm:w-auto pb-1 sm:pb-0" style={{ WebkitOverflowScrolling: 'touch' as any }}>
+            <Button
+              variant={activeTab === 'upcoming' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('upcoming')}
+              className={(activeTab === 'upcoming' ? 'bg-[#006f6f] hover:bg-[#005555] text-white ' : 'border-slate-200 text-slate-700 hover:bg-slate-50 ') + 'shrink-0 text-xs sm:text-sm font-semibold'}
+            >
+              <Video className="w-3.5 h-3.5 mr-1.5" />
+              Upcoming Video ({upcomingCount})
+            </Button>
+            <Button
+              variant={activeTab === 'doctor_chats' ? 'default' : 'outline'}
+              onClick={() => {
+                setActiveTab('doctor_chats');
+                if (doctorChatTab === 'active') {
+                  const first = activeDoctorChats[0] || doctorChats[0];
+                  if (first) setSelectedDoctorChat(first);
+                } else {
+                  const first = completedDoctorChats[0] || doctorChats[0];
+                  if (first) setSelectedDoctorChat(first);
+                }
+              }}
+              className={(activeTab === 'doctor_chats' ? 'bg-[#006f6f] hover:bg-[#005555] text-white ' : 'border-slate-200 text-slate-700 hover:bg-slate-50 ') + 'shrink-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5'}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Doctor Chat Consultations ({doctorChats.length})</span>
+              {doctorChatCounts.waiting_doctor > 0 && (
+                <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full ml-1">
+                  {doctorChatCounts.waiting_doctor} needs reply
+                </span>
+              )}
+            </Button>
+            <Button
+              variant={activeTab === 'completed' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('completed')}
+              className={(activeTab === 'completed' ? 'bg-[#006f6f] hover:bg-[#005555] text-white ' : 'border-slate-200 text-slate-700 hover:bg-slate-50 ') + 'shrink-0 text-xs sm:text-sm font-semibold'}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+              Completed Video ({completedCount})
+            </Button>
+            <Button
+              variant={activeTab === 'all' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('all')}
+              className={(activeTab === 'all' ? 'bg-[#006f6f] hover:bg-[#005555] text-white ' : 'border-slate-200 text-slate-700 hover:bg-slate-50 ') + 'shrink-0 text-xs sm:text-sm font-semibold'}
+            >
+              All Video ({consultations.length})
+            </Button>
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Consultations List */}
-          <div className="lg:col-span-2">
-            <Card className="overflow-hidden">
-              <CardHeader className="sticky top-[56px] sm:static z-40 bg-white/95 supports-[backdrop-filter]:bg-white/80 backdrop-blur">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                  <CardTitle>{activeTab === 'doctor_chats' ? 'Doctor Chat & Report Consultations' : 'Video Consultations'}</CardTitle>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-6 w-full sm:w-auto sm:justify-end mt-1 sm:mt-0">
-                    <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto whitespace-nowrap px-1 -mx-1" style={{ WebkitOverflowScrolling: 'touch' as any }}>
-                      <Button
-                        variant={activeTab === 'upcoming' ? 'default' : 'outline'}
-                        onClick={() => setActiveTab('upcoming')}
-                        className={(activeTab === 'upcoming' ? 'bg-[#006f6f] hover:bg-[#005555] text-white ' : '') + 'shrink-0 text-xs sm:text-sm'}
-                      >
-                        Upcoming Video ({upcomingCount})
-                      </Button>
-                      <Button
-                        variant={activeTab === 'doctor_chats' ? 'default' : 'outline'}
-                        onClick={() => {
-                          setActiveTab('doctor_chats');
-                          if (!selectedDoctorChat && doctorChats.length > 0) {
-                            setSelectedDoctorChat(doctorChats[0]);
-                          }
-                        }}
-                        className={(activeTab === 'doctor_chats' ? 'bg-[#006f6f] hover:bg-[#005555] text-white ' : '') + 'shrink-0 text-xs sm:text-sm flex items-center gap-1.5'}
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span>Doctor Chats ({doctorChats.length})</span>
-                        {doctorChatCounts.waiting_doctor > 0 && (
-                          <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full">
-                            {doctorChatCounts.waiting_doctor}
-                          </span>
-                        )}
-                      </Button>
-                      <Button
-                        variant={activeTab === 'completed' ? 'default' : 'outline'}
-                        onClick={() => setActiveTab('completed')}
-                        className={(activeTab === 'completed' ? 'bg-[#006f6f] hover:bg-[#005555] text-white ' : '') + 'shrink-0 text-xs sm:text-sm'}
-                      >
-                        Completed Video ({completedCount})
-                      </Button>
-                      <Button
-                        variant={activeTab === 'all' ? 'default' : 'outline'}
-                        onClick={() => setActiveTab('all')}
-                        className={(activeTab === 'all' ? 'bg-[#006f6f] hover:bg-[#005555] text-white ' : '') + 'shrink-0 text-xs sm:text-sm'}
-                      >
-                        All Video ({consultations.length})
-                      </Button>
+          {/* Left Panel: Doctor Chat Inbox (1/3) OR Video Consultations List (2/3) */}
+          <div className={activeTab === 'doctor_chats' ? 'lg:col-span-1' : 'lg:col-span-2'}>
+            <Card className="overflow-hidden border border-slate-200 shadow-sm">
+              {activeTab === 'doctor_chats' ? (
+                /* Doctor Chat Inbox Queue Header */
+                <CardHeader className="p-4 border-b border-slate-200 bg-white space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5 text-[#006f6f]" />
+                      <h3 className="font-bold text-slate-900 text-base">Doctor Chat Inbox</h3>
                     </div>
-                    
-                    {activeTab === 'doctor_chats' ? (
-                      <Select value={doctorChatFilter} onValueChange={(val: any) => setDoctorChatFilter(val)}>
-                        <SelectTrigger className="w-full sm:w-36 text-xs sm:text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Chats</SelectItem>
-                          <SelectItem value="waiting_doctor">Waiting Doctor</SelectItem>
-                          <SelectItem value="doctor_replied">Doctor Replied</SelectItem>
-                          <SelectItem value="closed">Concluded</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Select value={filterStatus} onValueChange={setFilterStatus}>
-                        <SelectTrigger className="w-full sm:w-32 text-xs sm:text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Status</SelectItem>
-                          <SelectItem value="upcoming">Upcoming</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={async () => {
+                        try {
+                          const res = await adminService.getDoctorChats();
+                          setDoctorChats(res.chats);
+                          setDoctorChatCounts(res.counts);
+                          toast.success('Chat inbox refreshed');
+                        } catch {}
+                      }}
+                      className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900 rounded-full"
+                      title="Refresh inbox"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
-                </div>
-                {/* Search Bar */}
-                <div className="mt-3">
-                  <Input
-                    placeholder={activeTab === 'doctor_chats' ? "Search by patient name, email, ticket ID, symptoms..." : "Search consultations..."}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="text-xs sm:text-sm"
-                  />
-                </div>
-              </CardHeader>
+
+                  {/* Active vs Completed Segmented Switcher */}
+                  <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-lg text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDoctorChatTab('active');
+                        const first = activeDoctorChats[0];
+                        if (first) setSelectedDoctorChat(first);
+                      }}
+                      className={`py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                        doctorChatTab === 'active'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>Active Queue</span>
+                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                        activeDoctorChats.length > 0 ? 'bg-amber-100 text-amber-900 font-bold' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {activeDoctorChats.length}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDoctorChatTab('completed');
+                        const first = completedDoctorChats[0];
+                        if (first) setSelectedDoctorChat(first);
+                      }}
+                      className={`py-1.5 px-3 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                        doctorChatTab === 'completed'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>Completed</span>
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 text-slate-600">
+                        {completedDoctorChats.length}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Filter Pills for Active */}
+                  {doctorChatTab === 'active' && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setDoctorChatFilter('all')}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
+                          doctorChatFilter === 'all'
+                            ? 'bg-[#006f6f] text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        All Active ({activeDoctorChats.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDoctorChatFilter('waiting_doctor')}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1 ${
+                          doctorChatFilter === 'waiting_doctor'
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+                        }`}
+                      >
+                        <span>⏳ Needs Reply</span>
+                        <span className="font-bold">({doctorChatCounts.waiting_doctor})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDoctorChatFilter('doctor_replied')}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1 ${
+                          doctorChatFilter === 'doctor_replied'
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
+                        }`}
+                      >
+                        <span>✓ Replied</span>
+                        <span className="font-bold">({doctorChatCounts.doctor_replied})</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <Input
+                      placeholder="Search patient, ticket, symptoms..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="text-xs h-8 pl-8 border-slate-200"
+                    />
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                  </div>
+                </CardHeader>
+              ) : (
+                /* Video Consultations Header */
+                <CardHeader className="sticky top-[56px] sm:static z-40 bg-white/95 supports-[backdrop-filter]:bg-white/80 backdrop-blur border-b border-slate-100 p-4 sm:p-5">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                    <CardTitle className="text-lg font-bold text-slate-900">Video Consultations</CardTitle>
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="w-full sm:w-36 text-xs sm:text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="upcoming">Upcoming</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="mt-2 relative">
+                    <Input
+                      placeholder="Search consultations by name or email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="text-xs sm:text-sm pl-8"
+                    />
+                    <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-3" />
+                  </div>
+                </CardHeader>
+              )}
               
               <CardContent className="p-0">
 
                 {/* Left Column Content */}
                 <div>
                   {activeTab === 'doctor_chats' ? (
-                    <div className="md:max-h-[72vh] md:overflow-y-auto overflow-visible overflow-x-hidden overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' as any }}>
+                    <div className="divide-y divide-slate-100 max-h-[72vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' as any }}>
                       {filteredDoctorChats.length === 0 ? (
-                        <div className="text-center py-12 px-4 text-gray-500">
-                          <MessageSquare className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                          <p className="font-medium text-gray-700">No doctor chat consultations found</p>
-                          <p className="text-xs text-gray-400 mt-1">Chats submitted by patients will appear here</p>
+                        <div className="text-center py-12 px-4 text-slate-500">
+                          <MessageSquare className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+                          <p className="font-semibold text-slate-700 text-sm">No consultations in this view</p>
+                          <p className="text-xs text-slate-400 mt-1">
+                            {doctorChatTab === 'active'
+                              ? 'All caught up! No active chats waiting.'
+                              : 'Completed consultations will appear here.'}
+                          </p>
                         </div>
                       ) : (
-                        filteredDoctorChats.map((chat) => (
-                          <motion.div
-                            key={chat._id || chat.ticketId}
-                            className={`p-4 sm:p-5 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                              selectedDoctorChat?.ticketId === chat.ticketId ? 'bg-teal-50/70 border-l-4 border-l-[#006f6f] border-teal-200' : ''
-                            }`}
-                            onClick={() => setSelectedDoctorChat(chat)}
-                          >
-                            <div className="flex justify-between items-start gap-2 mb-1.5">
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-800">
+                        filteredDoctorChats.map((chat) => {
+                          const isSelected = selectedDoctorChat?.ticketId === chat.ticketId;
+                          const isWaiting = chat.status === 'waiting_doctor';
+                          const isReplied = chat.status === 'doctor_replied';
+                          return (
+                            <div
+                              key={chat._id || chat.ticketId}
+                              className={`p-3.5 sm:p-4 cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'bg-teal-50/90 border-l-4 border-l-[#006f6f] shadow-xs'
+                                  : 'hover:bg-slate-50'
+                              }`}
+                              onClick={() => setSelectedDoctorChat(chat)}
+                            >
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
                                   {chat.ticketId}
                                 </span>
-                                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{chat.patient.name}</h3>
-                              </div>
-                              <Badge 
-                                className={
-                                  chat.status === 'waiting_doctor' 
-                                    ? 'bg-amber-100 text-amber-900 border-amber-300 font-medium'
-                                    : chat.status === 'doctor_replied'
-                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                                    : 'bg-gray-100 text-gray-700 border-gray-300'
-                                }
-                                variant="outline"
-                              >
-                                {chat.status === 'waiting_doctor'
-                                  ? '⏳ Needs Reply'
-                                  : chat.status === 'doctor_replied'
-                                  ? '✓ Replied'
-                                  : 'Concluded'}
-                              </Badge>
-                            </div>
-
-                            <p className="text-xs sm:text-sm text-gray-700 line-clamp-2 my-1">
-                              <span className="font-medium text-gray-900">Symptoms: </span>
-                              {chat.initialQuery?.symptoms || chat.initialQuery?.primaryQuestion || 'Report review consultation'}
-                            </p>
-
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-gray-500 mt-2">
-                              <span>{chat.patient.email}</span>
-                              {chat.patient.phone && <span>• {chat.patient.phone}</span>}
-                              {chat.patient.age && <span>• {chat.patient.age}y {chat.patient.gender || ''}</span>}
-                              {chat.documents && chat.documents.length > 0 && (
-                                <span className="text-[#006f6f] font-medium flex items-center">
-                                  <FileText className="w-3 h-3 mr-0.5 inline" />
-                                  {chat.documents.length} report(s)
+                                <span
+                                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                                    isWaiting
+                                      ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                      : isReplied
+                                      ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  }`}
+                                >
+                                  {isWaiting ? '⏳ Needs Reply' : isReplied ? '✓ Replied' : '✓ Completed'}
                                 </span>
-                              )}
-                              <span className="ml-auto text-[11px] text-gray-400">
-                                {new Date(chat.createdAt).toLocaleDateString()}
-                              </span>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 mt-1">
+                                <h4 className="font-bold text-slate-900 text-sm truncate">{chat.patient.name}</h4>
+                                <span className="text-[10px] text-slate-400 shrink-0">
+                                  {new Date(chat.lastMessageAt || chat.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                </span>
+                              </div>
+
+                              <p className="text-xs text-slate-600 line-clamp-2 my-1">
+                                {chat.initialQuery?.symptoms || chat.initialQuery?.primaryQuestion || 'Clinical report review consultation'}
+                              </p>
+
+                              <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-1.5 border-t border-slate-100">
+                                <span className="truncate max-w-[140px]">{chat.patient.email}</span>
+                                {chat.documents && chat.documents.length > 0 && (
+                                  <span className="text-[#006f6f] font-semibold flex items-center gap-1 shrink-0">
+                                    <FileText className="w-3 h-3" />
+                                    {chat.documents.length} report{chat.documents.length > 1 ? 's' : ''}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </motion.div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   ) : (
@@ -725,239 +875,406 @@ export default function AdminDashboard() {
             </Card>
           </div>
 
-          {/* Patient Details Panel */}
-          <div className="lg:col-span-1">
+          {/* Right Panel: Doctor Chat Consultation & Review Workspace (2/3) OR Video Patient Details (1/3) */}
+          <div className={activeTab === 'doctor_chats' ? 'lg:col-span-2' : 'lg:col-span-1'}>
             {activeTab === 'doctor_chats' ? (
               selectedDoctorChat ? (
-                <Card className="overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-teal-50 to-blue-50 border-b border-teal-100 p-4">
-                    <div className="flex justify-between items-start">
+                <Card className="overflow-hidden border border-slate-200 shadow-sm flex flex-col">
+                  {/* Workspace Header */}
+                  <CardHeader className="bg-white border-b border-slate-200 p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-teal-100 text-teal-800">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
                             {selectedDoctorChat.ticketId}
                           </span>
-                          <span className="text-xs font-bold text-teal-700 bg-white px-2 py-0.5 rounded border border-teal-200">
-                            {selectedDoctorChat.price?.currency === 'INR' ? '₹' : '$'}{selectedDoctorChat.price?.amount || 100} Paid
+                          <span className="text-xs font-bold text-[#006f6f] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+                            {selectedDoctorChat.price?.amount === 0 ? '🎁 1st Consultation Free' : '₹100 Paid'}
                           </span>
+                          <Badge 
+                            className={
+                              selectedDoctorChat.status === 'waiting_doctor' 
+                                ? 'bg-amber-100 text-amber-900 border-amber-300 font-semibold'
+                                : selectedDoctorChat.status === 'doctor_replied'
+                                ? 'bg-blue-50 text-blue-800 border-blue-200 font-semibold'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-200 font-semibold'
+                            }
+                            variant="outline"
+                          >
+                            {selectedDoctorChat.status === 'waiting_doctor'
+                              ? '⏳ Needs Your Reply'
+                              : selectedDoctorChat.status === 'doctor_replied'
+                              ? '✓ You Replied'
+                              : '✓ Completed'}
+                          </Badge>
                         </div>
-                        <CardTitle className="mt-2 text-lg font-bold text-gray-900">
+                        <h2 className="mt-2 text-xl font-bold text-slate-900">
                           {selectedDoctorChat.patient.name}
-                        </CardTitle>
-                        <p className="text-xs text-gray-600 mt-0.5">
-                          {selectedDoctorChat.patient.age ? `${selectedDoctorChat.patient.age} yrs • ` : ''}
-                          {selectedDoctorChat.patient.gender || ''}
-                          {selectedDoctorChat.patient.phone ? ` • ${selectedDoctorChat.patient.phone}` : ''}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate max-w-[240px]">
-                          {selectedDoctorChat.patient.email}
-                        </p>
+                        </h2>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-slate-600 mt-1">
+                          <span>{selectedDoctorChat.patient.email}</span>
+                          {selectedDoctorChat.patient.phone && <span>• {selectedDoctorChat.patient.phone}</span>}
+                          {selectedDoctorChat.patient.age && <span>• {selectedDoctorChat.patient.age}y {selectedDoctorChat.patient.gender || ''}</span>}
+                          {selectedDoctorChat.patient.country && <span>• {selectedDoctorChat.patient.country}</span>}
+                        </div>
                       </div>
-                      <Badge 
-                        className={
-                          selectedDoctorChat.status === 'waiting_doctor' 
-                            ? 'bg-amber-100 text-amber-900 border-amber-300 font-medium'
-                            : selectedDoctorChat.status === 'doctor_replied'
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300 font-medium'
-                            : 'bg-gray-100 text-gray-700 border-gray-300 font-medium'
-                        }
-                        variant="outline"
-                      >
-                        {selectedDoctorChat.status === 'waiting_doctor'
-                          ? '⏳ Needs Reply'
-                          : selectedDoctorChat.status === 'doctor_replied'
-                          ? '✓ Doctor Replied'
-                          : 'Concluded'}
-                      </Badge>
+
+                      {/* Header Actions */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 h-9"
+                          onClick={() => window.open(`/doctor-chat?ticketId=${selectedDoctorChat.ticketId}`, '_blank')}
+                          title="Open client chat view in a new tab"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-[#006f6f]" />
+                          <span className="hidden sm:inline">Open Client View</span>
+                        </Button>
+                        {selectedDoctorChat.status !== 'closed' && (
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1.5 h-9 shadow-xs"
+                            onClick={() => setIsClosingDoctorChatModal(true)}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Complete & Conclude</span>
+                          </Button>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Patient Medical Profile Toggle Bar */}
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setShowPatientReportsDrawer(!showPatientReportsDrawer)}
+                        className="inline-flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-[#006f6f] transition-colors"
+                      >
+                        <FileText className="w-4 h-4 text-[#006f6f]" />
+                        <span>Patient Clinical Profile & Lab Reports ({selectedDoctorChat.documents?.length || 0})</span>
+                        {showPatientReportsDrawer ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                      <span className="text-[11px] text-slate-400">
+                        Started {new Date(selectedDoctorChat.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    {/* Collapsible Patient Clinical Summary & Uploaded Reports */}
+                    <AnimatePresence>
+                      {showPatientReportsDrawer && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="mt-3 pt-3 border-t border-slate-100 space-y-3 overflow-hidden text-xs"
+                        >
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200">
+                            <div>
+                              <strong className="text-slate-900 block mb-0.5">Symptoms / Chief Complaints:</strong>
+                              <p className="text-slate-700 leading-relaxed bg-white p-2.5 rounded-lg border border-slate-200">
+                                {selectedDoctorChat.initialQuery?.symptoms || 'Report review consultation'}
+                              </p>
+                            </div>
+                            <div>
+                              <strong className="text-slate-900 block mb-0.5">Primary Question for Dr. Ilango:</strong>
+                              <p className="text-teal-900 font-medium leading-relaxed bg-teal-50/60 p-2.5 rounded-lg border border-teal-200">
+                                {selectedDoctorChat.initialQuery?.primaryQuestion || 'Comprehensive clinical opinion requested on attached reports'}
+                              </p>
+                            </div>
+                            {selectedDoctorChat.initialQuery?.duration && (
+                              <div>
+                                <strong className="text-slate-900">Duration: </strong>
+                                <span className="text-slate-700">{selectedDoctorChat.initialQuery.duration}</span>
+                              </div>
+                            )}
+                            {selectedDoctorChat.initialQuery?.currentMedications && (
+                              <div>
+                                <strong className="text-slate-900">Current Medications: </strong>
+                                <span className="text-slate-700">{selectedDoctorChat.initialQuery.currentMedications}</span>
+                              </div>
+                            )}
+                            {selectedDoctorChat.initialQuery?.medicalHistory && (
+                              <div>
+                                <strong className="text-slate-900">Medical History: </strong>
+                                <span className="text-slate-700">{selectedDoctorChat.initialQuery.medicalHistory}</span>
+                              </div>
+                            )}
+                            {selectedDoctorChat.initialQuery?.allergies && (
+                              <div>
+                                <strong className="text-red-700">Known Allergies: </strong>
+                                <span className="text-red-800 font-semibold">{selectedDoctorChat.initialQuery.allergies}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Uploaded Lab Reports */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
+                                Uploaded Lab Reports ({selectedDoctorChat.documents?.length || 0})
+                              </span>
+                            </div>
+                            {selectedDoctorChat.documents && selectedDoctorChat.documents.length > 0 ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {selectedDoctorChat.documents.map((doc, idx) => {
+                                  const filename = typeof doc === 'string' && doc.includes('|') ? doc.split('|')[0] : `Lab-Report-${idx + 1}`;
+                                  return (
+                                    <div key={idx} className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg shadow-2xs">
+                                      <div className="flex items-center space-x-2 min-w-0 mr-2">
+                                        <FileText className="w-4 h-4 text-[#006f6f] shrink-0" />
+                                        <span className="truncate text-xs font-semibold text-slate-800">{filename}</span>
+                                      </div>
+                                      <div className="flex items-center space-x-1 shrink-0">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 px-2 text-xs border-slate-300 text-slate-700 hover:bg-slate-100"
+                                          onClick={() => handleViewAnyDocument(doc)}
+                                        >
+                                          <Eye className="w-3 h-3 mr-1" /> View
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 px-2 text-xs border-teal-300 text-[#006f6f] hover:bg-teal-50 font-semibold"
+                                          onClick={() => handleDownloadAnyDocument(doc)}
+                                        >
+                                          <Download className="w-3 h-3 mr-1" /> Download
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-slate-400 italic bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                                No lab reports were attached with this consultation.
+                              </p>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </CardHeader>
 
-                  <CardContent className="p-4 space-y-4 max-h-[72vh] overflow-y-auto">
-                    {/* Patient Clinical Info */}
-                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-xs sm:text-sm space-y-2">
-                      <h4 className="font-bold text-gray-900 text-xs uppercase tracking-wider text-[#006f6f]">Clinical Query & Symptoms</h4>
-                      <p className="text-gray-800 font-medium">
-                        {selectedDoctorChat.initialQuery?.symptoms || 'No specific symptoms described'}
-                      </p>
-                      {selectedDoctorChat.initialQuery?.duration && (
-                        <p className="text-gray-600">
-                          <strong>Duration:</strong> {selectedDoctorChat.initialQuery.duration}
-                        </p>
-                      )}
-                      {selectedDoctorChat.initialQuery?.currentMedications && (
-                        <p className="text-gray-600">
-                          <strong>Current Medications:</strong> {selectedDoctorChat.initialQuery.currentMedications}
-                        </p>
-                      )}
-                      {selectedDoctorChat.initialQuery?.medicalHistory && (
-                        <p className="text-gray-600">
-                          <strong>Medical History:</strong> {selectedDoctorChat.initialQuery.medicalHistory}
-                        </p>
-                      )}
-                      {selectedDoctorChat.initialQuery?.allergies && (
-                        <p className="text-gray-600">
-                          <strong>Allergies:</strong> {selectedDoctorChat.initialQuery.allergies}
-                        </p>
-                      )}
-                      {selectedDoctorChat.initialQuery?.primaryQuestion && (
-                        <p className="text-teal-900 bg-teal-50/70 p-2 rounded border border-teal-200">
-                          <strong>Primary Question:</strong> {selectedDoctorChat.initialQuery.primaryQuestion}
-                        </p>
-                      )}
+                  {/* Chat Messages Feed (Mirroring User Interface) */}
+                  <CardContent className="p-4 sm:p-5 space-y-4">
+                    <div className="flex items-center justify-between pb-1">
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Doctor-Patient Conversation Timeline
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        {selectedDoctorChat.messages?.length || 0} message{selectedDoctorChat.messages?.length === 1 ? '' : 's'}
+                      </span>
                     </div>
 
-                    {/* Uploaded Documents */}
-                    <div>
-                      <h4 className="font-bold text-gray-900 mb-2 flex items-center justify-between text-xs sm:text-sm">
-                        <span>Uploaded Lab Reports ({selectedDoctorChat.documents?.length || 0})</span>
-                      </h4>
-                      {selectedDoctorChat.documents && selectedDoctorChat.documents.length > 0 ? (
-                        <div className="space-y-2">
-                          {selectedDoctorChat.documents.map((doc, idx) => {
-                            const filename = typeof doc === 'string' && doc.includes('|') ? doc.split('|')[0] : `Report-${idx + 1}`;
+                    <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 min-h-[380px] max-h-[500px] overflow-y-auto space-y-3.5">
+                      {selectedDoctorChat.messages && selectedDoctorChat.messages.length > 0 ? (
+                        selectedDoctorChat.messages.map((msg, index) => {
+                          if (msg.sender === 'system') {
                             return (
-                              <div key={idx} className="flex items-center justify-between p-2.5 bg-blue-50/70 border border-blue-200 rounded-lg text-xs">
-                                <div className="flex items-center space-x-2 min-w-0 mr-2">
-                                  <FileText className="w-4 h-4 text-blue-600 shrink-0" />
-                                  <span className="truncate font-medium text-blue-900">{filename}</span>
-                                </div>
-                                <div className="flex items-center space-x-1 shrink-0">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 px-2 text-xs border-blue-300 text-blue-700 hover:bg-blue-100"
-                                    onClick={() => handleViewAnyDocument(doc)}
-                                  >
-                                    <Eye className="w-3 h-3 mr-1" /> View
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 px-2 text-xs border-blue-300 text-blue-700 hover:bg-blue-100"
-                                    onClick={() => handleDownloadAnyDocument(doc)}
-                                  >
-                                    <Download className="w-3 h-3 mr-1" /> Download
-                                  </Button>
+                              <div key={index} className="flex justify-center my-2">
+                                <div className="bg-white border border-slate-200 text-slate-600 text-xs px-3.5 py-1.5 rounded-full text-center max-w-md shadow-2xs">
+                                  ℹ️ {msg.text}
                                 </div>
                               </div>
                             );
-                          })}
-                        </div>
+                          }
+
+                          const isPatient = msg.sender === 'patient';
+
+                          return (
+                            <div
+                              key={index}
+                              className={`flex items-start gap-2.5 ${isPatient ? 'flex-row' : 'flex-row-reverse'}`}
+                            >
+                              {/* Avatar */}
+                              <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
+                                  isPatient
+                                    ? 'bg-slate-700 text-white'
+                                    : 'bg-[#006f6f] text-white'
+                                }`}
+                              >
+                                {isPatient ? <User className="w-4 h-4" /> : <Stethoscope className="w-4 h-4" />}
+                              </div>
+
+                              {/* Message Bubble */}
+                              <div
+                                className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-4 text-xs sm:text-sm leading-relaxed shadow-sm ${
+                                  isPatient
+                                    ? 'bg-white border border-slate-200 text-slate-900 rounded-tl-sm'
+                                    : 'bg-[#006f6f] text-white rounded-tr-sm'
+                                }`}
+                              >
+                                <div className={`flex items-center justify-between gap-3 mb-1.5 pb-1 border-b text-[11px] ${
+                                  isPatient ? 'border-slate-100' : 'border-white/15'
+                                }`}>
+                                  <span className={`font-bold ${isPatient ? 'text-slate-800' : 'text-teal-100'}`}>
+                                    {isPatient ? (msg.senderName || selectedDoctorChat.patient.name) : (msg.senderName || 'Dr. Ilango S. Prakasam')}
+                                  </span>
+                                  <span className={isPatient ? 'text-slate-400' : 'text-teal-200'}>
+                                    {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                  </span>
+                                </div>
+
+                                <div className={`whitespace-pre-wrap ${isPatient ? 'text-slate-800' : 'text-white'}`}>
+                                  {msg.text}
+                                </div>
+
+                                {msg.attachments && msg.attachments.length > 0 && (
+                                  <div className={`mt-3 pt-2.5 border-t space-y-1.5 ${isPatient ? 'border-slate-100' : 'border-white/20'}`}>
+                                    <div className={`text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 ${
+                                      isPatient ? 'text-slate-500' : 'text-teal-100'
+                                    }`}>
+                                      <FileText className="w-3 h-3" />
+                                      <span>Attached Reports ({msg.attachments.length}):</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-1.5">
+                                      {msg.attachments.map((att, i) => (
+                                        <div
+                                          key={i}
+                                          className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-xs ${
+                                            isPatient
+                                              ? 'bg-slate-50 border border-slate-200 text-slate-800'
+                                              : 'bg-white/15 border border-white/25 text-white'
+                                          }`}
+                                        >
+                                          <span className="truncate font-medium">{att}</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const matchingDoc = selectedDoctorChat.documents?.find(d => d.includes(att));
+                                              if (matchingDoc) handleDownloadAnyDocument(matchingDoc);
+                                              else handleDownloadAnyDocument(att);
+                                            }}
+                                            className={`font-semibold text-xs ml-2 shrink-0 flex items-center gap-1 ${
+                                              isPatient ? 'text-[#006f6f] hover:underline' : 'text-teal-100 hover:text-white underline'
+                                            }`}
+                                          >
+                                            <Download className="w-3 h-3" /> Download
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
                       ) : (
-                        <p className="text-xs text-gray-500 italic bg-gray-50 p-2.5 rounded border border-gray-200">
-                          No lab reports attached with this consultation.
-                        </p>
+                        <div className="text-center py-8 text-slate-400 text-xs">
+                          No messages yet in this consultation.
+                        </div>
                       )}
                     </div>
 
-                    {/* Interactive Messages Timeline */}
-                    <div>
-                      <h4 className="font-bold text-gray-900 mb-2 text-xs sm:text-sm">Doctor-Patient Messages</h4>
-                      <div className="space-y-2.5 bg-slate-50 p-3 rounded-lg border border-slate-200 max-h-56 overflow-y-auto">
-                        {/* Initial patient query */}
-                        <div className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm text-xs">
-                          <div className="flex justify-between items-center text-[10px] text-gray-400 mb-1">
-                            <span className="font-semibold text-gray-700">{selectedDoctorChat.patient.name}</span>
-                            <span>{new Date(selectedDoctorChat.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          </div>
-                          <p className="text-gray-800">
-                            {selectedDoctorChat.initialQuery?.symptoms || 'Submitted reports for clinical review.'}
-                          </p>
-                        </div>
-
-                        {/* Subsequent messages */}
-                        {selectedDoctorChat.messages?.map((msg, i) => {
-                          const isDoc = msg.sender === 'doctor';
-                          return (
-                            <div 
-                              key={i} 
-                              className={`p-2.5 rounded-lg text-xs ${
-                                isDoc 
-                                  ? 'bg-[#006f6f] text-white ml-4 shadow-sm' 
-                                  : 'bg-white text-gray-800 mr-4 border border-gray-200 shadow-sm'
-                              }`}
-                            >
-                              <div className={`flex justify-between items-center text-[10px] mb-1 ${isDoc ? 'text-teal-100' : 'text-gray-400'}`}>
-                                <span className="font-semibold">{msg.senderName || (isDoc ? 'Dr. Ilango' : 'Patient')}</span>
-                                <span>{msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                              </div>
-                              <p className="whitespace-pre-wrap">{msg.text}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Actions & Reply Box */}
+                    {/* Actions & Doctor Reply Box OR Concluded Prescription Summary */}
                     {selectedDoctorChat.status !== 'closed' ? (
-                      <div className="space-y-3 pt-2 border-t border-gray-200">
+                      <div className="space-y-3 pt-3 border-t border-slate-200">
                         <div>
-                          <Label className="text-xs font-semibold text-gray-700 mb-1 block">
-                            Doctor Reply (Patient notified by email with 1-click reply link)
+                          <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 block">
+                            Type Reply to Patient
                           </Label>
                           <Textarea
                             rows={3}
-                            placeholder="Type clinical advice or questions for the patient..."
+                            placeholder="Type clinical advice, report interpretation, or instructions for the patient..."
                             value={doctorReplyText}
                             onChange={(e) => setDoctorReplyText(e.target.value)}
-                            className="text-xs sm:text-sm"
+                            className="text-xs sm:text-sm bg-white border-slate-200 focus:border-[#006f6f]"
                           />
+                          <p className="text-[11px] text-slate-500 mt-1">
+                            Patient will immediately receive an email notification with a 1-click link to view and reply.
+                          </p>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                           <Button
-                            className="flex-1 bg-[#006f6f] hover:bg-[#005555] text-white text-xs sm:text-sm h-9"
+                            className="w-full sm:w-auto bg-[#006f6f] hover:bg-[#005555] text-white text-xs sm:text-sm h-10 px-5 flex items-center gap-2 font-semibold shadow-xs"
                             disabled={isSendingReply || !doctorReplyText.trim()}
                             onClick={handleSendDoctorReply}
                           >
-                            <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                            <Send className="w-4 h-4" />
                             {isSendingReply ? 'Sending...' : 'Send Reply to Patient'}
                           </Button>
+
                           <Button
                             variant="outline"
-                            className="border-green-600 text-green-700 hover:bg-green-50 text-xs sm:text-sm h-9"
+                            className="w-full sm:w-auto border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs sm:text-sm h-10 px-5 flex items-center gap-2 font-semibold"
                             onClick={() => setIsClosingDoctorChatModal(true)}
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                            Complete & Conclude
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            Complete & Conclude Consultation
                           </Button>
                         </div>
                       </div>
                     ) : (
-                      <div className="p-3 bg-gray-100 rounded-lg border border-gray-300 text-xs space-y-2">
-                        <div className="flex items-center text-gray-800 font-semibold">
-                          <CheckCircle2 className="w-4 h-4 mr-1.5 text-green-600" />
-                          Consultation Concluded
+                      /* Concluded Prescription Summary Card */
+                      <div className="p-4 bg-emerald-50/70 rounded-xl border border-emerald-200 text-xs sm:text-sm space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-emerald-200">
+                          <div className="flex items-center text-emerald-950 font-bold gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                            <span>Consultation Concluded & Prescription Dispatched</span>
+                          </div>
+                          {selectedDoctorChat.closedAt && (
+                            <span className="text-[11px] text-emerald-700 font-medium">
+                              Completed on {new Date(selectedDoctorChat.closedAt).toLocaleDateString()}
+                            </span>
+                          )}
                         </div>
+
                         {selectedDoctorChat.prescription?.diagnosis && (
-                          <p><strong>Diagnosis:</strong> {selectedDoctorChat.prescription.diagnosis}</p>
-                        )}
-                        {selectedDoctorChat.prescription?.instructions && (
-                          <p><strong>Instructions:</strong> {selectedDoctorChat.prescription.instructions}</p>
-                        )}
-                        {selectedDoctorChat.prescription?.medicines && selectedDoctorChat.prescription.medicines.length > 0 && (
                           <div>
-                            <strong>Prescribed:</strong>
-                            <ul className="list-disc list-inside mt-1 space-y-0.5">
-                              {selectedDoctorChat.prescription.medicines.map((m, idx) => (
-                                <li key={idx}>{m.name} - {m.dosage}</li>
-                              ))}
-                            </ul>
+                            <span className="font-bold text-slate-700 block text-xs uppercase tracking-wider mb-0.5">Clinical Diagnosis:</span>
+                            <p className="text-slate-900 bg-white p-2.5 rounded-lg border border-emerald-100 font-medium">
+                              {selectedDoctorChat.prescription.diagnosis}
+                            </p>
                           </div>
                         )}
+
+                        {selectedDoctorChat.prescription?.instructions && (
+                          <div>
+                            <span className="font-bold text-slate-700 block text-xs uppercase tracking-wider mb-0.5">Instructions & Diet:</span>
+                            <p className="text-slate-800 bg-white p-2.5 rounded-lg border border-emerald-100 leading-relaxed whitespace-pre-line">
+                              {selectedDoctorChat.prescription.instructions}
+                            </p>
+                          </div>
+                        )}
+
+                        {selectedDoctorChat.prescription?.medicines && selectedDoctorChat.prescription.medicines.length > 0 && (
+                          <div>
+                            <span className="font-bold text-slate-700 block text-xs uppercase tracking-wider mb-1">Prescribed Medicines:</span>
+                            <div className="space-y-1">
+                              {selectedDoctorChat.prescription.medicines.map((m, idx) => (
+                                <div key={idx} className="bg-white p-2 rounded-lg border border-emerald-100 flex items-center justify-between text-xs">
+                                  <span className="font-bold text-slate-900">{m.name}</span>
+                                  <span className="text-slate-600">{m.dosage}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {selectedDoctorChat.prescription?.nextReview && (
-                          <p><strong>Next Review:</strong> {selectedDoctorChat.prescription.nextReview}</p>
+                          <div className="bg-white p-2.5 rounded-lg border border-emerald-100 text-xs">
+                            <strong className="text-slate-700">Next Review: </strong>
+                            <span className="text-slate-900 font-medium">{selectedDoctorChat.prescription.nextReview}</span>
+                          </div>
                         )}
                       </div>
                     )}
                   </CardContent>
                 </Card>
               ) : (
-                <Card>
-                  <CardContent className="p-8 text-center text-gray-500">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p className="font-medium text-gray-700">No Doctor Chat Selected</p>
-                    <p className="text-xs text-gray-400 mt-1">Select a consultation from the left to view medical query, lab reports, chat history, and prescribe medicines.</p>
+                <Card className="border border-slate-200">
+                  <CardContent className="p-12 text-center text-slate-500">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                    <h3 className="font-bold text-slate-800 text-base">No Consultation Selected</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                      Select a consultation from the left queue to review patient clinical queries, lab reports, conversation timeline, and dispatch prescriptions.
+                    </p>
                   </CardContent>
                 </Card>
               )
@@ -1427,50 +1744,57 @@ export default function AdminDashboard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50"
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden border border-slate-200"
             >
-              <div className="flex justify-between items-center mb-4 border-b pb-3">
+              {/* Modal Header (Sticky shrink-0) */}
+              <div className="p-4 sm:p-5 border-b border-slate-200 flex justify-between items-center shrink-0 bg-slate-50/70">
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">Complete & Conclude Doctor Chat</h2>
-                  <p className="text-xs text-gray-600">
-                    Ticket: {selectedDoctorChat.ticketId} • Patient: {selectedDoctorChat.patient.name}
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900">Complete & Conclude Doctor Chat</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Ticket: <span className="font-mono font-bold text-slate-800">{selectedDoctorChat.ticketId}</span> • Patient: <span className="font-semibold text-slate-800">{selectedDoctorChat.patient.name}</span>
                   </p>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="h-8 w-8 p-0 rounded-full text-slate-400 hover:text-slate-700"
                   onClick={() => setIsClosingDoctorChatModal(false)}
                 >
                   ✕
                 </Button>
               </div>
 
-              <div className="space-y-4">
+              {/* Modal Body (Scrollable flex-1) */}
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
                 <div>
-                  <Label className="text-xs font-semibold">Clinical Diagnosis / Impression</Label>
+                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                    Clinical Diagnosis / Impression
+                  </Label>
                   <Input
                     placeholder="e.g. Stage 2 CKD with mild proteinuria, stable renal function"
                     value={chatCloseForm.diagnosis}
                     onChange={(e) => setChatCloseForm(prev => ({ ...prev, diagnosis: e.target.value }))}
-                    className="mt-1 text-sm"
+                    className="text-xs sm:text-sm"
                   />
                 </div>
 
-                {/* Medicines List */}
+                {/* Prescribed Medications */}
                 <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <Label className="text-xs font-semibold">Prescribed Medications</Label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Prescribed Medications
+                    </Label>
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="text-xs h-7"
+                      className="text-xs h-7 border-teal-300 text-[#006f6f] hover:bg-teal-50"
                       onClick={addChatMedicine}
                     >
                       + Add Medicine
@@ -1478,25 +1802,25 @@ export default function AdminDashboard() {
                   </div>
                   <div className="space-y-2">
                     {chatCloseForm.medicines.map((med, idx) => (
-                      <div key={idx} className="flex gap-2 items-center">
+                      <div key={idx} className="flex gap-2 items-center bg-slate-50 p-2 rounded-lg border border-slate-200">
                         <Input
-                          placeholder="Medicine name"
+                          placeholder="Medicine name (e.g. Telmisartan)"
                           value={med.name}
                           onChange={(e) => updateChatMedicine(idx, 'name', e.target.value)}
-                          className="text-xs sm:text-sm flex-1"
+                          className="text-xs sm:text-sm flex-1 bg-white"
                         />
                         <Input
-                          placeholder="Dosage (e.g. 5mg OD after breakfast)"
+                          placeholder="Dosage & Frequency (e.g. 40mg OD morning)"
                           value={med.dosage}
                           onChange={(e) => updateChatMedicine(idx, 'dosage', e.target.value)}
-                          className="text-xs sm:text-sm flex-1"
+                          className="text-xs sm:text-sm flex-1 bg-white"
                         />
                         {chatCloseForm.medicines.length > 1 && (
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="text-red-500 h-8 px-2 text-xs"
+                            className="text-red-500 hover:bg-red-50 h-8 px-2 text-xs shrink-0"
                             onClick={() => removeChatMedicine(idx)}
                           >
                             ✕
@@ -1507,47 +1831,55 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                {/* Dietary & Clinical Instructions */}
                 <div>
-                  <Label className="text-xs font-semibold">Dietary & Clinical Instructions</Label>
+                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                    Dietary & Clinical Instructions
+                  </Label>
                   <Textarea
                     rows={3}
-                    placeholder="Low salt diet, hydrate well, repeat serum creatinine & urine albumin in 1 month..."
+                    placeholder="Low salt diet (<2g/day), adequate hydration (2-2.5L/day), avoid NSAID painkillers..."
                     value={chatCloseForm.instructions}
                     onChange={(e) => setChatCloseForm(prev => ({ ...prev, instructions: e.target.value }))}
-                    className="mt-1 text-sm"
+                    className="text-xs sm:text-sm"
                   />
                 </div>
 
+                {/* Next Review Recommended */}
                 <div>
-                  <Label className="text-xs font-semibold">Next Review Recommended</Label>
+                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                    Next Review Recommended
+                  </Label>
                   <Input
-                    placeholder="e.g. In 4-6 weeks with fresh lab reports"
+                    placeholder="e.g. In 4 weeks with fresh Serum Creatinine & Urine Routine reports"
                     value={chatCloseForm.nextReview}
                     onChange={(e) => setChatCloseForm(prev => ({ ...prev, nextReview: e.target.value }))}
-                    className="mt-1 text-sm"
+                    className="text-xs sm:text-sm"
                   />
                 </div>
 
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
-                  ⚠️ Concluding this consultation locks further messages on this ticket and dispatches an official prescription & summary email to <strong>{selectedDoctorChat.patient.email}</strong>. The patient can start a new consultation anytime.
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900 leading-relaxed">
+                  ⚠️ <strong>Notice:</strong> Concluding this consultation marks it completed, moves it to the <strong>Completed</strong> archive, locks further messages, and dispatches the official prescription & summary email to <strong>{selectedDoctorChat.patient.email}</strong>.
                 </div>
+              </div>
 
-                <div className="flex justify-end gap-3 pt-3 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsClosingDoctorChatModal(false)}
-                    disabled={isClosingDoctorChat}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    disabled={isClosingDoctorChat}
-                    onClick={handleCloseDoctorChat}
-                  >
-                    {isClosingDoctorChat ? 'Closing...' : 'Complete & Dispatch Summary Email'}
-                  </Button>
-                </div>
+              {/* Modal Footer (Sticky shrink-0) */}
+              <div className="p-4 border-t border-slate-200 bg-slate-50/70 flex items-center justify-end gap-3 shrink-0">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsClosingDoctorChatModal(false)}
+                  disabled={isClosingDoctorChat}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-2 shadow-xs"
+                  disabled={isClosingDoctorChat}
+                  onClick={handleCloseDoctorChat}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  {isClosingDoctorChat ? 'Concluding...' : 'Complete & Dispatch Summary Email'}
+                </Button>
               </div>
             </motion.div>
           </motion.div>

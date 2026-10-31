@@ -418,12 +418,11 @@ export default function DoctorChatPage() {
           {/* Asynchronous Turnaround Banner (when waiting for doctor) */}
           {activeTicket.status === 'waiting_doctor' && (
             <div
-              style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534' }}
-              className="px-4 py-2.5 text-xs sm:text-sm border-t flex items-start sm:items-center gap-2"
+              className="px-4 py-2.5 text-xs sm:text-sm border-t bg-slate-50 border-slate-200 text-slate-700 flex items-start sm:items-center gap-2.5"
             >
-              <Clock className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0 text-green-700" />
+              <Clock className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0 text-[#006f6f]" />
               <div className="leading-snug">
-                <strong>Notice:</strong> Dr. Ilango reviews reports personally within <strong>12 to 24 hours</strong>. You do not need to keep this page open — we will email you immediately the moment Dr. Ilango replies or prescribes advice!
+                <strong>Turnaround Notice:</strong> Dr. Ilango reviews consultations personally within <strong>12 to 24 hours</strong>. You do not need to keep this page open — we will email you immediately the moment Dr. Ilango replies or prescribes advice!
               </div>
             </div>
           )}
@@ -503,15 +502,15 @@ export default function DoctorChatPage() {
           activeTicket.prescription.notes ||
           (activeTicket.prescription.medicines && activeTicket.prescription.medicines.length > 0)
         ) && (
-          <Card className="border-2 border-emerald-500/40 shadow-sm mb-3 bg-gradient-to-br from-emerald-50/50 to-white">
-            <CardHeader className="py-3 px-4 border-b border-emerald-100 flex flex-row items-center justify-between">
+          <Card className="border border-slate-200 shadow-sm mb-3 bg-white">
+            <CardHeader className="py-3 px-4 border-b border-slate-100 flex flex-row items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-2">
-                <Pill className="w-4 h-4 text-emerald-600" />
-                <CardTitle className="text-sm font-bold text-emerald-950">
+                <Pill className="w-4 h-4 text-[#006f6f]" />
+                <CardTitle className="text-sm font-bold text-slate-900">
                   Doctor's Digital Prescription & Advice
                 </CardTitle>
               </div>
-              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[11px]">
+              <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[11px]">
                 Official
               </Badge>
             </CardHeader>
@@ -592,8 +591,8 @@ export default function DoctorChatPage() {
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
                         isPatient
-                          ? 'bg-[#006f6f] text-white'
-                          : 'bg-emerald-600 text-white'
+                          ? 'bg-slate-700 text-white'
+                          : 'bg-[#006f6f] text-white'
                       }`}
                     >
                       {isPatient ? <User className="w-4 h-4" /> : <Stethoscope className="w-4 h-4" />}
@@ -601,31 +600,61 @@ export default function DoctorChatPage() {
 
                     {/* Message Bubble */}
                     <div
-                      className={`max-w-[82%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 text-xs sm:text-sm leading-relaxed shadow-sm ${
+                      className={`max-w-[85%] sm:max-w-[72%] rounded-2xl px-4 py-3 text-xs sm:text-sm leading-relaxed shadow-sm ${
                         isPatient
-                          ? 'bg-gradient-to-r from-[#006f6f] to-[#005555] text-white rounded-tr-none'
-                          : 'bg-gray-50 border border-gray-200 text-gray-900 rounded-tl-none'
+                          ? 'bg-[#006f6f] text-white rounded-tr-sm'
+                          : 'bg-white border border-slate-200 text-slate-900 rounded-tl-sm'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-3 mb-1">
+                      <div className="flex items-center justify-between gap-3 mb-1.5 pb-1 border-b border-white/10">
                         <span className={`text-[11px] font-bold ${isPatient ? 'text-teal-100' : 'text-[#006f6f]'}`}>
-                          {isPatient ? 'You' : (msg.senderName || 'Dr. Ilango')}
+                          {isPatient ? 'You' : (msg.senderName || 'Dr. Ilango S. Prakasam')}
                         </span>
-                        <span className={`text-[10px] ${isPatient ? 'text-teal-200' : 'text-gray-400'}`}>
+                        <span className={`text-[10px] ${isPatient ? 'text-teal-200' : 'text-slate-400'}`}>
                           {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
                       </div>
 
-                      <div className="whitespace-pre-wrap">{msg.text}</div>
+                      <div className="whitespace-pre-wrap leading-relaxed font-normal">{msg.text}</div>
 
                       {msg.attachments && msg.attachments.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-white/20 text-[11px] space-y-1">
-                          {msg.attachments.map((att, i) => (
-                            <div key={i} className="flex items-center gap-1 opacity-90">
-                              <span>📎</span>
-                              <span className="truncate">{att}</span>
-                            </div>
-                          ))}
+                        <div className={`mt-3 pt-2.5 border-t space-y-1.5 ${isPatient ? 'border-white/20' : 'border-slate-200'}`}>
+                          <div className={`text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 ${isPatient ? 'text-teal-100' : 'text-slate-600'}`}>
+                            <FileText className="w-3 h-3" />
+                            <span>Attached Lab Reports ({msg.attachments.length}):</span>
+                          </div>
+                          <div className="grid grid-cols-1 gap-1.5">
+                            {msg.attachments.map((att, i) => (
+                              <div
+                                key={i}
+                                className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs transition-colors ${
+                                  isPatient
+                                    ? 'bg-white/15 hover:bg-white/25 border border-white/25 text-white'
+                                    : 'bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0 mr-2">
+                                  <FileText className={`w-3.5 h-3.5 shrink-0 ${isPatient ? 'text-teal-200' : 'text-[#006f6f]'}`} />
+                                  <span className="truncate font-medium">{att}</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const matchingDoc = activeTicket.documents?.find(d => d.includes(att));
+                                    if (matchingDoc) handleDownloadReport(matchingDoc);
+                                    else handleDownloadReport(att);
+                                  }}
+                                  className={`font-semibold text-xs inline-flex items-center gap-1 shrink-0 px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                                    isPatient
+                                      ? 'text-teal-100 hover:text-white bg-white/15 hover:bg-white/30'
+                                      : 'text-[#006f6f] hover:text-[#004f4f] bg-teal-50 hover:bg-teal-100'
+                                  }`}
+                                >
+                                  <Download className="w-3 h-3" /> Download
+                                </button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>

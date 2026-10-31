@@ -882,59 +882,6 @@ export default function BookingPage() {
     toast.success(`Time slot ${slot.time} selected successfully!`);
   };
 
-  const readFileWithCompression = (file: File): Promise<string> => {
-    return new Promise<string>((resolve) => {
-      if (file.type && file.type.startsWith('image/')) {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          URL.revokeObjectURL(url);
-          try {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            const maxDim = 1600;
-            if (width > maxDim || height > maxDim) {
-              if (width > height) {
-                height = Math.round((height * maxDim) / width);
-                width = maxDim;
-              } else {
-                width = Math.round((width * maxDim) / height);
-                height = maxDim;
-              }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0, width, height);
-              const compressed = canvas.toDataURL('image/jpeg', 0.75);
-              resolve(`${file.name}|${compressed}`);
-              return;
-            }
-          } catch {}
-          const reader = new FileReader();
-          reader.onload = () => resolve(`${file.name}|${reader.result as string}`);
-          reader.onerror = () => resolve(`${file.name}|error`);
-          reader.readAsDataURL(file);
-        };
-        img.onerror = () => {
-          URL.revokeObjectURL(url);
-          const reader = new FileReader();
-          reader.onload = () => resolve(`${file.name}|${reader.result as string}`);
-          reader.onerror = () => resolve(`${file.name}|error`);
-          reader.readAsDataURL(file);
-        };
-        img.src = url;
-      } else {
-        const reader = new FileReader();
-        reader.onload = () => resolve(`${file.name}|${reader.result as string}`);
-        reader.onerror = () => resolve(`${file.name}|error`);
-        reader.readAsDataURL(file);
-      }
-    });
-  };
-
   const processFreeInitialBooking = async () => {
     const { patientInfo } = bookingData;
     if (!patientInfo.name || !patientInfo.email || !patientInfo.phone || !patientInfo.age || !patientInfo.gender || !patientInfo.medicalHistory) {
@@ -949,7 +896,12 @@ export default function BookingPage() {
       try {
         if (Array.isArray((bookingData as any).uploadedFiles) && (bookingData as any).uploadedFiles.length > 0) {
           preProcessedDocuments = await Promise.all(
-            (bookingData as any).uploadedFiles.map((file: File) => readFileWithCompression(file))
+            (bookingData as any).uploadedFiles.map((file: File) => new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(`${file.name}|${reader.result as string}`);
+              reader.onerror = () => resolve(`${file.name}|error`);
+              reader.readAsDataURL(file);
+            }))
           );
         }
       } catch (e) {
@@ -976,6 +928,9 @@ export default function BookingPage() {
       if (!response.ok) {
         if (response.status === 402) {
           setIsFreeEligible(false);
+          if (user?.email) {
+            try { localStorage.setItem(`nephro_free_used_${user.email.toLowerCase().trim()}`, 'true'); } catch {}
+          }
           updateUser?.({ hasUsedFreeConsultation: true });
           toast.error(data.error || 'Your 1st free consultation has already been used. Please proceed with regular payment.');
           return;
@@ -985,6 +940,9 @@ export default function BookingPage() {
 
       setIsFreeEligible(false);
       setPaymentCompleted(true);
+      if (user?.email) {
+        try { localStorage.setItem(`nephro_free_used_${user.email.toLowerCase().trim()}`, 'true'); } catch {}
+      }
       updateUser?.({ hasUsedFreeConsultation: true });
       try {
         localStorage.removeItem('cashfree_booking_details');
@@ -1015,7 +973,12 @@ export default function BookingPage() {
       try {
         if (Array.isArray((bookingData as any).uploadedFiles) && (bookingData as any).uploadedFiles.length > 0) {
           preProcessedDocuments = await Promise.all(
-            (bookingData as any).uploadedFiles.map((file: File) => readFileWithCompression(file))
+            (bookingData as any).uploadedFiles.map((file: File) => new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(`${file.name}|${reader.result as string}`);
+              reader.onerror = () => resolve(`${file.name}|error`);
+              reader.readAsDataURL(file);
+            }))
           );
         }
       } catch (e) {
@@ -1036,31 +999,11 @@ export default function BookingPage() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        if (data.ticketId) {
-          toast.success('🎉 Your Doctor Chat Consultation has been submitted!');
-          navigate(`/doctor-chat?ticketId=${data.ticketId}`);
-          return;
-        }
-
         if (response.status === 402) {
-          // Check if patient already has a ticket created before showing error
-          try {
-            const userEmail = (user?.email || bookingData.patientInfo?.email || '').toLowerCase().trim();
-            if (userEmail) {
-              const checkRes = await fetch(`/api/doctor-chat/mine?email=${encodeURIComponent(userEmail)}`, { credentials: 'include' });
-              if (checkRes.ok) {
-                const checkData = await checkRes.json();
-                const recent = checkData.chats?.[0];
-                if (recent && recent.ticketId) {
-                  toast.success('🎉 Consultation request found! Opening your doctor chat...');
-                  navigate(`/doctor-chat?ticketId=${recent.ticketId}`);
-                  return;
-                }
-              }
-            }
-          } catch {}
-
           setIsFreeChatEligible(false);
+          if (user?.email) {
+            try { localStorage.setItem(`nephro_free_chat_used_${user.email.toLowerCase().trim()}`, 'true'); } catch {}
+          }
           updateUser?.({ hasUsedFreeChat: true });
           toast.error(data.error || 'Your 1st free doctor chat has already been used. Please proceed with payment.');
           return;
@@ -1070,6 +1013,9 @@ export default function BookingPage() {
 
       setIsFreeChatEligible(false);
       setPaymentCompleted(true);
+      if (user?.email) {
+        try { localStorage.setItem(`nephro_free_chat_used_${user.email.toLowerCase().trim()}`, 'true'); } catch {}
+      }
       updateUser?.({ hasUsedFreeChat: true });
       try {
         localStorage.removeItem('cashfree_booking_details');
@@ -1085,23 +1031,6 @@ export default function BookingPage() {
       }
     } catch (error: any) {
       console.error('❌ Error in processFreeChatBooking:', error);
-      // In case of timeout or "Load failed", check if ticket was actually created on the server
-      try {
-        const userEmail = (user?.email || bookingData.patientInfo?.email || '').toLowerCase().trim();
-        if (userEmail) {
-          const checkRes = await fetch(`/api/doctor-chat/mine?email=${encodeURIComponent(userEmail)}`, { credentials: 'include' });
-          if (checkRes.ok) {
-            const checkData = await checkRes.json();
-            const recent = checkData.chats?.[0];
-            if (recent && recent.ticketId) {
-              toast.success('🎉 Free 1st Doctor Chat Consultation submitted! Opening your chat...');
-              navigate(`/doctor-chat?ticketId=${recent.ticketId}`);
-              return;
-            }
-          }
-        }
-      } catch {}
-
       toast.error(error?.message || 'Failed to submit free doctor chat. Please try again.');
     } finally {
       setIsProcessingPayment(false);

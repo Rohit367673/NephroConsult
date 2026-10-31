@@ -347,18 +347,19 @@ class AdminService {
   }
 
   // Doctor sends message in chat
-  async sendDoctorChatMessage(ticketId: string, text: string, senderName = 'Dr. Ilango S. Prakasam'): Promise<any> {
+  async sendDoctorChatMessage(ticketId: string, text: string, senderName = 'Dr. Ilango S. Prakasam', userEmail?: string): Promise<any> {
     try {
       const apiBaseUrl = this.getApiBaseUrl();
       const response = await fetch(`${apiBaseUrl}/api/doctor-chat/${ticketId}/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          ...(userEmail ? { 'x-user-email': userEmail } : {})
         },
         credentials: 'include',
         mode: 'cors',
-        body: JSON.stringify({ text, senderName })
+        body: JSON.stringify({ text, senderName, userEmail })
       });
 
       if (!response.ok) {
@@ -379,18 +380,19 @@ class AdminService {
     instructions?: string;
     diagnosis?: string;
     nextReview?: string;
-  }): Promise<any> {
+  }, userEmail?: string): Promise<any> {
     try {
       const apiBaseUrl = this.getApiBaseUrl();
       const response = await fetch(`${apiBaseUrl}/api/doctor-chat/${ticketId}/close`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          ...(userEmail ? { 'x-user-email': userEmail } : {})
         },
         credentials: 'include',
         mode: 'cors',
-        body: JSON.stringify({ prescription: payload })
+        body: JSON.stringify({ prescription: payload, ...payload, userEmail })
       });
 
       if (!response.ok) {

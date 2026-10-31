@@ -13,7 +13,10 @@ const DoctorChatMessageSchema = new mongoose.Schema(
 
 const DoctorPrescriptionSchema = new mongoose.Schema(
   {
+    diagnosis: { type: String, default: '' },
+    instructions: { type: String, default: '' },
     notes: { type: String, default: '' },
+    nextReview: { type: String, default: '' },
     medicines: [
       {
         name: { type: String, required: true },
@@ -24,7 +27,7 @@ const DoctorPrescriptionSchema = new mongoose.Schema(
     ],
     closedAt: { type: Date },
   },
-  { _id: false }
+  { _id: false, strict: false }
 );
 
 const DoctorChatSchema = new mongoose.Schema(
