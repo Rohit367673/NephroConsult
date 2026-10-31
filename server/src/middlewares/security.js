@@ -19,8 +19,10 @@ export function verifyOrigin(req, res, next) {
 
   const origin = req.headers['origin'] || '';
   const referer = req.headers['referer'] || '';
+  const xForwardedHost = req.headers['x-forwarded-host'] || '';
+  const host = req.headers['host'] || '';
 
-  // Allow same-origin requests only; compare hostnames
+  // Allow same-origin requests; compare hostnames
   try {
     const allowedOrigins = String(env.CLIENT_URL || '').split(',').map(s => s.trim()).filter(Boolean);
     
@@ -29,7 +31,8 @@ export function verifyOrigin(req, res, next) {
       'nephro-consult.vercel.app',
       'nephroconsult.vercel.app', 
       'nephro-consult-git-main-rohit367673s-projects.vercel.app',
-      'nephro-consult-rohit367673s-projects.vercel.app'
+      'nephro-consult-rohit367673s-projects.vercel.app',
+      'nephroconsult.onrender.com'
     ];
     
     // Default allowed domains (mirror server CORS defaults)
@@ -55,23 +58,29 @@ export function verifyOrigin(req, res, next) {
     
     const isLoopback = (h) => h === '127.0.0.1' || h === 'localhost';
 
-    console.log('🔍 Origin check - Origin:', origin);
-    console.log('🔍 Origin check - Referer:', referer);
-    console.log('🔍 Origin check - Allowed hosts:', allowedHosts);
+    console.log('🔍 Origin check - Origin:', origin, 'Referer:', referer, 'X-Forwarded-Host:', xForwardedHost);
 
     if (origin) {
       const o = new URL(origin);
-      console.log('🔍 Origin hostname:', o.hostname);
       if (allowedHosts.includes(o.hostname) || (isLoopback(o.hostname) && allowedHosts.some(isLoopback))) {
-        console.log('✅ Origin check passed via origin header');
         return next();
       }
     }
     if (referer) {
       const r = new URL(referer);
-      console.log('🔍 Referer hostname:', r.hostname);
       if (allowedHosts.includes(r.hostname) || (isLoopback(r.hostname) && allowedHosts.some(isLoopback))) {
-        console.log('✅ Origin check passed via referer header');
+        return next();
+      }
+    }
+    if (xForwardedHost) {
+      const xHost = xForwardedHost.split(':')[0].trim();
+      if (allowedHosts.includes(xHost) || (isLoopback(xHost) && allowedHosts.some(isLoopback))) {
+        return next();
+      }
+    }
+    if (host) {
+      const hHost = host.split(':')[0].trim();
+      if (allowedHosts.includes(hHost) || (isLoopback(hHost) && allowedHosts.some(isLoopback))) {
         return next();
       }
     }

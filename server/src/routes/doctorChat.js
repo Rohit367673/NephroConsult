@@ -136,6 +136,28 @@ router.post('/free-create', async (req, res) => {
     });
 
     if (!eligibility.eligible) {
+      // Check if user already submitted a ticket in this session / recently (e.g. if previous connection dropped)
+      const recentChat = await DoctorChat.findOne({
+        'patient.email': patientEmail,
+        createdAt: { $gte: new Date(Date.now() - 30 * 60 * 1000) }
+      }).sort({ createdAt: -1 }).lean();
+
+      if (recentChat) {
+        console.log('ℹ️ Returning already-created recent chat ticket:', recentChat.ticketId);
+        return res.status(200).json({
+          success: true,
+          ticketId: recentChat.ticketId,
+          alreadyCreated: true,
+          chat: {
+            _id: recentChat._id,
+            ticketId: recentChat.ticketId,
+            status: recentChat.status,
+            patient: recentChat.patient,
+            createdAt: recentChat.createdAt
+          }
+        });
+      }
+
       return res.status(402).json({
         error: 'You have already used your free 1st Doctor Chat. Payment (₹100 / $1) is required for subsequent chats.',
         reason: eligibility.reason
@@ -150,6 +172,25 @@ router.post('/free-create', async (req, res) => {
         { new: true }
       );
       if (!claimedUser) {
+        // Also check if they just created one seconds ago
+        const recentChat = await DoctorChat.findOne({
+          'patient.email': patientEmail,
+          createdAt: { $gte: new Date(Date.now() - 30 * 60 * 1000) }
+        }).sort({ createdAt: -1 }).lean();
+        if (recentChat) {
+          return res.status(200).json({
+            success: true,
+            ticketId: recentChat.ticketId,
+            alreadyCreated: true,
+            chat: {
+              _id: recentChat._id,
+              ticketId: recentChat.ticketId,
+              status: recentChat.status,
+              patient: recentChat.patient,
+              createdAt: recentChat.createdAt
+            }
+          });
+        }
         return res.status(402).json({ error: 'Free doctor chat has already been claimed for this account.' });
       }
     } else {
@@ -192,96 +233,113 @@ router.post('/free-create', async (req, res) => {
 
     console.log('✅ Free DoctorChat created successfully:', createdDoctorChat.ticketId);
 
-    // Send notifications to Dr. Ilango & Telegram alert
-    try {
-      const doctorRecipient = (env.OWNER_EMAIL && env.OWNER_EMAIL.trim()) ? env.OWNER_EMAIL.trim() : 'suyambu54321@gmail.com';
-      const siteUrl = env.FRONTEND_URL || 'https://nephroconsultation.com';
-      const doctorHtml = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: #006f6f; color: white; padding: 16px 20px; border-radius: 8px 8px 0 0;">
-            <h2 style="margin: 0; font-size: 20px;">New Doctor Chat & Report Review Request (1st Free)</h2>
-            <p style="margin: 4px 0 0; opacity: 0.9; font-size: 14px;">Ticket: <strong>${createdDoctorChat.ticketId}</strong></p>
-          </div>
-          <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
-            <p style="font-size: 15px; margin-top: 0;">Dear Dr. Ilango,</p>
-            <p>A patient has submitted their medical query and uploaded reports for your review (1st Free Chat Offer):</p>
-            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-              <p style="margin: 0 0 8px;"><strong>Patient:</strong> ${patientName} (${patientAge ? `${patientAge} yrs` : ''} ${patientGender || ''})</p>
-              <p style="margin: 0 0 8px;"><strong>Email:</strong> ${patientEmail}</p>
-              <p style="margin: 0 0 8px;"><strong>Phone:</strong> ${patientPhone || 'Not provided'}</p>
-              <p style="margin: 0 0 8px;"><strong>Uploaded Reports:</strong> ${docs.length} file(s)</p>
-              <p style="margin: 0 0 8px;"><strong>Status:</strong> 🎁 1st Free Chat Consultation</p>
-              <p style="margin: 0;"><strong>Patient's Message:</strong></p>
-              <div style="background: #f3f4f6; padding: 10px; border-radius: 4px; margin-top: 6px; font-style: italic;">
-                ${initialQuery}
-              </div>
-            </div>
-            <div style="text-align: center; margin: 20px 0;">
-              <a href="${siteUrl}/admin" style="background: #006f6f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                Open Doctor Admin Panel
-              </a>
-            </div>
-          </div>
-        </div>
-      `;
-      await sendEmail(doctorRecipient, `New Doctor Chat Request [FREE 1st] (${createdDoctorChat.ticketId}) - ${patientName}`, doctorHtml);
-    } catch (err) {
-      console.warn('⚠️ Doctor chat notification to doctor failed:', err?.message);
-    }
+    // Build clean response object (WITHOUT returning huge base64 documents back to client)
+    const cleanChat = {
+      _id: createdDoctorChat._id,
+      ticketId: createdDoctorChat.ticketId,
+      status: createdDoctorChat.status,
+      patient: createdDoctorChat.patient,
+      doctor: createdDoctorChat.doctor,
+      initialQuery: createdDoctorChat.initialQuery,
+      documentsCount: docs.length,
+      createdAt: createdDoctorChat.createdAt,
+      lastMessageAt: createdDoctorChat.lastMessageAt,
+      price: createdDoctorChat.price,
+    };
 
-    try {
-      await telegramService.notifyNewAppointment({
-        patientName,
-        patientEmail,
-        phone: patientPhone,
-        date: new Date().toLocaleDateString('en-US'),
-        timeSlot: 'Free 1st Doctor Chat',
-        amount: 0,
-        consultationType: 'Upload Files & Chat with Doctor (1st Free)',
-        symptoms: initialQuery,
-        medicalHistory: `${docs.length} lab report document(s) uploaded`,
-      });
-    } catch {}
+    // Respond immediately so client never times out or drops connection
+    res.status(201).json({
+      success: true,
+      ticketId: createdDoctorChat.ticketId,
+      chat: cleanChat
+    });
 
-    try {
-      if (patientEmail) {
+    // Send notifications to Dr. Ilango & Telegram alert asynchronously in background
+    (async () => {
+      try {
+        const doctorRecipient = (env.OWNER_EMAIL && env.OWNER_EMAIL.trim()) ? env.OWNER_EMAIL.trim() : 'suyambu54321@gmail.com';
         const siteUrl = env.FRONTEND_URL || 'https://nephroconsultation.com';
-        const chatLink = `${siteUrl}/doctor-chat?ticketId=${createdDoctorChat.ticketId}`;
-        const patientHtml = `
+        const doctorHtml = `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: #006f6f; color: white; padding: 16px 20px; border-radius: 8px 8px 0 0; text-align: center;">
-              <h2 style="margin: 0; font-size: 20px;">Consultation Received — Dr. Ilango S. Prakasam</h2>
-              <p style="margin: 4px 0 0; opacity: 0.9; font-size: 14px;">Ticket: <strong>${createdDoctorChat.ticketId}</strong> (1st Chat Free)</p>
+            <div style="background: #006f6f; color: white; padding: 16px 20px; border-radius: 8px 8px 0 0;">
+              <h2 style="margin: 0; font-size: 20px;">New Doctor Chat & Report Review Request (1st Free)</h2>
+              <p style="margin: 4px 0 0; opacity: 0.9; font-size: 14px;">Ticket: <strong>${createdDoctorChat.ticketId}</strong></p>
             </div>
             <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
-              <p style="font-size: 15px; margin-top: 0;">Dear ${patientName},</p>
-              <p>Thank you for submitting your reports. Your complimentary 1st consultation has been received and assigned to <strong>Dr. Ilango S. Prakasam (Sr. Nephrologist)</strong>.</p>
-              <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 14px; margin-bottom: 16px; color: #065f46;">
-                <h4 style="margin: 0 0 6px; font-size: 15px;">⏳ What happens next?</h4>
-                <p style="margin: 0; font-size: 14px;">Dr. Ilango personally reviews cases within <strong>12 to 24 hours</strong>. You do not need to wait on the website. We will email you immediately once Dr. Ilango replies or prescribes advice.</p>
+              <p style="font-size: 15px; margin-top: 0;">Dear Dr. Ilango,</p>
+              <p>A patient has submitted their medical query and uploaded reports for your review (1st Free Chat Offer):</p>
+              <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+                <p style="margin: 0 0 8px;"><strong>Patient:</strong> ${patientName} (${patientAge ? `${patientAge} yrs` : ''} ${patientGender || ''})</p>
+                <p style="margin: 0 0 8px;"><strong>Email:</strong> ${patientEmail}</p>
+                <p style="margin: 0 0 8px;"><strong>Phone:</strong> ${patientPhone || 'Not provided'}</p>
+                <p style="margin: 0 0 8px;"><strong>Uploaded Reports:</strong> ${docs.length} file(s)</p>
+                <p style="margin: 0 0 8px;"><strong>Status:</strong> 🎁 1st Free Chat Consultation</p>
+                <p style="margin: 0;"><strong>Patient's Message:</strong></p>
+                <div style="background: #f3f4f6; padding: 10px; border-radius: 4px; margin-top: 6px; font-style: italic;">
+                  ${initialQuery}
+                </div>
               </div>
-              <div style="text-align: center; margin: 24px 0;">
-                <a href="${chatLink}" style="background: #006f6f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                  View Your Consultation Chat
+              <div style="text-align: center; margin: 20px 0;">
+                <a href="${siteUrl}/admin" style="background: #006f6f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                  Open Doctor Admin Panel
                 </a>
               </div>
-              <p style="font-size: 12px; color: #6b7280; text-align: center;">
-                You can also access this chat anytime from your NephroConsult profile.
-              </p>
             </div>
           </div>
         `;
-        await sendEmail(patientEmail, `Consultation Received (${createdDoctorChat.ticketId}) - NephroConsult`, patientHtml);
+        await sendEmail(doctorRecipient, `New Doctor Chat Request [FREE 1st] (${createdDoctorChat.ticketId}) - ${patientName}`, doctorHtml);
+      } catch (err) {
+        console.warn('⚠️ Doctor chat notification to doctor failed:', err?.message);
       }
-    } catch (err) {
-      console.warn('⚠️ Doctor chat confirmation to patient failed:', err?.message);
-    }
 
-    return res.status(201).json({
-      success: true,
-      chat: createdDoctorChat,
-      ticketId: createdDoctorChat.ticketId
-    });
+      try {
+        await telegramService.notifyNewAppointment({
+          patientName,
+          patientEmail,
+          phone: patientPhone,
+          date: new Date().toLocaleDateString('en-US'),
+          timeSlot: 'Free 1st Doctor Chat',
+          amount: 0,
+          consultationType: 'Upload Files & Chat with Doctor (1st Free)',
+          symptoms: initialQuery,
+          medicalHistory: `${docs.length} lab report document(s) uploaded`,
+        });
+      } catch {}
+
+      try {
+        if (patientEmail) {
+          const siteUrl = env.FRONTEND_URL || 'https://nephroconsultation.com';
+          const chatLink = `${siteUrl}/doctor-chat?ticketId=${createdDoctorChat.ticketId}`;
+          const patientHtml = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <div style="background: #006f6f; color: white; padding: 16px 20px; border-radius: 8px 8px 0 0; text-align: center;">
+                <h2 style="margin: 0; font-size: 20px;">Consultation Received — Dr. Ilango S. Prakasam</h2>
+                <p style="margin: 4px 0 0; opacity: 0.9; font-size: 14px;">Ticket: <strong>${createdDoctorChat.ticketId}</strong> (1st Chat Free)</p>
+              </div>
+              <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
+                <p style="font-size: 15px; margin-top: 0;">Dear ${patientName},</p>
+                <p>Thank you for submitting your reports. Your complimentary 1st consultation has been received and assigned to <strong>Dr. Ilango S. Prakasam (Sr. Nephrologist)</strong>.</p>
+                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 14px; margin-bottom: 16px; color: #065f46;">
+                  <h4 style="margin: 0 0 6px; font-size: 15px;">⏳ What happens next?</h4>
+                  <p style="margin: 0; font-size: 14px;">Dr. Ilango personally reviews cases within <strong>12 to 24 hours</strong>. You do not need to wait on the website. We will email you immediately once Dr. Ilango replies or prescribes advice.</p>
+                </div>
+                <div style="text-align: center; margin: 24px 0;">
+                  <a href="${chatLink}" style="background: #006f6f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                    View Your Consultation Chat
+                  </a>
+                </div>
+                <p style="font-size: 12px; color: #6b7280; text-align: center;">
+                  You can also access this chat anytime from your NephroConsult profile.
+                </p>
+              </div>
+            </div>
+          `;
+          await sendEmail(patientEmail, `Consultation Received (${createdDoctorChat.ticketId}) - NephroConsult`, patientHtml);
+        }
+      } catch (err) {
+        console.warn('⚠️ Doctor chat confirmation to patient failed:', err?.message);
+      }
+    })().catch((err) => console.error('Background notification error:', err));
   } catch (err) {
     console.error('Error creating free doctor chat:', err);
     return res.status(500).json({ error: 'Failed to create doctor chat consultation' });
