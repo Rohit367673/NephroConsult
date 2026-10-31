@@ -40,6 +40,9 @@ export default function AdminDashboard() {
   const [doctorChatTab, setDoctorChatTab] = useState<'active' | 'completed'>('active');
   const [doctorChatFilter, setDoctorChatFilter] = useState<'all' | 'waiting_doctor' | 'doctor_replied'>('all');
   const [showPatientReportsDrawer, setShowPatientReportsDrawer] = useState(true);
+  const [closingMessageText, setClosingMessageText] = useState(
+    'Your consultation has been reviewed and concluded by Dr. Ilango S. Prakasam. Thank you for choosing NephroConsult. All your reports and records remain securely saved in your profile. You may start a new consultation anytime if needed.'
+  );
   const [chatCloseForm, setChatCloseForm] = useState({
     diagnosis: '',
     instructions: '',
@@ -158,6 +161,8 @@ export default function AdminDashboard() {
 
   const activeDoctorChats = doctorChats.filter(chat => chat.status !== 'closed');
   const completedDoctorChats = doctorChats.filter(chat => chat.status === 'closed');
+  const waitingDoctorCount = activeDoctorChats.filter(c => c.status === 'waiting_doctor').length;
+  const repliedDoctorCount = activeDoctorChats.filter(c => c.status === 'doctor_replied').length;
 
   const filteredDoctorChats = doctorChats.filter(chat => {
     const s = searchTerm.toLowerCase();
@@ -380,17 +385,17 @@ export default function AdminDashboard() {
     if (!selectedDoctorChat) return;
     try {
       setIsClosingDoctorChat(true);
-      await adminService.closeDoctorChat(selectedDoctorChat.ticketId, chatCloseForm, user?.email);
-      toast.success('Consultation concluded & removed from active queue! Summary emailed to patient.');
+      await adminService.closeDoctorChat(
+        selectedDoctorChat.ticketId,
+        {
+          closingMessage: closingMessageText.trim()
+        },
+        user?.email
+      );
+      toast.success('Consultation closed & archived! Notification emailed to client.');
       setIsClosingDoctorChatModal(false);
       
       const closedTicketId = selectedDoctorChat.ticketId;
-      setChatCloseForm({
-        diagnosis: '',
-        instructions: '',
-        nextReview: '',
-        medicines: [{ name: '', dosage: '', url: '' }]
-      });
 
       const updated = await adminService.getDoctorChats();
       setDoctorChats(updated.chats);
@@ -409,7 +414,7 @@ export default function AdminDashboard() {
         setSelectedDoctorChat(refreshed || null);
       }
     } catch (err: any) {
-      toast.error(err.message || 'Failed to complete consultation');
+      toast.error(err.message || 'Failed to close consultation');
     } finally {
       setIsClosingDoctorChat(false);
     }
@@ -532,9 +537,9 @@ export default function AdminDashboard() {
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>Doctor Chat Consultations ({doctorChats.length})</span>
-              {doctorChatCounts.waiting_doctor > 0 && (
+              {waitingDoctorCount > 0 && (
                 <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full ml-1">
-                  {doctorChatCounts.waiting_doctor} needs reply
+                  {waitingDoctorCount} needs reply
                 </span>
               )}
             </Button>
@@ -653,7 +658,7 @@ export default function AdminDashboard() {
                         }`}
                       >
                         <span>⏳ Needs Reply</span>
-                        <span className="font-bold">({doctorChatCounts.waiting_doctor})</span>
+                        <span className="font-bold">({waitingDoctorCount})</span>
                       </button>
                       <button
                         type="button"
@@ -665,7 +670,7 @@ export default function AdminDashboard() {
                         }`}
                       >
                         <span>✓ Replied</span>
-                        <span className="font-bold">({doctorChatCounts.doctor_replied})</span>
+                        <span className="font-bold">({repliedDoctorCount})</span>
                       </button>
                     </div>
                   )}
@@ -879,9 +884,9 @@ export default function AdminDashboard() {
           <div className={activeTab === 'doctor_chats' ? 'lg:col-span-2' : 'lg:col-span-1'}>
             {activeTab === 'doctor_chats' ? (
               selectedDoctorChat ? (
-                <Card className="overflow-hidden border border-slate-200 shadow-sm flex flex-col">
-                  {/* Workspace Header */}
-                  <CardHeader className="bg-white border-b border-slate-200 p-4 sm:p-5">
+                <Card className="border border-slate-200 shadow-sm flex flex-col rounded-xl">
+                  {/* Workspace Header - Sticky below admin navbar */}
+                  <CardHeader className="bg-white border-b border-slate-200 p-4 sm:p-5 sticky top-14 sm:top-16 z-20 shadow-xs rounded-t-xl">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
@@ -938,7 +943,7 @@ export default function AdminDashboard() {
                             onClick={() => setIsClosingDoctorChatModal(true)}
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Complete & Conclude</span>
+                            <span>Close Consultation</span>
                           </Button>
                         )}
                       </div>
@@ -1737,7 +1742,7 @@ export default function AdminDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Conclude Doctor Chat Modal */}
+      {/* Conclude Doctor Chat Modal - Direct Closure (No Form Required) */}
       <AnimatePresence>
         {isClosingDoctorChatModal && selectedDoctorChat && (
           <motion.div
@@ -1750,15 +1755,20 @@ export default function AdminDashboard() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden border border-slate-200"
+              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full flex flex-col overflow-hidden border border-slate-200"
             >
-              {/* Modal Header (Sticky shrink-0) */}
-              <div className="p-4 sm:p-5 border-b border-slate-200 flex justify-between items-center shrink-0 bg-slate-50/70">
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900">Complete & Conclude Doctor Chat</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Ticket: <span className="font-mono font-bold text-slate-800">{selectedDoctorChat.ticketId}</span> • Patient: <span className="font-semibold text-slate-800">{selectedDoctorChat.patient.name}</span>
-                  </p>
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50/70">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold text-slate-900">Close Consultation</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Ticket <span className="font-mono font-bold text-slate-800">{selectedDoctorChat.ticketId}</span> • Patient: <span className="font-semibold text-slate-800">{selectedDoctorChat.patient.name}</span>
+                    </p>
+                  </div>
                 </div>
                 <Button
                   variant="ghost"
@@ -1770,115 +1780,51 @@ export default function AdminDashboard() {
                 </Button>
               </div>
 
-              {/* Modal Body (Scrollable flex-1) */}
-              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
-                <div>
-                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    Clinical Diagnosis / Impression
-                  </Label>
-                  <Input
-                    placeholder="e.g. Stage 2 CKD with mild proteinuria, stable renal function"
-                    value={chatCloseForm.diagnosis}
-                    onChange={(e) => setChatCloseForm(prev => ({ ...prev, diagnosis: e.target.value }))}
-                    className="text-xs sm:text-sm"
-                  />
-                </div>
-
-                {/* Prescribed Medications */}
-                <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Prescribed Medications
-                    </Label>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="text-xs h-7 border-teal-300 text-[#006f6f] hover:bg-teal-50"
-                      onClick={addChatMedicine}
-                    >
-                      + Add Medicine
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {chatCloseForm.medicines.map((med, idx) => (
-                      <div key={idx} className="flex gap-2 items-center bg-slate-50 p-2 rounded-lg border border-slate-200">
-                        <Input
-                          placeholder="Medicine name (e.g. Telmisartan)"
-                          value={med.name}
-                          onChange={(e) => updateChatMedicine(idx, 'name', e.target.value)}
-                          className="text-xs sm:text-sm flex-1 bg-white"
-                        />
-                        <Input
-                          placeholder="Dosage & Frequency (e.g. 40mg OD morning)"
-                          value={med.dosage}
-                          onChange={(e) => updateChatMedicine(idx, 'dosage', e.target.value)}
-                          className="text-xs sm:text-sm flex-1 bg-white"
-                        />
-                        {chatCloseForm.medicines.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:bg-red-50 h-8 px-2 text-xs shrink-0"
-                            onClick={() => removeChatMedicine(idx)}
-                          >
-                            ✕
-                          </Button>
-                        )}
-                      </div>
-                    ))}
+              {/* Modal Body */}
+              <div className="p-4 sm:p-6 space-y-4">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 text-xs text-emerald-950 leading-relaxed flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block font-semibold mb-0.5">Direct Consultation Conclusion</strong>
+                    This consultation will be closed, immediately archived to the <strong>Completed</strong> tab, and the closing message will be sent to <strong>{selectedDoctorChat.patient.email}</strong>.
                   </div>
                 </div>
 
-                {/* Dietary & Clinical Instructions */}
                 <div>
-                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    Dietary & Clinical Instructions
+                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                    Closing Message to Client
                   </Label>
                   <Textarea
-                    rows={3}
-                    placeholder="Low salt diet (<2g/day), adequate hydration (2-2.5L/day), avoid NSAID painkillers..."
-                    value={chatCloseForm.instructions}
-                    onChange={(e) => setChatCloseForm(prev => ({ ...prev, instructions: e.target.value }))}
-                    className="text-xs sm:text-sm"
+                    rows={4}
+                    placeholder="Enter closing message or clinical advice for client..."
+                    value={closingMessageText}
+                    onChange={(e) => setClosingMessageText(e.target.value)}
+                    className="text-xs sm:text-sm bg-slate-50/50 border-slate-200 focus:border-emerald-500 focus:bg-white"
                   />
-                </div>
-
-                {/* Next Review Recommended */}
-                <div>
-                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                    Next Review Recommended
-                  </Label>
-                  <Input
-                    placeholder="e.g. In 4 weeks with fresh Serum Creatinine & Urine Routine reports"
-                    value={chatCloseForm.nextReview}
-                    onChange={(e) => setChatCloseForm(prev => ({ ...prev, nextReview: e.target.value }))}
-                    className="text-xs sm:text-sm"
-                  />
-                </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900 leading-relaxed">
-                  ⚠️ <strong>Notice:</strong> Concluding this consultation marks it completed, moves it to the <strong>Completed</strong> archive, locks further messages, and dispatches the official prescription & summary email to <strong>{selectedDoctorChat.patient.email}</strong>.
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Pre-filled with doctor's standard conclusion note. You can edit this before closing.
+                  </p>
                 </div>
               </div>
 
-              {/* Modal Footer (Sticky shrink-0) */}
-              <div className="p-4 border-t border-slate-200 bg-slate-50/70 flex items-center justify-end gap-3 shrink-0">
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-slate-200 bg-slate-50/70 flex items-center justify-end gap-2.5">
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => setIsClosingDoctorChatModal(false)}
                   disabled={isClosingDoctorChat}
+                  className="text-xs h-9"
                 >
                   Cancel
                 </Button>
                 <Button
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-2 shadow-xs"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-2 shadow-xs text-xs h-9 px-4"
                   disabled={isClosingDoctorChat}
                   onClick={handleCloseDoctorChat}
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  {isClosingDoctorChat ? 'Concluding...' : 'Complete & Dispatch Summary Email'}
+                  {isClosingDoctorChat ? 'Closing...' : 'Close & Notify Client'}
                 </Button>
               </div>
             </motion.div>

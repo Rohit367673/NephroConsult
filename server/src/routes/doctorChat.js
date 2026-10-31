@@ -571,11 +571,22 @@ router.post('/:ticketId/close', async (req, res) => {
       closedAt: new Date(),
     };
 
+    const closingMessage = (body.closingMessage && String(body.closingMessage).trim())
+      || 'Your consultation has been reviewed and concluded by Dr. Ilango S. Prakasam. Thank you for consulting with NephroConsult. All your reports and records remain securely saved in your profile. You may start a new consultation anytime if needed.';
+
+    // Add doctor's final closing message to the patient
+    chat.messages.push({
+      sender: 'doctor',
+      senderName: 'Dr. Ilango S. Prakasam',
+      text: closingMessage,
+      timestamp: new Date(),
+    });
+
     // Add a system closure message
     chat.messages.push({
       sender: 'system',
       senderName: 'System',
-      text: 'This consultation has been marked as completed and closed by Dr. Ilango S. Prakasam. All chat history, reports, and digital prescriptions remain accessible.',
+      text: 'This consultation has been marked as concluded. Further replies on this ticket are closed. You can view all records or initiate a new consultation anytime.',
       timestamp: new Date(),
     });
 
@@ -606,6 +617,11 @@ router.post('/:ticketId/close', async (req, res) => {
               <p style="font-size: 15px; margin-top: 0;">Dear ${chat.patient?.name || 'Patient'},</p>
               <p>Your doctor consultation with <strong>Dr. Ilango S. Prakasam</strong> has been completed.</p>
               
+              <div style="background: white; border-left: 4px solid #006f6f; padding: 14px; border-radius: 4px; margin: 16px 0;">
+                <h4 style="margin: 0 0 6px; color: #006f6f;">Doctor's Note:</h4>
+                <p style="margin: 0; font-size: 14px; color: #1f2937;">${closingMessage.replace(/\n/g, '<br/>')}</p>
+              </div>
+
               ${chat.prescription?.diagnosis ? `
                 <div style="background: white; border-left: 4px solid #006f6f; padding: 14px; border-radius: 4px; margin: 16px 0;">
                   <h4 style="margin: 0 0 6px; color: #006f6f;">Clinical Impression / Diagnosis:</h4>
@@ -639,7 +655,7 @@ router.post('/:ticketId/close', async (req, res) => {
                 </a>
               </div>
               <p style="font-size: 13px; color: #4b5563; text-align: center;">
-                Need further assistance in the future? You can easily start a new consultation anytime for ₹100 / $1.
+                Need further assistance in the future? You can easily start a new consultation anytime.
               </p>
             </div>
           </div>

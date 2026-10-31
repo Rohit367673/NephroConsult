@@ -377,24 +377,26 @@ export default function DoctorChatPage() {
         </div>
 
         {/* Doctor Consultation Header Card */}
-        <Card className="border border-gray-200 shadow-sm mb-3 overflow-hidden">
-          <div className="p-4 sm:p-5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#006f6f] to-[#004f4f] text-white flex items-center justify-center shrink-0 shadow-sm">
+        <Card className="border border-slate-200/90 shadow-sm mb-3.5 overflow-hidden rounded-2xl bg-white">
+          <div className="p-4 sm:p-5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#006f6f] border border-teal-200/60 flex items-center justify-center shrink-0 shadow-2xs">
                 <Stethoscope className="w-6 h-6" />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-lg font-bold text-gray-900 leading-tight">
+                  <h1 className="text-lg font-bold text-slate-900 leading-tight">
                     Dr. Ilango S. Prakasam
                   </h1>
-                  <span className="text-xs bg-teal-50 text-[#006f6f] border border-teal-200 px-2 py-0.5 rounded font-medium">
-                    Sr. Nephrologist
+                  <span className="text-[11px] bg-teal-50 text-[#006f6f] border border-teal-200 px-2 py-0.5 rounded-full font-semibold">
+                    Senior Nephrologist
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Consultation Ticket: <strong className="text-gray-700">{activeTicket.ticketId}</strong> • Patient: <strong className="text-gray-700">{activeTicket.patient?.name}</strong>
-                </p>
+                <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 flex-wrap">
+                  <span>Ticket: <strong className="font-mono text-slate-700 font-semibold">{activeTicket.ticketId}</strong></span>
+                  <span>•</span>
+                  <span>Patient: <strong className="text-slate-700 font-semibold">{activeTicket.patient?.name}</strong></span>
+                </div>
               </div>
             </div>
 
@@ -407,7 +409,7 @@ export default function DoctorChatPage() {
                   setIsRefreshing(true);
                   fetchChats(activeTicket.ticketId);
                 }}
-                className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                className="h-8 w-8 p-0 text-slate-400 hover:text-slate-700 rounded-full"
                 title="Refresh messages"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -418,9 +420,9 @@ export default function DoctorChatPage() {
           {/* Asynchronous Turnaround Banner (when waiting for doctor) */}
           {activeTicket.status === 'waiting_doctor' && (
             <div
-              className="px-4 py-2.5 text-xs sm:text-sm border-t bg-slate-50 border-slate-200 text-slate-700 flex items-start sm:items-center gap-2.5"
+              className="px-4 py-2.5 text-xs sm:text-sm border-t bg-sky-50/70 border-sky-100 text-sky-900 flex items-start sm:items-center gap-2.5"
             >
-              <Clock className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0 text-[#006f6f]" />
+              <Clock className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0 text-sky-600" />
               <div className="leading-snug">
                 <strong>Turnaround Notice:</strong> Dr. Ilango reviews consultations personally within <strong>12 to 24 hours</strong>. You do not need to keep this page open — we will email you immediately the moment Dr. Ilango replies or prescribes advice!
               </div>
@@ -428,16 +430,16 @@ export default function DoctorChatPage() {
           )}
 
           {/* Collapsible Submitted Reports & Medical Query Drawer */}
-          <div className="bg-gray-50 px-4 py-2 border-t border-gray-100 flex items-center justify-between text-xs">
+          <div className="bg-slate-50 px-4 py-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
             <button
               onClick={() => setShowReports(!showReports)}
-              className="inline-flex items-center gap-1.5 text-gray-700 hover:text-[#006f6f] font-semibold transition-colors"
+              className="inline-flex items-center gap-2 text-slate-700 hover:text-[#006f6f] font-bold transition-colors"
             >
-              <FileText className="w-3.5 h-3.5 text-[#006f6f]" />
+              <FileText className="w-4 h-4 text-[#006f6f]" />
               <span>View Submitted Reports ({activeTicket.documents?.length || 0}) & Symptoms</span>
               {showReports ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
-            <span className="text-gray-400">
+            <span className="text-slate-400 text-[11px]">
               {new Date(activeTicket.createdAt).toLocaleDateString()}
             </span>
           </div>
@@ -566,14 +568,14 @@ export default function DoctorChatPage() {
         )}
 
         {/* Chat Messages Feed */}
-        <Card className="flex-1 border border-gray-200 shadow-sm flex flex-col overflow-hidden bg-white min-h-[380px] max-h-[550px]">
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
+        <Card className="flex-1 border border-slate-200 shadow-sm flex flex-col overflow-hidden bg-white min-h-[460px] max-h-[620px] rounded-2xl">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/60">
             {activeTicket.messages && activeTicket.messages.length > 0 ? (
               activeTicket.messages.map((msg, index) => {
                 if (msg.sender === 'system') {
                   return (
                     <div key={index} className="flex justify-center my-3">
-                      <div className="bg-gray-100 border border-gray-200 text-gray-600 text-xs px-3.5 py-1.5 rounded-full text-center max-w-md">
+                      <div className="bg-white border border-slate-200 text-slate-600 text-xs px-4 py-1.5 rounded-full text-center max-w-md shadow-2xs">
                         ℹ️ {msg.text}
                       </div>
                     </div>
@@ -591,8 +593,8 @@ export default function DoctorChatPage() {
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
                         isPatient
-                          ? 'bg-slate-700 text-white'
-                          : 'bg-[#006f6f] text-white'
+                          ? 'bg-slate-800 text-white shadow-2xs'
+                          : 'bg-[#006f6f] text-white shadow-2xs'
                       }`}
                     >
                       {isPatient ? <User className="w-4 h-4" /> : <Stethoscope className="w-4 h-4" />}
@@ -600,42 +602,46 @@ export default function DoctorChatPage() {
 
                     {/* Message Bubble */}
                     <div
-                      className={`max-w-[85%] sm:max-w-[72%] rounded-2xl px-4 py-3 text-xs sm:text-sm leading-relaxed shadow-sm ${
+                      className={`max-w-[88%] sm:max-w-[72%] rounded-2xl p-4 text-xs sm:text-sm leading-relaxed shadow-sm ${
                         isPatient
-                          ? 'bg-[#006f6f] text-white rounded-tr-sm'
-                          : 'bg-white border border-slate-200 text-slate-900 rounded-tl-sm'
+                          ? 'bg-slate-900 text-white rounded-tr-xs'
+                          : 'bg-white border border-slate-200 text-slate-900 rounded-tl-xs'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-3 mb-1.5 pb-1 border-b border-white/10">
-                        <span className={`text-[11px] font-bold ${isPatient ? 'text-teal-100' : 'text-[#006f6f]'}`}>
+                      <div className={`flex items-center justify-between gap-3 mb-1.5 pb-1 border-b text-[11px] ${
+                        isPatient ? 'border-white/15' : 'border-slate-100'
+                      }`}>
+                        <span className={`font-bold ${isPatient ? 'text-slate-300' : 'text-[#006f6f]'}`}>
                           {isPatient ? 'You' : (msg.senderName || 'Dr. Ilango S. Prakasam')}
                         </span>
-                        <span className={`text-[10px] ${isPatient ? 'text-teal-200' : 'text-slate-400'}`}>
+                        <span className={isPatient ? 'text-slate-400' : 'text-slate-400'}>
                           {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
                       </div>
 
-                      <div className="whitespace-pre-wrap leading-relaxed font-normal">{msg.text}</div>
+                      <div className={`whitespace-pre-wrap leading-relaxed font-normal ${isPatient ? 'text-white' : 'text-slate-800'}`}>
+                        {msg.text}
+                      </div>
 
                       {msg.attachments && msg.attachments.length > 0 && (
-                        <div className={`mt-3 pt-2.5 border-t space-y-1.5 ${isPatient ? 'border-white/20' : 'border-slate-200'}`}>
-                          <div className={`text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 ${isPatient ? 'text-teal-100' : 'text-slate-600'}`}>
+                        <div className={`mt-3 pt-2.5 border-t space-y-1.5 ${isPatient ? 'border-white/15' : 'border-slate-200'}`}>
+                          <div className={`text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 ${isPatient ? 'text-slate-300' : 'text-slate-600'}`}>
                             <FileText className="w-3 h-3" />
                             <span>Attached Lab Reports ({msg.attachments.length}):</span>
                           </div>
-                          <div className="grid grid-cols-1 gap-1.5">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                             {msg.attachments.map((att, i) => (
                               <div
                                 key={i}
-                                className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs transition-colors ${
+                                className={`flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs transition-colors ${
                                   isPatient
-                                    ? 'bg-white/15 hover:bg-white/25 border border-white/25 text-white'
+                                    ? 'bg-white/10 hover:bg-white/15 border border-white/15 text-white'
                                     : 'bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800'
                                 }`}
                               >
-                                <div className="flex items-center gap-2 min-w-0 mr-2">
-                                  <FileText className={`w-3.5 h-3.5 shrink-0 ${isPatient ? 'text-teal-200' : 'text-[#006f6f]'}`} />
-                                  <span className="truncate font-medium">{att}</span>
+                                <div className="flex items-center gap-1.5 min-w-0 mr-1.5">
+                                  <FileText className={`w-3.5 h-3.5 shrink-0 ${isPatient ? 'text-teal-300' : 'text-[#006f6f]'}`} />
+                                  <span className="truncate font-medium text-[11px]">{att}</span>
                                 </div>
                                 <button
                                   type="button"
@@ -644,13 +650,14 @@ export default function DoctorChatPage() {
                                     if (matchingDoc) handleDownloadReport(matchingDoc);
                                     else handleDownloadReport(att);
                                   }}
-                                  className={`font-semibold text-xs inline-flex items-center gap-1 shrink-0 px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                                  className={`p-1 rounded-md transition-colors shrink-0 ${
                                     isPatient
-                                      ? 'text-teal-100 hover:text-white bg-white/15 hover:bg-white/30'
-                                      : 'text-[#006f6f] hover:text-[#004f4f] bg-teal-50 hover:bg-teal-100'
+                                      ? 'text-teal-200 hover:text-white hover:bg-white/15'
+                                      : 'text-[#006f6f] hover:text-[#004f4f] hover:bg-teal-50'
                                   }`}
+                                  title="Download"
                                 >
-                                  <Download className="w-3 h-3" /> Download
+                                  <Download className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             ))}
@@ -662,7 +669,7 @@ export default function DoctorChatPage() {
                 );
               })
             ) : (
-              <div className="h-full flex items-center justify-center text-gray-400 text-xs">
+              <div className="h-full flex items-center justify-center text-slate-400 text-xs">
                 No messages yet. Send a message below.
               </div>
             )}
